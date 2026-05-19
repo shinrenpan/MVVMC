@@ -94,7 +94,7 @@ extension FeatureViewModel {
 
 - `@MainActor @Observable final class`
 - 單一進入點：`func doAction(_ action: Action) async`，內部只做 `switch` dispatch
-- `Action` enum 固定四個 namespace：
+- `Action` enum namespace 由 developer 視需要定義，常見結構：
 
 ```swift
 enum Action: Sendable {
@@ -175,7 +175,7 @@ final class FeatureHostController: UIHostingController<FeatureView> {
 ```
 使用者操作
   → View: Task { await viewModel.doAction(.view(.xxx)) }
-  → VM handleViewAction → doAction(.apiRequest / .route)
+  → VM handleViewAction → doAction(.apiRequest(...))
 
 API 請求:
   → VM handleAPIRequest → 呼叫 API → doAction(.apiResponse)
@@ -186,7 +186,7 @@ API 請求:
   → HostController → push / present
 
 跨 VC 回傳:
-  → 子 VM: onCallback?(.callback(.xxx))
+  → 子 VM: onCallback?(.xxx)
   → 父 HostController → 處理結果
 ```
 
@@ -209,7 +209,7 @@ cp -r Templates/MVVMC\ Feature.xctemplate ~/Library/Developer/Xcode/Templates/Fi
 - `FeatureViewModel+Models.swift` — State、Domain Models、DTOs 骨架
 - `FeatureViewModel.swift` — `@Observable @MainActor`、`doAction` 單一進入點
 - `FeatureView.swift` — SwiftUI placeholder + Preview
-- `FeatureHostController.swift` — 純 Router（viewDidLoad 設 onAction，viewDidDisappear 清 onAction）
+- `FeatureHostController.swift` — 純 Router（viewDidLoad 設 onRoute / onCallback）
 
 ---
 
