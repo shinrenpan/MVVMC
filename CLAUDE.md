@@ -51,7 +51,8 @@ Pages/FeatureName/
 | `DTOs` | API 原始資料 | Network Layer，解碼後立即 mapping |
 
 - `State` 是 `struct`，遵守 `Sendable`，所有欄位給定預設值
-- DTO 是 `Codable & Sendable` struct，提供 `toDomain()` 轉換為 Domain Model，轉換邏輯屬於 DTO 自身
+- DTO 是 `Codable & Sendable` struct，保留 API response 所有欄位，忠實反映 API 合約
+- DTO 提供 `toDomain()` 轉換為 Domain Model，取捨欄位是 `toDomain()` 的事，不是 DTO 的事
 - State 不持有 DTO，UI 層對 DTO 的存在完全透明
 
 ```swift
