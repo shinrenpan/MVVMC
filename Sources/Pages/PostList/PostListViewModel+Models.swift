@@ -7,6 +7,7 @@ extension PostListViewModel {
     var isFirstAppear: Bool = true
     var api: API = .init()
     var posts: [Post] = []
+    var filterUserId: Int? = nil
   }
 
   struct API: Sendable {
@@ -29,6 +30,7 @@ extension PostListViewModel {
 extension PostListViewModel {
   struct PostDTO: Codable, Sendable {
     var id: Int
+    var user_id: Int
     var title: String
     var body: String
 

@@ -28,6 +28,19 @@ private extension PostListHostController {
     case let .toDetail(post):
       let vc = PostDetailHostController(post: post)
       navigationController?.pushViewController(vc, animated: true)
+    case .toFilter:
+      let filterVM = PostFilterViewModel()
+      filterVM.onCallback = { [weak self] callback in
+        switch callback {
+        case let .didSelectUser(user):
+          self?.dismiss(animated: true)
+          await self?.viewModel.doAction(.view(.didFilterUser(user.id)))
+        case .didCancel:
+          self?.dismiss(animated: true)
+        }
+      }
+      let vc = PostFilterHostController(viewModel: filterVM)
+      present(vc, animated: true)
     }
   }
 }

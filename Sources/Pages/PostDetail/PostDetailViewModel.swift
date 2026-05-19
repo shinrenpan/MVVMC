@@ -16,7 +16,7 @@ final class PostDetailViewModel {
   func doAction(_ action: Action) async {
     switch action {
     case let .view(action):
-      handleViewAction(action)
+      await handleViewAction(action)
     }
   }
 }
@@ -25,12 +25,12 @@ final class PostDetailViewModel {
 
 extension PostDetailViewModel {
   enum ViewAction: Sendable {
-    case onAppear
+    case isFirstAppear
   }
 
-  private func handleViewAction(_ action: ViewAction) {
+  private func handleViewAction(_ action: ViewAction) async {
     switch action {
-    case .onAppear:
+    case .isFirstAppear:
       break
     }
   }

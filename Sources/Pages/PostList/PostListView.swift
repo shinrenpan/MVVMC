@@ -18,7 +18,12 @@ struct PostListView: View {
         }
       }
     }
-    .navigationTitle("Posts")
+    .navigationTitle(viewModel.state.filterUserId.map { "User \($0)'s Posts" } ?? "Posts")
+    .toolbar {
+      Button("Filter") {
+        Task { await viewModel.doAction(.view(.showFilter)) }
+      }
+    }
     .task {
       await viewModel.doAction(.view(.isFirstAppear))
     }

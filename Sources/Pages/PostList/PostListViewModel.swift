@@ -29,6 +29,8 @@ extension PostListViewModel {
   enum ViewAction: Sendable {
     case isFirstAppear
     case postDidTap(Post)
+    case showFilter
+    case didFilterUser(Int)
   }
 
   private func handleViewAction(_ action: ViewAction) async {
@@ -36,9 +38,15 @@ extension PostListViewModel {
     case .isFirstAppear:
       guard state.isFirstAppear else { return }
       state.isFirstAppear = false
-      await doAction(.apiRequest(.fetchPosts))
+      await doAction(.apiRequest(.fetchPosts(userId: nil)))
     case let .postDidTap(post):
       onRoute?(.toDetail(post))
+    case .showFilter:
+      onRoute?(.toFilter)
+    case let .didFilterUser(userId):
+      state.filterUserId = userId
+      state.api.fetchPosts = .prepare
+      await doAction(.apiRequest(.fetchPosts(userId: userId)))
     }
   }
 }
@@ -48,6 +56,7 @@ extension PostListViewModel {
 extension PostListViewModel {
   enum Router: Sendable {
     case toDetail(Post)
+    case toFilter
   }
 }
 
@@ -55,16 +64,16 @@ extension PostListViewModel {
 
 extension PostListViewModel {
   enum APIRequest: Sendable {
-    case fetchPosts
+    case fetchPosts(userId: Int?)
   }
 
   private func handleAPIRequest(_ request: APIRequest) async {
     switch request {
-    case .fetchPosts:
+    case let .fetchPosts(userId):
       guard !state.api.fetchPosts.isLoading else { return }
       state.api.fetchPosts = .loading
       do {
-        let dtos = try await PostListAPI.fetch()
+        let dtos = try await PostListAPI.fetch(userId: userId)
         await doAction(.apiResponse(.fetchPosts(.success(dtos))))
       } catch {
         await doAction(.apiResponse(.fetchPosts(.failure(.message(error.localizedDescription)))))
