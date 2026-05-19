@@ -11,9 +11,4 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError() }
-
-  override func viewDidDisappear(_ animated: Bool) {
-    super.viewDidDisappear(animated)
-    viewModel.onAction = nil
-  }
 }

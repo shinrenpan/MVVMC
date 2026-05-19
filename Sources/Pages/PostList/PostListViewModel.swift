@@ -5,7 +5,6 @@ import Observation
 final class PostListViewModel {
   enum Action: Sendable {
     case view(ViewAction)
-    case route(Router)
     case apiRequest(APIRequest)
     case apiResponse(APIResponse)
   }
@@ -13,12 +12,11 @@ final class PostListViewModel {
   var state: State = .init()
 
   @ObservationIgnored
-  var onAction: (@MainActor (Action) -> Void)?
+  var onRoute: (@MainActor (Router) -> Void)?
 
   func doAction(_ action: Action) async {
     switch action {
     case let .view(action): await handleViewAction(action)
-    case let .route(router): await handleRouter(router)
     case let .apiRequest(request): await handleAPIRequest(request)
     case let .apiResponse(response): await handleAPIResponse(response)
     }
@@ -29,18 +27,18 @@ final class PostListViewModel {
 
 extension PostListViewModel {
   enum ViewAction: Sendable {
-    case onAppear
+    case isFirstAppear
     case postDidTap(Post)
   }
 
   private func handleViewAction(_ action: ViewAction) async {
     switch action {
-    case .onAppear:
+    case .isFirstAppear:
       guard state.isFirstAppear else { return }
       state.isFirstAppear = false
       await doAction(.apiRequest(.fetchPosts))
     case let .postDidTap(post):
-      await doAction(.route(.toDetail(post)))
+      onRoute?(.toDetail(post))
     }
   }
 }
@@ -50,10 +48,6 @@ extension PostListViewModel {
 extension PostListViewModel {
   enum Router: Sendable {
     case toDetail(Post)
-  }
-
-  private func handleRouter(_ router: Router) async {
-    onAction?(.route(router))
   }
 }
 

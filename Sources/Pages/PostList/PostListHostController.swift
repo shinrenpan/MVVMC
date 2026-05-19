@@ -14,16 +14,9 @@ final class PostListHostController: UIHostingController<PostListView> {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    viewModel.onAction = { [weak self] action in
-      guard case let .route(router) = action else { return }
+    viewModel.onRoute = { [weak self] router in
       self?.handleRouter(router)
     }
-  }
-
-  override func viewDidDisappear(_ animated: Bool) {
-    super.viewDidDisappear(animated)
-    viewModel.onAction = nil
-    self.tabBarController?.selectedIndex = 2
   }
 }
 
