@@ -4,6 +4,7 @@ import Foundation
 
 extension PostListViewModel {
   struct State: Sendable {
+    var isFirstAppear: Bool = true
     var api: API = .init()
     var posts: [Post] = []
   }

@@ -9,7 +9,6 @@ import SwiftUI
 @MainActor
 final class ___FILEBASENAME___HostController: UIHostingController<___FILEBASENAME___View> {
   private let viewModel: ___FILEBASENAME___ViewModel
-  private var tasks: [String: Task<Void, Never>] = [:]
 
   init(viewModel: ___FILEBASENAME___ViewModel) {
     self.viewModel = viewModel
@@ -19,16 +18,8 @@ final class ___FILEBASENAME___HostController: UIHostingController<___FILEBASENAM
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError() }
 
-  override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(animated)
-    tasks["onAppear"]?.cancel()
-    tasks["onAppear"] = Task { await viewModel.doAction(.view(.onAppear)) }
-  }
-
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
-    tasks.values.forEach { $0.cancel() }
-    tasks.removeAll()
     viewModel.onAction = nil
   }
 }

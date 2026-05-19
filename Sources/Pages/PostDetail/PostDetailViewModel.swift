@@ -9,6 +9,9 @@ final class PostDetailViewModel {
 
   var state: State
 
+  @ObservationIgnored
+  var onAction: (@MainActor (Action) -> Void)?
+
   init(post: PostListViewModel.Post) {
     state = .init(post: post)
   }

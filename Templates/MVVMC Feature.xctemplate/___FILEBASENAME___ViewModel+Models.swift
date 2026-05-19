@@ -10,6 +10,7 @@ import Foundation
 
 extension ___FILEBASENAME___ViewModel {
   struct State: Sendable {
+    var isFirstAppear: Bool = true
     var api: API = .init()
   }
 

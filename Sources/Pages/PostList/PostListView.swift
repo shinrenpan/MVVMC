@@ -19,6 +19,9 @@ struct PostListView: View {
       }
     }
     .navigationTitle("Posts")
+    .task {
+      await viewModel.doAction(.view(.onAppear))
+    }
   }
 }
 

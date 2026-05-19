@@ -36,6 +36,8 @@ extension PostListViewModel {
   private func handleViewAction(_ action: ViewAction) async {
     switch action {
     case .onAppear:
+      guard state.isFirstAppear else { return }
+      state.isFirstAppear = false
       await doAction(.apiRequest(.fetchPosts))
     case let .postDidTap(post):
       await doAction(.route(.toDetail(post)))

@@ -36,7 +36,9 @@ extension ___FILEBASENAME___ViewModel {
   private func handleViewAction(_ action: ViewAction) async {
     switch action {
     case .onAppear:
-      break
+      guard state.isFirstAppear else { return }
+      state.isFirstAppear = false
+      // 第一次出現的邏輯
     }
   }
 }

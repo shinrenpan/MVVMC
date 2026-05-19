@@ -3,7 +3,6 @@ import SwiftUI
 @MainActor
 final class PostListHostController: UIHostingController<PostListView> {
   private let viewModel: PostListViewModel
-  private var tasks: [String: Task<Void, Never>] = [:]
 
   init(viewModel: PostListViewModel) {
     self.viewModel = viewModel
@@ -21,16 +20,8 @@ final class PostListHostController: UIHostingController<PostListView> {
     }
   }
 
-  override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(animated)
-    tasks["onAppear"]?.cancel()
-    tasks["onAppear"] = Task { await viewModel.doAction(.view(.onAppear)) }
-  }
-
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
-    tasks.values.forEach { $0.cancel() }
-    tasks.removeAll()
     viewModel.onAction = nil
   }
 }

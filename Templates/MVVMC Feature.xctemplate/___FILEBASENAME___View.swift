@@ -11,6 +11,9 @@ struct ___FILEBASENAME___View: View {
 
   var body: some View {
     Text("___FILEBASENAME___")
+      .task {
+        await viewModel.doAction(.view(.onAppear))
+      }
   }
 }
 
