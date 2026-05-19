@@ -4,7 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 用途
 
-本專案用於討論、改進、demo 實作 MVVMC 架構。MVVMC 是作者自行設計的 iOS 架構模式。
+本專案是作者個人的 MVVMC 開發準則，透過討論、改進、Demo 驗證持續演進。
+MVVMC 是作者自行設計的 iOS 架構模式，準則面向個人與協作團隊使用。
 
 ---
 
