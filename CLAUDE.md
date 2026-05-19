@@ -206,36 +206,44 @@ cp -r Templates/MVVMC\ Feature.xctemplate ~/Library/Developer/Xcode/Templates/Fi
 
 **問題**：SwiftUI 的 `.onAppear` / `.task` 每次畫面出現都觸發，沒有天然的 `viewDidLoad` 等價。
 
-**原則**：View 永遠觸發，ViewModel 決定是否回應。HostController 不介入。
-
-**解法**：在 `State` 加 flag，ViewModel 自行控制首次邏輯：
+**解法**：`isFirstAppear` 和 `pullToRefresh` 是語意不同的兩個 ViewAction，都指向同一個 APIRequest。
 
 ```swift
-// State
-struct State: Sendable {
-  var isFirstAppear: Bool = true
+enum ViewAction: Sendable {
+  case isFirstAppear
+  case pullToRefresh
 }
 
+enum APIRequest: Sendable {
+  case loadData
+}
+```
+
+```swift
+// View
+.task {
+  await viewModel.doAction(.view(.isFirstAppear))
+}
+
+.refreshable {
+  await viewModel.doAction(.view(.pullToRefresh))
+}
+```
+
+```swift
 // ViewModel
-case .onAppear:
+case .isFirstAppear:
   guard state.isFirstAppear else { return }
   state.isFirstAppear = false
-  // 只執行一次的邏輯
+  await doAction(.apiRequest(.loadData))
+
+case .pullToRefresh:
+  await doAction(.apiRequest(.loadData))
 ```
 
-進入點可以是 `.onAppear`（同步）或 `.task`（async）：
-
-```swift
-// 同步
-.onAppear {
-  Task { await viewModel.doAction(.view(.onAppear)) }
-}
-
-// async（較簡潔）
-.task {
-  await viewModel.doAction(.view(.onAppear))
-}
-```
+- `isFirstAppear` action 名稱本身說明了 run once 語意
+- `loadData` 乾淨，不帶任何 lifecycle 假設
+- View 不直接碰 State，ViewModel 仍是唯一責任者
 
 ---
 
