@@ -50,7 +50,6 @@ Pages/FeatureName/
 | `DTOs` | API 原始資料 | Network Layer，解碼後立即 mapping |
 
 - `State` 是 `struct`，遵守 `Sendable`，所有欄位給定預設值
-- `isFirstAppear: Bool = true` 是標準欄位，控制 lifecycle 只執行一次的邏輯（對應 UIKit 的 `viewDidLoad`）
 - `API` 是 State 內的子 struct，每個 API 對應一個狀態欄位（`.prepare / .loading / .success / .error`）
 - DTO 是 `Codable & Sendable` struct，提供 `toDomain()` 轉換為 Domain Model，轉換邏輯屬於 DTO 自身
 - State 不持有 DTO，UI 層對 DTO 的存在完全透明
@@ -114,7 +113,6 @@ enum Action: Sendable {
 
 - `viewModel` 以 `let` 持有（`@Observable` 自動追蹤，不需 `@State` 或 `@Bindable`）
 - 使用者互動統一：`Task { await viewModel.doAction(.view(.xxx)) }`
-- `.task { await viewModel.doAction(.view(.onAppear)) }` 掛在 root view，每次畫面出現都觸發；ViewModel 內部以 `isFirstAppear` flag 控制是否為首次（對應 `viewDidLoad`）
 - 子 View 做成 `private extension FeatureView { struct SubView: View {...} }`
 - 子 View 若需回傳 action，接收 `let doAction: @MainActor (Action) -> Void` closure
 - Model 的顯示輔助 extension 放 View 檔最頂部：`private extension FeatureViewModel.SomeModel { var color: Color { ... } }`
@@ -126,7 +124,7 @@ enum Action: Sendable {
 - **純 Router**：push / present / dismiss 全在這裡，不做任何 task 管理
 - `viewDidLoad`：設定 `viewModel.onAction` 監聽 `.route` 事件
 - `viewDidDisappear`：清空 `onAction` / `onCallback` closure，防止 retain cycle
-- Lifecycle 觸發（onAppear / onDisappear）完全由 SwiftUI `.task` 負責，HostController 不介入
+- HostController 不管 lifecycle 觸發，不持有任何 Task
 - 監聽子 VC 回傳：present 前設定 `childViewModel.onCallback`
 
 ```swift
@@ -195,10 +193,49 @@ cp -r Templates/MVVMC\ Feature.xctemplate ~/Library/Developer/Xcode/Templates/Fi
 使用：Xcode → New File → MVVMC → MVVMC Feature → 輸入 Feature 名稱（如 `UserProfile`）
 
 產生四個檔案：
-- `FeatureViewModel+Models.swift` — State（含 `isFirstAppear`）、Domain Models、DTOs 骨架
-- `FeatureViewModel.swift` — `@Observable @MainActor`、ViewAction(.onAppear) 含 `isFirstAppear` guard
-- `FeatureView.swift` — SwiftUI placeholder + `.task` lifecycle trigger + Preview
+- `FeatureViewModel+Models.swift` — State、Domain Models、DTOs 骨架
+- `FeatureViewModel.swift` — `@Observable @MainActor`、`doAction` 單一進入點
+- `FeatureView.swift` — SwiftUI placeholder + Preview
 - `FeatureHostController.swift` — 純 Router（viewDidLoad 設 onAction，viewDidDisappear 清 onAction）
+
+---
+
+## 常見情境
+
+### 只執行一次（viewDidLoad 等價）
+
+**問題**：SwiftUI 的 `.onAppear` / `.task` 每次畫面出現都觸發，沒有天然的 `viewDidLoad` 等價。
+
+**原則**：View 永遠觸發，ViewModel 決定是否回應。HostController 不介入。
+
+**解法**：在 `State` 加 flag，ViewModel 自行控制首次邏輯：
+
+```swift
+// State
+struct State: Sendable {
+  var isFirstAppear: Bool = true
+}
+
+// ViewModel
+case .onAppear:
+  guard state.isFirstAppear else { return }
+  state.isFirstAppear = false
+  // 只執行一次的邏輯
+```
+
+進入點可以是 `.onAppear`（同步）或 `.task`（async）：
+
+```swift
+// 同步
+.onAppear {
+  Task { await viewModel.doAction(.view(.onAppear)) }
+}
+
+// async（較簡潔）
+.task {
+  await viewModel.doAction(.view(.onAppear))
+}
+```
 
 ---
 
