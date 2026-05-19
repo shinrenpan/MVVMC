@@ -105,9 +105,9 @@ enum Action: Sendable {
 }
 ```
 
-- `onAction` — HostController 設定，接收 `.route` 事件後執行導航
+- `onRoute` — HostController 設定，接收導航事件後執行導航
 - `onCallback` — 父 HostController 設定，接收跨 VC 回傳值
-- Router 不自行導航，統一呼叫 `onAction?(.route(router))` 後由 C 處理
+- Router 不自行導航，統一呼叫 `onRoute?(.toXxx)` 後由 C 處理
 - 非 UI 相關的 property（closure 等）標注 `@ObservationIgnored`
 
 ### V — View
@@ -123,8 +123,8 @@ enum Action: Sendable {
 
 - `@MainActor final class`，繼承 `UIHostingController<FeatureView>`
 - **純 Router**：push / present / dismiss 全在這裡，不做任何 task 管理
-- `viewDidLoad`：設定 `viewModel.onAction` 監聽 `.route` 事件
-- `viewDidDisappear`：清空 `onAction` / `onCallback` closure，防止 retain cycle
+- `viewDidLoad`：設定 `viewModel.onRoute` 監聽導航事件
+- `viewDidDisappear`：清空 `onRoute` / `onCallback` closure，防止 retain cycle
 - HostController 不管 lifecycle 觸發，不持有任何 Task
 - 監聽子 VC 回傳：present 前設定 `childViewModel.onCallback`
 
@@ -143,15 +143,14 @@ final class FeatureHostController: UIHostingController<FeatureView> {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    viewModel.onAction = { [weak self] action in
-      guard case let .route(router) = action else { return }
+    viewModel.onRoute = { [weak self] router in
       self?.handleRouter(router)
     }
   }
 
   override func viewDidDisappear(_ animated: Bool) {
     super.viewDidDisappear(animated)
-    viewModel.onAction = nil
+    viewModel.onRoute = nil
   }
 }
 ```
@@ -170,7 +169,7 @@ API 請求:
   → VM handleAPIResponse → 更新 state → View 自動刷新
 
 導航:
-  → VM: onAction?(.route(.toXxx))
+  → VM: onRoute?(.toXxx)
   → HostController → push / present
 
 跨 VC 回傳:
