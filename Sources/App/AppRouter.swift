@@ -42,7 +42,6 @@ final class AppRouter {
     if style == .push {
       nav.pushViewController(destination, animated: animated)
     } else {
-      destination.navigationItem.hidesBackButton = true
       applyTransition(style, isPush: true, on: nav)
       nav.pushViewController(destination, animated: false)
     }
@@ -100,7 +99,7 @@ private extension AppRouter {
     switch style {
     case .modal:
       transition.type = isPush ? .moveIn : .reveal
-      transition.subtype = isPush ? .fromBottom : .fromTop
+      transition.subtype = isPush ? .fromTop : .fromBottom
       transition.timingFunction = CAMediaTimingFunction(name: isPush ? .easeOut : .easeIn)
     case .fade:
       transition.type = .fade

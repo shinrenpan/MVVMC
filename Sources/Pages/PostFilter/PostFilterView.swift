@@ -14,6 +14,7 @@ struct PostFilterView: View {
         }
       }
     }
+    .navigationBarBackButtonHidden(true)
     .navigationTitle("Filter by User")
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
