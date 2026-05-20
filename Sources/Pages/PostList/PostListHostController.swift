@@ -26,29 +26,27 @@ private extension PostListHostController {
   func handleRouter(_ router: PostListViewModel.Router) {
     switch router {
     case let .toDetail(post):
-      let vc = PostDetailHostController(id: post.id, title: post.title, body: post.body)
-      navigationController?.pushViewController(vc, animated: true)
+      AppRouter.shared.to(PostDetailHostController(id: post.id, title: post.title, body: post.body), from: self)
 
     case let .toUserDetail(userId):
-      let vc = UserDetailHostController(userId: userId)
-      navigationController?.pushViewController(vc, animated: true)
+      AppRouter.shared.to(UserDetailHostController(userId: userId), from: self)
 
     case .toFilter:
       let filterVM = PostFilterViewModel()
       filterVM.onCallback = { [weak self] callback in
+        guard let self else { return }
         switch callback {
         case let .didSelectUser(user):
-          self?.dismiss(animated: true)
-          await self?.viewModel.doAction(.view(.didFilterUser(user.id)))
+          AppRouter.shared.back(from: self)
+          await self.viewModel.doAction(.view(.didFilterUser(user.id)))
         case .showAll:
-          self?.dismiss(animated: true)
-          await self?.viewModel.doAction(.view(.clearFilter))
+          AppRouter.shared.back(from: self)
+          await self.viewModel.doAction(.view(.clearFilter))
         case .didCancel:
-          self?.dismiss(animated: true)
+          AppRouter.shared.back(from: self)
         }
       }
-      let vc = PostFilterHostController(viewModel: filterVM)
-      present(vc, animated: true)
+      AppRouter.shared.to(PostFilterHostController(viewModel: filterVM), from: self)
     }
   }
 }

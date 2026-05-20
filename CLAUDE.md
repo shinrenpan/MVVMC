@@ -119,10 +119,11 @@ case .didSelectItem(let item):
 ```swift
 // 父 HostController，不需要 Task
 childViewModel.onCallback = { [weak self] callback in
+  guard let self else { return }
   switch callback {
   case .didSelectItem(let item):
-    self?.dismiss(animated: true)
-    await self?.viewModel.doAction(.view(.itemSelected(item)))
+    AppRouter.shared.back(from: self)
+    await self.viewModel.doAction(.view(.itemSelected(item)))
   }
 }
 ```
@@ -139,11 +140,11 @@ childViewModel.onCallback = { [weak self] callback in
 ### C — HostController
 
 - `@MainActor final class`，繼承 `UIHostingController<FeatureView>`
-- **純 Router**：push / present / dismiss 全在這裡，不做任何 task 管理
+- **純 Router**：所有導航透過 `AppRouter.shared`，不直接呼叫 `navigationController` / `present` / `dismiss`
 - `viewDidLoad`：設定 `viewModel.onRoute` / `onCallback`
 - HostController 不管 lifecycle 觸發，不持有任何 Task
 - closure 用 `[weak self]`，ViewModel 生命週期與 HostController 一致，不需要手動 nil 清空
-- 監聽子 VC 回傳：present 前設定 `childViewModel.onCallback`
+- 監聽子 VC 回傳：導航前設定 `childViewModel.onCallback`
 
 ```swift
 @MainActor
@@ -182,12 +183,37 @@ API 請求:
 
 導航:
   → VM: onRoute?(.toXxx)
-  → HostController → push / present
+  → HostController → AppRouter.shared.to(vc, from: self)
 
 跨 VC 回傳:
   → 子 VM: onCallback?(.xxx)
-  → 父 HostController → 處理結果
+  → 父 HostController → AppRouter.shared.back(from: self) → 處理結果
 ```
+
+---
+
+## AppRouter
+
+`AppRouter.shared` 是 App 唯一的導航入口，底層基於 `UINavigationController`。所有導航（包含視覺上的 modal / sheet）都是 push / pop，不使用 `present` / `dismiss`。
+
+- **無狀態**：不持有任何 stored property，nav controller 從 `source.navigationController` 動態取得
+- **assertionFailure**：`source.navigationController` 為 nil 代表 developer 架構設定錯誤（root 不是 `UINavigationController`），Debug 下立即崩潰提示
+
+```swift
+// 前進
+AppRouter.shared.to(DetailHostController(...), from: self)
+
+// 後退
+AppRouter.shared.back(from: self)
+
+// 後退到指定 VC
+AppRouter.shared.backTo(targetVC, from: self)
+
+// 後退到 root
+AppRouter.shared.backToRoot(from: self)
+```
+
+`SceneDelegate` 只需確保 `rootViewController` 是 `UINavigationController`，AppRouter 不需要任何 register / setup。
 
 ---
 
