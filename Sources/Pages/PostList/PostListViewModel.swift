@@ -31,6 +31,7 @@ extension PostListViewModel {
     case postDidTap(Post)
     case userDidTap(Int)
     case showFilter
+    case toProfile
     case didFilterUser(Int)
     case clearFilter
   }
@@ -47,6 +48,8 @@ extension PostListViewModel {
       onRoute?(.toUserDetail(userId))
     case .showFilter:
       onRoute?(.toFilter)
+    case .toProfile:
+      onRoute?(.toProfile)
     case let .didFilterUser(userId):
       state.filterUserId = userId
       state.api.fetchPosts = .prepare
@@ -66,6 +69,7 @@ extension PostListViewModel {
     case toDetail(Post)
     case toUserDetail(Int)
     case toFilter
+    case toProfile
   }
 }
 

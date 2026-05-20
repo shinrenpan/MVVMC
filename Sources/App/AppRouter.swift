@@ -74,6 +74,14 @@ final class AppRouter: NSObject {
     }
     nav.popToRootViewController(animated: animated)
   }
+
+  func tab(_ index: Int, from source: UIViewController) {
+    guard let tabBar = source.tabBarController else {
+      assertionFailure("AppRouter.tab(): source VC 沒有 tabBarController，請確認 rootViewController 設定為 UITabBarController")
+      return
+    }
+    tabBar.selectedIndex = index
+  }
 }
 
 // MARK: - UINavigationControllerDelegate

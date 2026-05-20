@@ -216,6 +216,9 @@ AppRouter.shared.backTo(targetVC, from: self)
 
 // 後退到 root
 AppRouter.shared.backToRoot(from: self)
+
+// 切換 Tab
+AppRouter.shared.tab(1, from: self)
 ```
 
 `SceneDelegate` 設定：

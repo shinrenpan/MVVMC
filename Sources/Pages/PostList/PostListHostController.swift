@@ -31,6 +31,9 @@ private extension PostListHostController {
     case let .toUserDetail(userId):
       AppRouter.shared.to(UserDetailHostController(userId: userId), from: self, style: .fade)
 
+    case .toProfile:
+      AppRouter.shared.tab(1, from: self)
+
     case .toFilter:
       let filterVM = PostFilterViewModel()
       filterVM.onCallback = { [weak self] callback in
