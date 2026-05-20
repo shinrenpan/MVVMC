@@ -46,7 +46,7 @@ private extension PostListHostController {
           AppRouter.shared.back(from: self)
         }
       }
-      AppRouter.shared.to(PostFilterHostController(viewModel: filterVM), from: self)
+      AppRouter.shared.to(PostFilterHostController(viewModel: filterVM), from: self, style: .modal)
     }
   }
 }
