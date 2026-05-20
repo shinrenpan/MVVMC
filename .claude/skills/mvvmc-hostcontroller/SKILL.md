@@ -89,7 +89,7 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 - ✅ `viewDidLoad` 設定 `viewModel.onRoute`，監聽導航意圖
 - ✅ `onRoute` closure 用 `[weak self]`
 - ✅ 導航邏輯集中在 `handleRouter(_:)`
-- ✅ 所有導航透過 `AppRouter.shared`（`to / back / backTo / backToRoot`）
+- ✅ 所有導航透過 `AppRouter.shared`（`to / back / backTo / backToRoot / tab`）
 - ❌ 禁止直接呼叫 `navigationController?.pushViewController` / `present` / `dismiss`
 - ❌ 禁止 ViewModel 直接持有 UIViewController 或做導航
 - ❌ 不需要 `viewDidDisappear` 清空 closure（ViewModel 由 HostController 持有，`[weak self]` 已足夠）
