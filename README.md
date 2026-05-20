@@ -95,10 +95,10 @@ func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
 ### 安裝
 
 ```bash
-git clone https://github.com/shinren-pan/MVVMC
+git clone https://github.com/shinrenpan/MVVMC
 cd MVVMC/mcp-server
 npm install && npm run build
-claude mcp add mvvmc -s user node /path/to/MVVMC/mcp-server/dist/index.js
+claude mcp add mvvmc -s user node "$PWD/dist/index.js"
 ```
 
 ### 提供的 Tools
