@@ -284,9 +284,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
-				TargetAttributes = {
-				};
+				LastUpgradeCheck = 2640;
 			};
 			buildConfigurationList = 9BEE9CFDC1C36459E0C5A90F /* Build configuration list for PBXProject "MVVMCDemo" */;
 			developmentRegion = en;
