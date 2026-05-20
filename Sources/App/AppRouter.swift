@@ -33,16 +33,19 @@ final class AppRouter {
   static let shared = AppRouter()
   private init() {}
 
-  private let transitionDelegate = NavigationTransitionDelegate()
-
   func to(_ destination: UIViewController, from source: UIViewController, style: TransitionStyle = .push, animated: Bool = true) {
     guard let nav = source.navigationController else {
       assertionFailure("AppRouter.to(): source VC 沒有 navigationController，請確認 rootViewController 設定為 UINavigationController")
       return
     }
     destination.appTransitionStyle = style
-    nav.delegate = transitionDelegate
-    nav.pushViewController(destination, animated: animated)
+    if style == .push {
+      nav.pushViewController(destination, animated: animated)
+    } else {
+      destination.navigationItem.hidesBackButton = true
+      applyTransition(style, isPush: true, on: nav)
+      nav.pushViewController(destination, animated: false)
+    }
   }
 
   func back(from source: UIViewController, animated: Bool = true) {
@@ -50,7 +53,13 @@ final class AppRouter {
       assertionFailure("AppRouter.back(): source VC 沒有 navigationController")
       return
     }
-    nav.popViewController(animated: animated)
+    let style = nav.topViewController?.appTransitionStyle ?? .push
+    if style == .push {
+      nav.popViewController(animated: animated)
+    } else {
+      applyTransition(style, isPush: false, on: nav)
+      nav.popViewController(animated: false)
+    }
   }
 
   func backTo(_ destination: UIViewController, from source: UIViewController, animated: Bool = true) {
@@ -58,7 +67,13 @@ final class AppRouter {
       assertionFailure("AppRouter.backTo(): source VC 沒有 navigationController")
       return
     }
-    nav.popToViewController(destination, animated: animated)
+    let style = nav.topViewController?.appTransitionStyle ?? .push
+    if style == .push {
+      nav.popToViewController(destination, animated: animated)
+    } else {
+      applyTransition(style, isPush: false, on: nav)
+      nav.popToViewController(destination, animated: false)
+    }
   }
 
   func backToRoot(from source: UIViewController, animated: Bool = true) {
@@ -66,113 +81,33 @@ final class AppRouter {
       assertionFailure("AppRouter.backToRoot(): source VC 沒有 navigationController")
       return
     }
-    nav.popToRootViewController(animated: animated)
-  }
-}
-
-// MARK: - NavigationTransitionDelegate
-
-private final class NavigationTransitionDelegate: NSObject, UINavigationControllerDelegate {
-  func navigationController(
-    _ navigationController: UINavigationController,
-    animationControllerFor operation: UINavigationController.Operation,
-    from fromVC: UIViewController,
-    to toVC: UIViewController
-  ) -> (any UIViewControllerAnimatedTransitioning)? {
-    let style: AppRouter.TransitionStyle = switch operation {
-    case .push: toVC.appTransitionStyle
-    case .pop: fromVC.appTransitionStyle
-    default: .push
+    let style = nav.topViewController?.appTransitionStyle ?? .push
+    if style == .push {
+      nav.popToRootViewController(animated: animated)
+    } else {
+      applyTransition(style, isPush: false, on: nav)
+      nav.popToRootViewController(animated: false)
     }
-    guard style != .push else { return nil }
-    return AppTransitionAnimator(style: style, operation: operation)
-  }
-
-  func navigationController(
-    _ navigationController: UINavigationController,
-    didShow viewController: UIViewController,
-    animated: Bool
-  ) {
-    // push style 才啟用 swipe back；modal / fade 語意上不應側滑返回
-    navigationController.interactivePopGestureRecognizer?.isEnabled =
-      viewController.appTransitionStyle == .push
   }
 }
 
-// MARK: - AppTransitionAnimator
+// MARK: - CATransition
 
-private final class AppTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
-  let style: AppRouter.TransitionStyle
-  let operation: UINavigationController.Operation
-
-  init(style: AppRouter.TransitionStyle, operation: UINavigationController.Operation) {
-    self.style = style
-    self.operation = operation
-  }
-
-  func transitionDuration(using transitionContext: (any UIViewControllerContextTransitioning)?) -> TimeInterval {
-    0.35
-  }
-
-  func animateTransition(using transitionContext: any UIViewControllerContextTransitioning) {
+private extension AppRouter {
+  func applyTransition(_ style: TransitionStyle, isPush: Bool, on nav: UINavigationController) {
+    let transition = CATransition()
+    transition.duration = 0.35
     switch style {
-    case .push:
-      transitionContext.completeTransition(true)
     case .modal:
-      animateModal(transitionContext)
+      transition.type = isPush ? .moveIn : .reveal
+      transition.subtype = isPush ? .fromBottom : .fromTop
+      transition.timingFunction = CAMediaTimingFunction(name: isPush ? .easeOut : .easeIn)
     case .fade:
-      animateFade(transitionContext)
-    }
-  }
-
-  private func animateModal(_ context: any UIViewControllerContextTransitioning) {
-    let container = context.containerView
-    let duration = transitionDuration(using: context)
-
-    switch operation {
+      transition.type = .fade
+      transition.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
     case .push:
-      guard let toView = context.view(forKey: .to) else {
-        context.completeTransition(false)
-        return
-      }
-      container.addSubview(toView)
-      toView.frame = container.bounds.offsetBy(dx: 0, dy: container.bounds.height)
-      UIView.animate(withDuration: duration, delay: 0, options: .curveEaseOut) {
-        toView.frame = container.bounds
-      } completion: {
-        context.completeTransition($0)
-      }
-
-    case .pop:
-      guard let fromView = context.view(forKey: .from),
-            let toView = context.view(forKey: .to) else {
-        context.completeTransition(false)
-        return
-      }
-      container.insertSubview(toView, belowSubview: fromView)
-      UIView.animate(withDuration: duration, delay: 0, options: .curveEaseIn) {
-        fromView.frame = container.bounds.offsetBy(dx: 0, dy: container.bounds.height)
-      } completion: {
-        context.completeTransition($0)
-      }
-
-    default:
-      context.completeTransition(true)
+      break
     }
-  }
-
-  private func animateFade(_ context: any UIViewControllerContextTransitioning) {
-    guard let toView = context.view(forKey: .to) else {
-      context.completeTransition(false)
-      return
-    }
-    let container = context.containerView
-    container.addSubview(toView)
-    toView.alpha = 0
-    UIView.animate(withDuration: transitionDuration(using: context)) {
-      toView.alpha = 1
-    } completion: {
-      context.completeTransition($0)
-    }
+    nav.view.layer.add(transition, forKey: kCATransition)
   }
 }
