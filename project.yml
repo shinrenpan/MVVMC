@@ -25,3 +25,16 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.joe.mvvmc.demo
         TARGETED_DEVICE_FAMILY: "1"
         SWIFT_STRICT_CONCURRENCY: targeted
+
+  MVVMCDemoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - Tests
+    dependencies:
+      - target: MVVMCDemo
+    settings:
+      base:
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_STRICT_CONCURRENCY: targeted
+        GENERATE_INFOPLIST_FILE: YES

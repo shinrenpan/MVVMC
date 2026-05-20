@@ -11,7 +11,7 @@ extension PostFilterViewModel {
 // MARK: - Domain Models
 
 extension PostFilterViewModel {
-  struct User: Identifiable, Sendable {
+  struct User: Identifiable, Equatable, Sendable {
     let id: Int
     var displayName: String { "User \(id)" }
   }
@@ -20,7 +20,7 @@ extension PostFilterViewModel {
 // MARK: - Callback
 
 extension PostFilterViewModel {
-  enum Callback: Sendable {
+  enum Callback: Equatable, Sendable {
     case didSelectUser(User)
     case showAll
     case didCancel

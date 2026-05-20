@@ -2,7 +2,7 @@ enum APIError: Error, Sendable {
   case message(String)
 }
 
-enum APIStatus: Sendable {
+enum APIStatus: Equatable, Sendable {
   case prepare
   case loading
   case success
