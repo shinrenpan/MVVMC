@@ -22,6 +22,7 @@ extension PostFilterViewModel {
 extension PostFilterViewModel {
   enum Callback: Sendable {
     case didSelectUser(User)
+    case showAll
     case didCancel
   }
 }

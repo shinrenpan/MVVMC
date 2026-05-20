@@ -1,7 +1,7 @@
 ---
 name: swift-viewmodel
 description: |
-  Swift ViewModel 架構規範。涉及建立、審查、重構 @Observable ViewModel 時觸發。確保遵守 @Observable + @MainActor + final class 三合一規範，以及 doAction 單一進入點 + Action 分層架構。
+  Swift ViewModel 架構規範。涉及建立、審查、重構 @Observable ViewModel 時觸發。確保遵守 @Observable + @MainActor + final class 三合一規範，以及 doAction 單一進入點。
 ---
 
 # Swift ViewModel Skill
@@ -18,9 +18,7 @@ State 結構請參考 `swift-model` skill 的規範。
 ```swift
 @Observable
 @MainActor
-final class FeatureViewModel: ViewModel {
-    enum Action: Sendable {}
-
+final class FeatureViewModel {
     var state: State = .init()
 
     func doAction(_ action: Action) async {
@@ -37,6 +35,7 @@ final class FeatureViewModel: ViewModel {
 
 **強制宣告：**
 - ✅ `@Observable` / `@MainActor` / `final class`
+- ❌ 禁止繼承任何 ViewModel protocol
 - ❌ 禁止 `ObservableObject` / `@Published`
 
 **doAction 規範：**
@@ -45,50 +44,29 @@ final class FeatureViewModel: ViewModel {
 - 💡 Action 種類多時，建議每層各自一個 `private extension`；單層或簡單的 ViewModel 可以合併
 - 💡 handle 內以語意判斷是否拆出獨立 private func；邏輯簡單且無命名價值時直接寫在 case 內即可
 
-```swift
-private extension FeatureViewModel {
-    enum APIRequest: Sendable {
-        case getCart
-        case applyCoupon(Int)
-    }
-
-    func handleAPIRequest(_ action: APIRequest) async {
-        switch action {
-        case .getCart:
-            await handleGetCart()
-        case let .applyCoupon(code):
-            await handleApplyCoupon(code)
-        }
-    }
-
-    func handleGetCart() async { ... }
-    func handleApplyCoupon(_ code: Int) async { ... }
-}
-```
-
-**onAction / onCallback：**
-
-`ViewModel` protocol 透過 `extension` 提供空實作，使兩者成為 optional pattern——只有 HostController 有監聽需求時才覆寫。
-
-- ✅ 只有在 HostController 需要時才實作 onAction / onCallback
-- ✅ onAction / onCallback 必須標注 `@ObservationIgnored`
-- ✅ 非 UI 相關的 Property 必須標注 `@ObservationIgnored`
-
-> `@Observable` 追蹤所有 stored property；closure 或非 UI 狀態若未標注 `@ObservationIgnored`，會觸發不必要的 View re-render。
-
-**Action 命名：**
+**Action 命名（不強制全部實作，依需求取捨）：**
 
 | Action 種類 | 命名 | 說明 |
 |---|---|---|
 | UI 事件 | `ViewAction` | 描述「UI 發生了什麼」（what happened） |
-| 導航意圖 | `Router` | 描述「要去哪」（where to go） |
 | API 請求 | `APIRequest` | 發起網路請求 |
-| API 回應 | `APIResponse` | 處理網路回應 |
-| 子層回調 | `Callback` | 來自子 ViewModel 的回傳 |
-
-> ViewAction 與 Router 並非互斥：ViewModel 在 `handleViewAction` 處理完業務邏輯後，可再 dispatch `.router(...)` 觸發導航。
+| API 回應 | `APIResponse` | 處理網路回應，更新 state |
 
 所有 Action enum 需為 `Sendable`，依情境放在合適的 `extension` 下。
+
+**onRoute / onCallback：**
+
+- `onRoute` — HostController 設定，接收導航意圖後執行導航
+  - 型別：`(@MainActor (Router) -> Void)?`，同步
+  - ViewModel 呼叫：`onRoute?(.toDetail(post))`（不經過 doAction dispatch）
+- `onCallback` — 父 HostController 設定，接收跨 VC 回傳值
+  - 型別：`(@MainActor (Callback) async -> Void)?`，async（避免呼叫端需要包 Task）
+  - ViewModel 呼叫：`await onCallback?(.didSelectUser(user))`（在 doAction 內 await）
+- ✅ 兩者只在有實際需求時才宣告
+- ✅ 必須標注 `@ObservationIgnored`
+- ✅ 非 UI 相關的 property 一律標注 `@ObservationIgnored`
+
+> `@Observable` 追蹤所有 stored property；closure 或非 UI 狀態若未標注 `@ObservationIgnored`，會觸發不必要的 View re-render。
 
 ---
 

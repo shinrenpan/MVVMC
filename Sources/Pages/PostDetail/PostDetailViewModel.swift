@@ -5,7 +5,7 @@ import Observation
 final class PostDetailViewModel {
   var state: State
 
-  init(post: PostListViewModel.Post) {
+  init(post: Post) {
     state = .init(post: post)
   }
 }

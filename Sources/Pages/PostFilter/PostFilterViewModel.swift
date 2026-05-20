@@ -24,6 +24,7 @@ final class PostFilterViewModel {
 extension PostFilterViewModel {
   enum ViewAction: Sendable {
     case didSelectUser(User)
+    case showAll
     case cancel
   }
 
@@ -31,6 +32,8 @@ extension PostFilterViewModel {
     switch action {
     case let .didSelectUser(user):
       await onCallback?(.didSelectUser(user))
+    case .showAll:
+      await onCallback?(.showAll)
     case .cancel:
       await onCallback?(.didCancel)
     }

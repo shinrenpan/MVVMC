@@ -14,6 +14,8 @@ struct PostListView: View {
         List(viewModel.state.posts) { post in
           PostRow(post: post) {
             Task { await viewModel.doAction(.view(.postDidTap(post))) }
+          } onUserTap: {
+            Task { await viewModel.doAction(.view(.userDidTap(post.userId))) }
           }
         }
       }
@@ -36,9 +38,10 @@ private extension PostListView {
   struct PostRow: View {
     let post: PostListViewModel.Post
     let onTap: @MainActor () -> Void
+    let onUserTap: @MainActor () -> Void
 
     var body: some View {
-      Button(action: onTap) {
+      VStack(alignment: .leading, spacing: 4) {
         VStack(alignment: .leading, spacing: 4) {
           Text(post.title)
             .font(.headline)
@@ -48,9 +51,18 @@ private extension PostListView {
             .foregroundStyle(.secondary)
             .lineLimit(2)
         }
-        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture { onTap() }
+
+        Button("User \(post.userId)") {
+          onUserTap()
+        }
+        .font(.caption)
+        .foregroundStyle(Color.accentColor)
+        .buttonStyle(.plain)
       }
-      .buttonStyle(.plain)
+      .padding(.vertical, 4)
     }
   }
 }

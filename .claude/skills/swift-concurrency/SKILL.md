@@ -74,7 +74,7 @@ let result = await Task.detached(priority: .userInitiated) {
 ```swift
 @Observable
 @MainActor
-final class FeatureViewModel: ViewModel {
+final class FeatureViewModel {
 
     // ✅ 純運算標注 nonisolated，不占用 MainActor
     nonisolated func toDomains(_ dtos: [DTO]) -> [Domain] {

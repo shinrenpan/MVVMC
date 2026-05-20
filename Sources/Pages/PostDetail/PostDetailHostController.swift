@@ -4,7 +4,8 @@ import SwiftUI
 final class PostDetailHostController: UIHostingController<PostDetailView> {
   private let viewModel: PostDetailViewModel
 
-  init(post: PostListViewModel.Post) {
+  init(id: Int, title: String, body: String) {
+    let post = PostDetailViewModel.Post(id: id, title: title, body: body)
     self.viewModel = PostDetailViewModel(post: post)
     super.init(rootView: PostDetailView(viewModel: viewModel))
   }

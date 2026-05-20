@@ -4,20 +4,17 @@
 
 ---
 
-## Template 1：最簡版
+## Template 1：最簡版（無 Router）
 
 ```swift
 @MainActor
 final class FeatureHostController: UIHostingController<FeatureView> {
 
-  // MARK: - ViewModel
-  let viewModel: FeatureViewModel
+  private let viewModel: FeatureViewModel
 
-  // MARK: - Init
   init(viewModel: FeatureViewModel) {
     self.viewModel = viewModel
-    let view = FeatureView(viewModel: viewModel)
-    super.init(rootView: view)
+    super.init(rootView: FeatureView(viewModel: viewModel))
   }
 
   @available(*, unavailable)
@@ -29,61 +26,38 @@ final class FeatureHostController: UIHostingController<FeatureView> {
 
 ---
 
-## Template 2：帶 Dependency
+## Template 2：帶 Router
 
 ```swift
 @MainActor
 final class FeatureHostController: UIHostingController<FeatureView> {
 
-  // MARK: - ViewModel
-  let viewModel: FeatureViewModel
+  private let viewModel: FeatureViewModel
 
-  // MARK: - Init
-  init(product: Product) {
-    let viewModel = FeatureViewModel(product: product)
+  init(viewModel: FeatureViewModel) {
     self.viewModel = viewModel
-    let view = FeatureView(viewModel: viewModel)
-    super.init(rootView: view)
+    super.init(rootView: FeatureView(viewModel: viewModel))
   }
 
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-}
-```
 
----
-
-## Template 3: 有 Router
-
-```swift
-// MARK: - Lifecycle
-extension FeatureHostController {
   override func viewDidLoad() {
     super.viewDidLoad()
-    listenSelfAction()
+    viewModel.onRoute = { [weak self] router in
+      self?.handleRouter(router)
+    }
   }
 }
 
-// MARK: - Router
 private extension FeatureHostController {
-  func listenSelfAction() {
-    viewModel.onAction = { [weak self] action in
-      switch action {
-      case .apiRequest, .apiResponse, .view:
-        break
-
-      case let .router(router):
-        self?.handleSelfRouter(router)
-      }
-    }
-  }
-
-  func handleSelfRouter(_ router: FeatureViewModel.Router) {
+  func handleRouter(_ router: FeatureViewModel.Router) {
     switch router {
-    case .toDetail:
-      ...
+    case let .toDetail(item):
+      let detailVC = DetailHostController(viewModel: .init(item: item))
+      navigationController?.pushViewController(detailVC, animated: true)
     }
   }
 }
@@ -91,216 +65,59 @@ private extension FeatureHostController {
 
 ---
 
-## Template 4: 有 Callback
-
-```swift
-// MARK: - Lifecycle
-extension FeatureHostController {
-  override func viewDidLoad() {
-    super.viewDidLoad()
-    listenSelfAction()
-  }
-}
-
-// MARK: - Router
-private extension FeatureHostController {
-  func listenSelfAction() {
-    viewModel.onAction = { [weak self] action in
-      switch action {
-      case .apiRequest, .apiResponse, .view:
-        break
-
-      case let .router(router):
-        self?.handleSelfRouter(router)
-      }
-    }
-  }
-
-  func handleSelfRouter(_ router: FeatureViewModel.Router) {
-    switch router {
-    case .toDetail:
-      let detail = DetailHostController(viewModel: .init())
-      listenDetailCallback(detail.viewModel)
-      navigationController?.pushViewController(detail, animated: true)
-    }
-  }
-}
-
-// MARK: - Detail Callback
-private extension FeatureHostController {
-  func listenDetailCallback(_ viewModel: DetailViewModel) {
-    viewModel.onCallback = { [weak self] action in
-      switch action {
-      case let .callback(callback):
-        self?.handleDetailCallback(callback)
-      }
-    }
-  }
-
-  func handleDetailCallback(_ callback: DetailViewModel.Callback) {
-    switch callback {
-      ...
-    }
-  }
-}
-```
-
----
-
-## Template 5: 有 Task
-`HostTaskLifecycleManaged` 參考 `references/host-lifecycle-management.md`
+## Template 3：帶 Router + Callback（Modal）
 
 ```swift
 @MainActor
-final class FeatureHostController: UIHostingController<FeatureView>, HostTaskLifecycleManaged {
+final class PostListHostController: UIHostingController<PostListView> {
 
-  // MARK: - ViewModel
-  let viewModel: FeatureViewModel
+  private let viewModel: PostListViewModel
 
-  // MARK: - Task
-  let taskManager: TaskLifecycleManager<FeatureViewModel>
-
-  // MARK: - Init
-  init(viewModel: FeatureViewModel) {
+  init(viewModel: PostListViewModel) {
     self.viewModel = viewModel
-    self.taskManager = TaskLifecycleManager(viewModel: viewModel)
-    let view = FeatureView(viewModel: viewModel)
-    super.init(rootView: view)
+    super.init(rootView: PostListView(viewModel: viewModel))
   }
 
   @available(*, unavailable)
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-}
-
-// MARK: - Lifecycle
-extension FeatureHostController {
-
-  // viewWillAppear：適用於每次出現都需要刷新的場景
-  // viewDidLoad 內的 manageTask：適用於只執行一次的初始化場景
-  override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(animated)
-    manageTask(tag: "onAppear", task: Task {
-      await viewModel.doAction(.view(.onAppear))
-    })
-  }
-
-  override func viewDidDisappear(_ animated: Bool) {
-    super.viewDidDisappear(animated)
-    cancelTasksAndCleanup()
-  }
-}
-```
-
----
-
-## Template 6: 組合場景（Router + Callback + Task）
-
-真實 HostController 常同時具備三種模式，以下示範正確的組合結構。
-
-```swift
-@MainActor
-final class FeatureHostController: UIHostingController<FeatureView>, HostTaskLifecycleManaged {
-
-  // MARK: - ViewModel
-  let viewModel: FeatureViewModel
-
-  // MARK: - Task
-  let taskManager: TaskLifecycleManager<FeatureViewModel>
-
-  // MARK: - Init
-  init(viewModel: FeatureViewModel) {
-    self.viewModel = viewModel
-    self.taskManager = TaskLifecycleManager(viewModel: viewModel)
-    let view = FeatureView(viewModel: viewModel)
-    super.init(rootView: view)
-  }
-
-  @available(*, unavailable)
-  required init?(coder: NSCoder) {
-    fatalError("init(coder:) has not been implemented")
-  }
-}
-
-// MARK: - Lifecycle
-extension FeatureHostController {
 
   override func viewDidLoad() {
     super.viewDidLoad()
-    listenSelfAction()
-  }
-
-  override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(animated)
-    manageTask(tag: "onAppear", task: Task {
-      await viewModel.doAction(.view(.onAppear))
-    })
-  }
-
-  override func viewDidDisappear(_ animated: Bool) {
-    super.viewDidDisappear(animated)
-    cancelTasksAndCleanup()   // 同時取消 task + 清空 onAction / onCallback
+    viewModel.onRoute = { [weak self] router in
+      self?.handleRouter(router)
+    }
   }
 }
 
-// MARK: - Router
-private extension FeatureHostController {
-
-  func listenSelfAction() {
-    viewModel.onAction = { [weak self] action in
-      switch action {
-      case .apiRequest, .apiResponse, .view:
-        break
-
-      case let .router(router):
-        self?.handleSelfRouter(router)
-      }
-    }
-  }
-
-  func handleSelfRouter(_ router: FeatureViewModel.Router) {
+private extension PostListHostController {
+  func handleRouter(_ router: PostListViewModel.Router) {
     switch router {
-    case .toDetail:
-      let detail = DetailHostController(viewModel: .init())
-      listenDetailCallback(detail.viewModel)
-      navigationController?.pushViewController(detail, animated: true)
+    case let .toDetail(post):
+      let detailVC = PostDetailHostController(viewModel: .init(post: post))
+      navigationController?.pushViewController(detailVC, animated: true)
 
-    case .toOther:
-      navigateToOther()
-    }
-  }
-
-  func navigateToOther() {
-    ...
-  }
-}
-
-// MARK: - Detail Callback
-private extension FeatureHostController {
-
-  func listenDetailCallback(_ viewModel: DetailViewModel) {
-    viewModel.onCallback = { [weak self] action in
-      switch action {
-      case let .callback(callback):
-        self?.handleDetailCallback(callback)
+    case .toFilter:
+      let filterVM = PostFilterViewModel()
+      filterVM.onCallback = { [weak self] callback in
+        await self?.handleFilterCallback(callback)
       }
+      let filterVC = PostFilterHostController(viewModel: filterVM)
+      present(filterVC, animated: true)
     }
   }
 
-  func handleDetailCallback(_ callback: DetailViewModel.Callback) {
+  func handleFilterCallback(_ callback: PostFilterViewModel.Callback) async {
     switch callback {
-    case .didFinish:
-      ...
+    case let .didSelectUser(user):
+      await viewModel.doAction(.view(.didFilterUser(user.id)))
+    case .didCancel:
+      break
     }
   }
 }
 ```
-
-> **組合重點**：
-> - `cancelTasksAndCleanup()` 在 `viewDidDisappear` 會一併清空 `onAction` / `onCallback`，不需手動設 nil。
-> - `listenSelfAction()` 永遠在 `viewDidLoad`，與是否有 Task 無關。
-> - 每個 child Callback 各自一個 `private extension`，Router 本身也是獨立的 `private extension`。
 
 ---
 
@@ -309,15 +126,11 @@ private extension FeatureHostController {
 | ❌ 錯誤寫法 | ✅ 正確寫法 | 原因 |
 |------------|------------|------|
 | 缺少 `@MainActor` | `@MainActor final class ...` | SwiftUI + UIKit 橋接必須在主執行緒 |
-| 沒有監聽 `onAction` | `viewDidLoad` 內呼叫 `listenSelfAction()` | Router 需要 HostController 接管 |
-| closure 未用 `[weak self]` | `{ [weak self] action in` | 避免 HostController 與 ViewModel 循環引用 |
-| ViewModel 直接做 `push` | 透過 `onAction?(.router(...))` 轉發 | ViewModel 不應持有 UIKit 依賴 |
-| 導航邏輯散落在 `listenSelfAction` | 集中在獨立的 `handleSelfRouter(_:)` | 單一職責，易於維護 |
+| `viewModel` 非 `private let` | `private let viewModel` | HostController 持有，外部無需存取 |
+| closure 未用 `[weak self]` | `{ [weak self] router in` | 避免循環引用 |
+| ViewModel 直接做 `push` | 透過 `onRoute?(.toXxx)` 轉發 | ViewModel 不應持有 UIKit 依賴 |
+| present 前未設定 `onCallback` | 設定後再 present | present 後子 VC 可能立即觸發 callback |
 | `required init?(coder:)` 未標 unavailable | 加上 `@available(*, unavailable)` | 防止 Storyboard 誤用 |
-| 有 Task 時未實作 `cancelTasksAndCleanup` | `viewDidDisappear` 實作 | HostController retain cycle |
-| `taskManager` 宣告為 `lazy var` | `let taskManager`，在 `init` 建立 | `@MainActor lazy var` 有 Swift Concurrency 隔離警告，且初始化時機不可控 |
-| Callback listener 寫在同一個 extension | 每個 child 各自一個 `private extension` | 多個 callback 時易混淆，單一職責 |
-| child 建立後先 push 再 listen callback | listen 必須在 push / present 之前 | push 後 child 可能立即觸發 callback，此時 listener 尚未設定，回調遺失 |
-| 有 Router 時，因為加了 Task 就省略 `listenSelfAction` | 有 Router 時，無論是否有 Task，`viewDidLoad` 都要呼叫 `listenSelfAction` | Task 與 Router 監聽是獨立的，互不影響 |
-
----
+| `onCallback` closure 包 `Task` | `onCallback` 是 async，直接 `await` | async closure 不需要包 Task |
+| `viewDidDisappear` 設 `onRoute = nil` | 不需要 | ViewModel 由 HostController 持有，`[weak self]` 已足夠 |
+| HostController 啟動 Task 觸發 ViewModel | View 的 `.task` 負責 Lifecycle | HostController 是純 Router |

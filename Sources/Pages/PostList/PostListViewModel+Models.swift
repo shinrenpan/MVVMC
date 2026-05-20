@@ -20,6 +20,7 @@ extension PostListViewModel {
 extension PostListViewModel {
   struct Post: Identifiable, Sendable {
     let id: Int
+    let userId: Int
     var title: String
     var body: String
   }
@@ -35,7 +36,7 @@ extension PostListViewModel {
     var body: String
 
     func toDomain() -> Post {
-      .init(id: id, title: title, body: body)
+      .init(id: id, userId: user_id, title: title, body: body)
     }
   }
 }

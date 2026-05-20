@@ -29,8 +29,10 @@ extension PostListViewModel {
   enum ViewAction: Sendable {
     case isFirstAppear
     case postDidTap(Post)
+    case userDidTap(Int)
     case showFilter
     case didFilterUser(Int)
+    case clearFilter
   }
 
   private func handleViewAction(_ action: ViewAction) async {
@@ -41,12 +43,18 @@ extension PostListViewModel {
       await doAction(.apiRequest(.fetchPosts(userId: nil)))
     case let .postDidTap(post):
       onRoute?(.toDetail(post))
+    case let .userDidTap(userId):
+      onRoute?(.toUserDetail(userId))
     case .showFilter:
       onRoute?(.toFilter)
     case let .didFilterUser(userId):
       state.filterUserId = userId
       state.api.fetchPosts = .prepare
       await doAction(.apiRequest(.fetchPosts(userId: userId)))
+    case .clearFilter:
+      state.filterUserId = nil
+      state.api.fetchPosts = .prepare
+      await doAction(.apiRequest(.fetchPosts(userId: nil)))
     }
   }
 }
@@ -56,6 +64,7 @@ extension PostListViewModel {
 extension PostListViewModel {
   enum Router: Sendable {
     case toDetail(Post)
+    case toUserDetail(Int)
     case toFilter
   }
 }
