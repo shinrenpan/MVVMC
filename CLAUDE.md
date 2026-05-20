@@ -194,21 +194,24 @@ API 請求:
 
 ## AppRouter
 
-`AppRouter.shared` 是 App 唯一的導航入口，底層基於 `UINavigationController`。所有導航（包含視覺上的 modal / sheet）都是 push / pop，不使用 `present` / `dismiss`。
+`AppRouter.shared` 是 App 唯一的導航入口。push / pop 底層基於 `UINavigationController`；sheet 使用系統 `present` / `dismiss`，但介面一致，HostController 一律呼叫 `AppRouter.shared.back()`，不直接呼叫 `dismiss`。
 
 - **無狀態**：不持有任何 stored property，nav controller 從 `source.navigationController` 動態取得
-- **assertionFailure**：`source.navigationController` 為 nil 代表 developer 架構設定錯誤（root 不是 `UINavigationController`），Debug 下立即崩潰提示
-- **轉場動畫**：透過 `UINavigationControllerDelegate` 實作，支援三種樣式
+- **assertionFailure**：`source.navigationController` 為 nil 代表 developer 架構設定錯誤，Debug 下立即崩潰提示
+- **轉場動畫**：透過 `UINavigationControllerDelegate` 實作，支援 `.modal`（由下往上）/ `.fade`（淡入淡出）
 
 ```swift
 // 前進（預設 push，原生右滑）
 AppRouter.shared.to(DetailHostController(...), from: self)
 
 // 前進（自訂轉場）
-AppRouter.shared.to(FilterHostController(...), from: self, style: .modal)  // 由下往上
-AppRouter.shared.to(SomeHostController(...), from: self, style: .fade)     // 淡入淡出
+AppRouter.shared.to(FilterHostController(...), from: self, style: .modal)
+AppRouter.shared.to(SomeHostController(...), from: self, style: .fade)
 
-// 後退
+// Sheet（系統 pageSheet，destination 自動包 UINavigationController）
+AppRouter.shared.sheet(SettingsHostController(...), from: self)
+
+// 後退（自動判斷：sheet → dismiss，其他 → pop）
 AppRouter.shared.back(from: self)
 
 // 後退到指定 VC

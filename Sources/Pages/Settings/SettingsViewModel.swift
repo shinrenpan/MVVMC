@@ -2,7 +2,7 @@ import Observation
 
 @MainActor
 @Observable
-final class ProfileViewModel {
+final class SettingsViewModel {
   enum Action: Sendable {
     case view(ViewAction)
   }
@@ -21,27 +21,23 @@ final class ProfileViewModel {
 
 // MARK: - View Action
 
-extension ProfileViewModel {
+extension SettingsViewModel {
   enum ViewAction: Sendable {
-    case toPosts
-    case toSettings
+    case close
   }
 
   private func handleViewAction(_ action: ViewAction) async {
     switch action {
-    case .toPosts:
-      onRoute?(.toPosts)
-    case .toSettings:
-      onRoute?(.toSettings)
+    case .close:
+      onRoute?(.close)
     }
   }
 }
 
 // MARK: - Router
 
-extension ProfileViewModel {
+extension SettingsViewModel {
   enum Router: Sendable {
-    case toPosts
-    case toSettings
+    case close
   }
 }

@@ -12,6 +12,9 @@ struct ProfileView: View {
         Button("前往文章列表") {
           Task { await viewModel.doAction(.view(.toPosts)) }
         }
+        Button("設定") {
+          Task { await viewModel.doAction(.view(.toSettings)) }
+        }
       }
     }
     .navigationTitle("Profile")

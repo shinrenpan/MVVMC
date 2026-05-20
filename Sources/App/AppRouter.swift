@@ -7,6 +7,7 @@ extension AppRouter {
     case push
     case modal
     case fade
+    case sheet
   }
 }
 
@@ -52,11 +53,16 @@ final class AppRouter: NSObject {
   }
 
   func back(from source: UIViewController, animated: Bool = true) {
-    guard let nav = source.navigationController else {
-      assertionFailure("AppRouter.back(): source VC 沒有 navigationController")
-      return
+    switch source.appTransitionStyle {
+    case .sheet:
+      source.dismiss(animated: animated)
+    default:
+      guard let nav = source.navigationController else {
+        assertionFailure("AppRouter.back(): source VC 沒有 navigationController")
+        return
+      }
+      nav.popViewController(animated: animated)
     }
-    nav.popViewController(animated: animated)
   }
 
   func backTo(_ destination: UIViewController, from source: UIViewController, animated: Bool = true) {
@@ -73,6 +79,13 @@ final class AppRouter: NSObject {
       return
     }
     nav.popToRootViewController(animated: animated)
+  }
+
+  func sheet(_ destination: UIViewController, from source: UIViewController, animated: Bool = true) {
+    destination.appTransitionStyle = .sheet
+    let nav = UINavigationController(rootViewController: destination)
+    nav.modalPresentationStyle = .pageSheet
+    source.present(nav, animated: animated)
   }
 
   func tab(_ index: Int, from source: UIViewController) {
@@ -94,7 +107,7 @@ extension AppRouter: UINavigationControllerDelegate {
     to toVC: UIViewController
   ) -> (any UIViewControllerAnimatedTransitioning)? {
     let style = operation == .push ? toVC.appTransitionStyle : fromVC.appTransitionStyle
-    guard style != .push else { return nil }
+    guard style != .push, style != .sheet else { return nil }
     return AppTransitionAnimator(style: style, isPush: operation == .push)
   }
 }
@@ -125,7 +138,7 @@ private final class AppTransitionAnimator: NSObject, UIViewControllerAnimatedTra
     switch style {
     case .modal: animateModal(transitionContext)
     case .fade:  animateFade(transitionContext)
-    case .push:  transitionContext.completeTransition(true)
+    case .push, .sheet: transitionContext.completeTransition(true)
     }
   }
 }

@@ -28,6 +28,8 @@ private extension ProfileHostController {
     switch router {
     case .toPosts:
       AppRouter.shared.tab(0, from: self)
+    case .toSettings:
+      AppRouter.shared.sheet(SettingsHostController(viewModel: .init()), from: self)
     }
   }
 }
