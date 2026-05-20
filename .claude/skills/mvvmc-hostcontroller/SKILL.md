@@ -15,6 +15,8 @@ ViewModel 結構（含 Router）請參考 `mvvmc-viewmodel` skill 的規範。
 
 ## 強制基礎結構
 
+### 標準：外部傳入 ViewModel
+
 ```swift
 @MainActor
 final class FeatureHostController: UIHostingController<FeatureView> {
@@ -32,6 +34,29 @@ final class FeatureHostController: UIHostingController<FeatureView> {
   }
 }
 ```
+
+### 變體：傳入原始參數，內部建立 ViewModel
+
+適用於「跨 feature 橋接」情境，呼叫端（父 HostController）傳入 primitive，C 層負責組裝 ViewModel：
+
+```swift
+@MainActor
+final class PostDetailHostController: UIHostingController<PostDetailView> {
+
+  private let viewModel: PostDetailViewModel
+
+  init(id: Int, title: String, body: String) {
+    let post = PostDetailViewModel.Post(id: id, title: title, body: body)
+    self.viewModel = PostDetailViewModel(post: post)
+    super.init(rootView: PostDetailView(viewModel: viewModel))
+  }
+
+  @available(*, unavailable)
+  required init?(coder: NSCoder) { fatalError() }
+}
+```
+
+優點：父 HostController 不需要知道子 ViewModel 的 Domain Model 型別，跨 feature 邊界以 primitive 傳遞，避免型別耦合。
 
 ---
 
