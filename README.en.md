@@ -19,11 +19,11 @@ MVVMC extends MVVM with a **HostController (C layer)** to solve the separation-o
 
 ```mermaid
 graph LR
-    M["M\nFeatureViewModel+Models\n─\nState\nDomain Models\nDTOs"]
-    VM["VM\nFeatureViewModel\n─\n@Observable @MainActor\nSingle doAction entry point"]
-    V["V\nFeatureView\n─\nPure SwiftUI\nZero navigation · Zero business logic"]
-    C["C\nFeatureHostController\n─\nUIHostingController\nSole routing owner"]
-    AR(["AppRouter.shared\nSingle navigation entry point"])
+    M["M<br/>FeatureViewModel+Models<br/>-<br/>State<br/>Domain Models<br/>DTOs"]
+    VM["VM<br/>FeatureViewModel<br/>-<br/>@Observable @MainActor<br/>Single doAction entry point"]
+    V["V<br/>FeatureView<br/>-<br/>Pure SwiftUI<br/>Zero navigation · Zero business logic"]
+    C["C<br/>FeatureHostController<br/>-<br/>UIHostingController<br/>Sole routing owner"]
+    AR(["AppRouter.shared<br/>Single navigation entry point"])
 
     M --> VM
     VM -->|"@Observable drives"| V
@@ -36,18 +36,18 @@ graph LR
 
 ```mermaid
 flowchart TD
-    User([User Interaction]) --> V["View\nTask { await doAction(.view) }"]
-    V --> VM["ViewModel\ndoAction dispatch"]
+    User([User Interaction]) --> V["View<br/>Task { await doAction(.view) }"]
+    V --> VM["ViewModel<br/>doAction dispatch"]
     VM -->|".apiRequest"| API["API"]
     API -->|".apiResponse"| VM
     VM -.->|"Update state, View re-renders automatically"| V
 
     VM -->|"onRoute"| HC["HostController"]
-    HC -->|"navigate"| AR["AppRouter.shared\nto / back / sheet / deeplink"]
+    HC -->|"navigate"| AR["AppRouter.shared<br/>to / back / sheet / deeplink"]
     AR --> Dest([Destination Screen])
 
-    subgraph Cross-VC Callback
-        Child["Child ViewModel\nawait onCallback?(.result)"] --> Parent["Parent HostController\nback + handle result"]
+    subgraph "Cross-VC Callback"
+        Child["Child ViewModel<br/>await onCallback?(.result)"] --> Parent["Parent HostController<br/>back + handle result"]
     end
 
     VM -.->|callback| Child
