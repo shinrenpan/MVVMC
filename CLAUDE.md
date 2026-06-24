@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A personal MVVMC architecture guideline, continuously evolved through discussion, refinement, and demo validation. MVVMC is a custom iOS architecture pattern designed for personal and team use.
 
+> **Related repo**: [MVVMC-Skip](https://github.com/shinrenpan/MVVMC-Skip) is a cross-platform variant via Skip.tools. It evolves the C layer (HostController → SwiftUI Router) to drop the UIKit dependency. The rules in this file describe the **UIKit-nav (pure iOS) variant** of MVVMC; MVVMC-Skip has its own CLAUDE.md with the Plan E (pure-SwiftUI) variant rules.
+
 ---
 
 ## Architecture: MVVMC
