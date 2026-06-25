@@ -6,13 +6,6 @@
 
 MVVMC extends MVVM with a **HostController (C layer)** to solve the separation-of-concerns problem when SwiftUI runs inside a UIKit navigation environment. Each of the four layers has a strictly defined responsibility — changes in one layer don't affect the others.
 
-> 🧪 **Planned cross-platform & architecture variants** (all work-in-progress):
-> - **MVVMC-Skip** — MVVMC + `#if SKIP` for Android (keeps UIKit HostController)
-> - **MVVMR** — Pure-SwiftUI evolution of MVVMC, C layer replaced by SwiftUI Router
-> - **MVVMR-Skip** — MVVMR + [Skip.tools](https://skip.tools), single SwiftUI codebase for iOS + Android
->
-> Links will be added once each is published.
-
 ---
 
 ## Architecture

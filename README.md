@@ -6,13 +6,6 @@
 
 MVVMC 在 MVVM 基礎上加入 **HostController（C 層）**，解決 SwiftUI 在 UIKit 導航環境下的責任分離問題。四層職責嚴格分離，任一層的改動不影響其他層。
 
-> 🧪 **跨平台與架構演化規劃**：MVVMC 之外計畫衍生三個 repo，皆 work-in-progress：
-> - **MVVMC-Skip** — 基於 MVVMC 加上 `#if SKIP` 跨平台到 Android（保留 UIKit HostController）
-> - **MVVMR** — MVVMC 的純 SwiftUI 演化版，C 層改為 SwiftUI Router
-> - **MVVMR-Skip** — MVVMR + [Skip.tools](https://skip.tools) 跨平台，純 SwiftUI 單一架構支援 iOS + Android
->
-> 完成後會補上對應連結。
-
 ---
 
 ## 四層架構
