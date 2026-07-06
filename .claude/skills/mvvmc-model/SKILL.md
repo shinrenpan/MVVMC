@@ -117,6 +117,30 @@ extension FeatureViewModel {
 
 ---
 
+## Mock 資料
+
+Mock 是 Domain Model 的延伸，供 Preview 與測試使用，因此歸屬 M 層。獨立成 `FeatureNameMocks.swift`，**整檔以 `#if DEBUG` 包裹**，正式 build 不含這些代碼。
+
+```swift
+// FeatureNameMocks.swift
+#if DEBUG
+extension FeatureViewModel.Item {
+  static let mock: Self = .init(id: "1", name: "Sample")
+  static let mocks: [Self] = [
+    .init(id: "1", name: "Sample A"),
+    .init(id: "2", name: "Sample B"),
+  ]
+}
+#endif
+```
+
+- ✅ `static let mock`（單筆）/ `static let mocks`（多筆）掛在 **Domain Model** 上，不掛在 State 或 DTO
+- ✅ 整個 `FeatureNameMocks.swift` 用 `#if DEBUG` 包住，可選檔案
+- ✅ Preview 端透過 `state.items = .mocks` 注入（Preview 寫法屬 V 層，見 `mvvmc-view`）
+- ❌ 禁止 mock 出現在非 `#if DEBUG` 區塊
+
+---
+
 ## 三種任務模式
 
 ### 模式 A：新建 Models 檔案

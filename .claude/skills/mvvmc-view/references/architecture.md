@@ -831,3 +831,32 @@ struct UserSection: View {
 ```
 
 Config 定義在「被呼叫的層」，由「呼叫方」負責組裝。各層皆適用，非強制。
+
+---
+
+## 12. Preview
+
+Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是建立 ViewModel、注入 mock state，再回傳 View——完全比照正式運行時 HostController 注入 ViewModel 的路徑。
+
+```swift
+#if DEBUG
+#Preview("列表有資料") {
+    let vm = FeatureViewModel()
+    vm.state.items = .mocks       // .mocks 由 M 層 FeatureNameMocks.swift 提供
+    return FeatureView(viewModel: vm)
+}
+
+#Preview("空狀態") {
+    FeatureView(viewModel: FeatureViewModel())
+}
+#endif
+```
+
+### 規則
+
+- ✅ 整段 `#Preview` 用 `#if DEBUG` 包住
+- ✅ 透過 `vm.state.xxx = .mock/.mocks` 注入狀態，**不是**在 Preview 裡呼叫 API 或 `doAction`
+- ✅ mock 資料來源是 M 層的 `.mock` / `.mocks`（見 `mvvmc-model` 的 Mock 規範），Preview 不自己造資料
+- ✅ ViewModel 用 `let` 注入 View，與 HostController 的注入路徑一致
+- ✅ 多個 `#Preview` 覆蓋不同狀態（有資料 / 空 / 載入中 / 錯誤）時，各給具描述性的名稱
+- ❌ 禁止在 Preview 內觸發真實網路請求
