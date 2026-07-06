@@ -104,31 +104,7 @@ func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
 }
 ```
 
-推播 payload 約定：`{ "deeplink": "myapp://posts/1" }`，`Deeplink(url:)` 直接複用。
-
----
-
-## MCP Server
-
-本 repo 附帶 MCP server，讓 Claude Code 在任何專案都能取得 MVVMC 規範。
-
-### 安裝
-
-```bash
-git clone https://github.com/shinrenpan/MVVMC
-cd MVVMC/mcp-server
-npm install && npm run build
-claude mcp add mvvmc -s user node "$PWD/dist/index.js"
-```
-
-### 提供的 Tools
-
-| Tool | 說明 |
-|---|---|
-| `get_architecture_overview` | 整體架構與資料流 |
-| `get_layer_guide` | 指定層（M / VM / V / C）規範與範例 |
-| `get_approuter_guide` | AppRouter 完整 API |
-| `get_deeplink_guide` | Deeplink + Push Notification 模式 |
+推播 payload 約定：`{ "deeplink": "mvvmc://posts/1" }`，`Deeplink(url:)` 直接複用。
 
 ---
 
@@ -137,7 +113,6 @@ claude mcp add mvvmc -s user node "$PWD/dist/index.js"
 | 目錄 | 用途 |
 |---|---|
 | `Sources/` | Demo 實作（可跑的 Xcode 專案） |
-| `mcp-server/` | MCP server 原始碼 |
 | `.claude/skills/` | Claude Code skill 規範 |
 
 ### Demo 專案

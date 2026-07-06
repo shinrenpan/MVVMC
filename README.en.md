@@ -104,31 +104,7 @@ func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
 }
 ```
 
-Push notification payload convention: `{ "deeplink": "myapp://posts/1" }` — reuses `Deeplink(url:)` directly, no extra parsing logic needed.
-
----
-
-## MCP Server
-
-This repo ships an MCP server so Claude Code can access MVVMC guidelines from any project.
-
-### Setup
-
-```bash
-git clone https://github.com/shinrenpan/MVVMC
-cd MVVMC/mcp-server
-npm install && npm run build
-claude mcp add mvvmc -s user node "$PWD/dist/index.js"
-```
-
-### Available Tools
-
-| Tool | Description |
-|---|---|
-| `get_architecture_overview` | Overall architecture and data flow |
-| `get_layer_guide` | Guidelines and examples for a specific layer (M / VM / V / C) |
-| `get_approuter_guide` | Full AppRouter API reference |
-| `get_deeplink_guide` | Deeplink + Push Notification patterns |
+Push notification payload convention: `{ "deeplink": "mvvmc://posts/1" }` — reuses `Deeplink(url:)` directly, no extra parsing logic needed.
 
 ---
 
@@ -137,7 +113,6 @@ claude mcp add mvvmc -s user node "$PWD/dist/index.js"
 | Directory | Purpose |
 |---|---|
 | `Sources/` | Demo implementation (runnable Xcode project) |
-| `mcp-server/` | MCP server source |
 | `.claude/skills/` | Claude Code skill guidelines |
 
 ### Demo Project
