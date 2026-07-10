@@ -1,5 +1,7 @@
 # DispatchQueue 遷移規範
 
+> 基準 Swift 6.3（本地 toolchain 6.3.1）；並發模型脈絡見 `SKILL.md`〈Swift 6.2+ 心智模型〉。
+
 ## 強制原則
 
 - ❌ 新代碼禁止使用 `DispatchQueue`，一律改用 Swift Concurrency
@@ -15,6 +17,8 @@
 | `DispatchQueue.global().async { heavyWork(); DispatchQueue.main.async { } }` | `Task { let r = await heavyWork(); await MainActor.run { } }` |
 
 > **關於 `MainActor.run`**：它只用於「從**非 isolated** context 跳回主 actor」。若程式碼已在 `@MainActor` context（例如 MVVMC 的 ViewModel 全是 `@MainActor`），或 `Task` 起自 `@MainActor`（Task 會繼承主 actor），就**不需要**再包 `MainActor.run`——直接寫即可。上表末列的 `MainActor.run` 只在該 `Task` 起自非 isolated 環境時才需要。
+
+> **`DispatchQueue.global()` → 真的要背景執行**：6.2+ 從 `@MainActor` 起的 `Task { }` **仍在主 actor**，不等於背景。若原本用 global queue 是為了離開主執行緒（重運算、阻塞 I/O），對應寫法是 **`@concurrent` async func**（見 `SKILL.md`），而非只包一層 `Task { }`。
 
 ## 遷移判斷流程
 
