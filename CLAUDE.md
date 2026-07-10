@@ -49,7 +49,12 @@ Three blocks: **State / Domain Models / DTOs**. Not all required, but each block
 | `Domain Models` | Business semantics | ViewModel logic, State |
 | `DTOs` | Raw API data | Network layer, mapped immediately after decoding |
 
-- `State` is a `struct` conforming to `Sendable`; all fields have default values
+- `State` is a `struct` conforming to `Equatable, Sendable`; all fields have default values
+- `State` and Domain Models default to `Equatable` (compiler auto-synthesizes at zero cost; enables `#expect(vm.state == expected)` in tests and SwiftUI `.onChange`/`.animation(value:)`). Add it by default; omit only in these three cases (annotate the reason inline):
+  1. Holds a member that blocks synthesis (commonly a closure `() -> Void`; also `Any`/`[String: Any]`, a non-Equatable class or third-party type) — for closures first try moving them back to the VM (`@ObservationIgnored`); otherwise hand-write `==` skipping that member or store a comparable substitute
+  2. A one-time fire-and-forget event type (log entry, push payload) — write-only, never compared
+  3. Holds a large binary blob / array (hundreds of MB) where `==` would land on a hot path — prefer storing an id/URL/version token instead; if unavoidable, hand-write `==` comparing a version/hash, not byte-by-byte
+- Value `enum`s (no associated values) are implicitly `Equatable` — no explicit conformance needed. DTOs do NOT get `Equatable` — discarded right after `toDomain()`
 - DTO is a `Codable & Sendable` struct; preserves all API response fields faithfully
 - DTO property names match API response keys directly (e.g. `user_id`, `created_at`); no `CodingKeys` needed
 - DTO provides `toDomain()` to convert to Domain Model; field selection is `toDomain()`'s responsibility, not the DTO's
@@ -58,14 +63,14 @@ Three blocks: **State / Domain Models / DTOs**. Not all required, but each block
 ```swift
 // MARK: - State
 extension FeatureViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     var items: [Item] = []
   }
 }
 
 // MARK: - Domain Models
 extension FeatureViewModel {
-  struct Item: Identifiable, Sendable {
+  struct Item: Identifiable, Equatable, Sendable {
     let id: String
     var name: String
   }

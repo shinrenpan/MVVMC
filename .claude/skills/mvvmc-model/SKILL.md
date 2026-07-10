@@ -36,21 +36,22 @@ description: |
 // MARK: - State
 
 extension FeatureViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     var items: [Item] = []
   }
 }
 ```
 
-- `struct`（值類型），遵守 `Sendable`
+- `struct`（值類型），遵守 `Equatable` 與 `Sendable`
 - 所有屬性給定預設值（確保 `.init()` 無參數可用）
 - 欄位只能是 Domain Model、Swift 原生型別、`Optional`
+- **預設加 `Equatable`**（例外見下方〈Equatable 規則〉）
 
 **例外：Detail View 必帶初始資料**
 
 ```swift
 extension PostDetailViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     let post: Post
   }
 }
@@ -63,7 +64,9 @@ extension PostDetailViewModel {
 ### Domain Models
 
 - 每個獨立 Model 各自一個 `extension`
-- 遵守 `Sendable`，有 `id` 時遵守 `Identifiable`
+- 遵守 `Equatable` 與 `Sendable`，有 `id` 時遵守 `Identifiable`
+- **預設加 `Equatable`**（例外見下方〈Equatable 規則〉）
+- 純值 `enum`（無 associated value）本身已隱含 `Equatable`，不需顯式宣告
 - `let` 用於不可變欄位，`var` 用於可變欄位
 - 禁止回傳 UI framework 型別（`Color`、`Font`、`Image`）的 computed property
 
@@ -73,13 +76,14 @@ extension PostDetailViewModel {
 // MARK: - Domain Models
 
 extension FeatureViewModel {
-  struct Order: Identifiable, Sendable {
+  struct Order: Identifiable, Equatable, Sendable {
     let id: String
     var status: OrderStatus  // L2
     var totalAmount: Double
   }
 
   // L2：只被 Order 使用 → 同一個 extension，加 Order Prefix
+  // 純值 enum 已隱含 Equatable，只宣告 Sendable 即可
   enum OrderStatus: String, Sendable {
     case pending, confirmed, shipped
   }
@@ -87,6 +91,25 @@ extension FeatureViewModel {
 ```
 
 被多個 Model 共用 → 各自獨立 `extension`。
+
+---
+
+### Equatable 規則
+
+**預設全加**：`State` 與 Domain Model 一律遵守 `Equatable`。它們由 Domain Model 與原生型別組成，compiler 自動合成、零成本。好處：
+
+- 測試可直接 `#expect(vm.state == expected)`，不必逐欄位比對
+- SwiftUI `.onChange(of:)` / `.animation(value:)` / diffing 需要 `Equatable`
+
+**判斷順序**：先加，遇到以下三種情形才省略（compiler 只擋得住第 1 條，2、3 靠人判斷）：
+
+| # | 情形 | 處理 |
+|---|------|------|
+| 1 | 含**無法合成 Equatable 的成員**（最常見是閉包 `() -> Void`；也包括 `Any` / `[String: Any]`、非 Equatable 的 class 或第三方型別） | 閉包情形先問「能否移回 VM（`@ObservationIgnored`）？」；其餘（或真的移不走）→ 手寫 `==` 跳過該成員，或改存可比較的替代值 |
+| 2 | **一次性丟棄的事件型別**（Log 紀錄、推播 payload 等 write-only / fire-and-forget） | 不加，語意同 DTO |
+| 3 | 持有**大型二進位 / 陣列**（數百 MB）且 `==` 會落在 hot path | 優先改為只存 id / URL / version token；非存不可 → 手寫 `==` 比對版本號 / hash，而非逐 byte |
+
+省略時於型別上方以註解說明原因。
 
 ---
 
@@ -114,6 +137,7 @@ extension FeatureViewModel {
 - property 命名直接使用 API response key（snake_case），不需要 `CodingKeys`
 - `toDomain()` 負責轉換與過濾，取捨欄位是 `toDomain()` 的事
 - State 不持有 DTO，UI 層對 DTO 的存在完全透明
+- **DTO 不加 `Equatable`**：解碼後立即 `toDomain()` 丟棄，從不參與相等比較，維持 `Codable & Sendable` 即可
 
 ---
 

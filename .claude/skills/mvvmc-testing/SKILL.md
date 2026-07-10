@@ -116,6 +116,17 @@ func `fetchItems failure sets error status`() async {
 }
 ```
 
+> **善用 State 的 `Equatable`**：M 層規範要求 `State` 預設遵守 `Equatable`（見 `mvvmc-model`）。狀態欄位一多時，逐欄位 `#expect` 會冗長且容易漏測，可直接比對整個 state：
+>
+> ```swift
+> var expected = FeatureViewModel.State()
+> expected.items = [.init(id: 1, name: "Item A"), .init(id: 2, name: "Item B")]
+> expected.api.fetchItems = .success
+> #expect(vm.state == expected)   // 一行涵蓋所有欄位，多餘變動也會被抓出
+> ```
+>
+> 逐欄位斷言仍適用於「只想驗證單一欄位、不在意其餘」的情境；要「鎖定完整狀態」時用整體比對。
+
 ### 3. Callback 驗證
 
 驗證 `onCallback` 是否以正確參數被呼叫：

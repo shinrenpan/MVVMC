@@ -4,7 +4,7 @@
 // MARK: - State
 
 extension OrderViewModel {
-    struct State: Sendable {
+    struct State: Equatable, Sendable {
         var isFirstAppear: Bool = true
         var orders: [Order] = []
     }
@@ -13,19 +13,19 @@ extension OrderViewModel {
 // MARK: - Domain Models
 
 extension OrderViewModel {
-    struct Order: Identifiable, Sendable {
+    struct Order: Identifiable, Equatable, Sendable {
         let id: String
         var status: OrderStatus
         var items: [OrderItem]
         var totalAmount: Double
     }
 
-    // L2：只被 Order 使用
+    // L2：只被 Order 使用（純值 enum 已隱含 Equatable）
     enum OrderStatus: String, Sendable {
         case pending, confirmed, shipped, delivered, cancelled
     }
 
-    struct OrderItem: Identifiable, Sendable {
+    struct OrderItem: Identifiable, Equatable, Sendable {
         let id: String
         var productName: String
         var quantity: Int
