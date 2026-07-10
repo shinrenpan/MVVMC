@@ -37,6 +37,7 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 // ✅ 逐筆下載（真正的 I/O + 需要與 UI priority 隔離）
 // @MainActor property 必須先在 actor context 取出，再傳入 detached task
 let items = self.items
+// .background 只是示範用的「某個不繼承父 Task 的 priority」；實際 priority 依情境選，不是規定值
 Task.detached(priority: .background) { [weak self] in
     guard let self else { return }
     for item in items {

@@ -58,7 +58,8 @@ Three blocks: **State / Domain Models / DTOs**. Not all required, but each block
 - DTO is a `Codable & Sendable` struct; preserves all API response fields faithfully
 - DTO property names align 1:1 with the API keys (snake_case if the API is snake_case; no forced style); no `CodingKeys`. Rationale: a DTO is throwaway "dirty" data mirroring the raw response — a 1:1 mapping is easier to debug and to talk to the backend about; the cleanup (renaming to camelCase, dropping fields) is `toDomain()`'s job
 - DTO provides `toDomain()` to convert to Domain Model; field selection is `toDomain()`'s responsibility, not the DTO's
-- State never holds DTOs; the UI layer is completely unaware of DTOs
+- Domain Models must not expose UI-framework types (`Color`/`Font`/`Image`); such display helpers belong in the V layer
+- State fields are Domain Models, Swift-native types, or Optionals thereof — never DTOs; the UI layer is completely unaware of DTOs
 
 ```swift
 // MARK: - State
@@ -134,10 +135,10 @@ childViewModel.onCallback = { [weak self] callback in
 
 ### V — View
 
-- Hold `viewModel` with `let` (`@Observable` tracks automatically; no `@State` or `@Bindable`)
+- Hold `viewModel` with `let` (`@Observable` tracks automatically; no `@State`). Declare `@Bindable` only inside `body` when a `Binding` is needed (e.g. `TextField`); never rebuild it inside a helper `func`.
 - All user interactions: `Task { await viewModel.doAction(.view(.xxx)) }`
 - Sub-views: `private extension FeatureView { struct SubView: View {...} }`
-- Sub-views that need to return actions receive: `let doAction: @MainActor (Action) -> Void`
+- Sub-views that need to return actions receive: `let send: @MainActor (Action) -> Void`
 - Display helpers for models go at the top of the View file: `private extension FeatureViewModel.SomeModel { var color: Color { ... } }`
 - **Zero navigation logic, zero business logic**
 
@@ -145,7 +146,7 @@ childViewModel.onCallback = { [weak self] callback in
 
 - `@MainActor final class` subclassing `UIHostingController<FeatureView>`
 - **Pure router**: all navigation via `AppRouter.shared`; never call `navigationController` / `present` / `dismiss` directly
-- `viewDidLoad`: set up `viewModel.onRoute` and `onCallback`
+- `viewDidLoad`: set up `viewModel.onRoute`
 - HostController does not manage lifecycle triggers and holds no Tasks
 - Use `[weak self]` in closures; ViewModel lifetime matches HostController, no manual nil cleanup needed
 - To receive child VC callbacks: set `childViewModel.onCallback` before navigating
@@ -212,7 +213,7 @@ AppRouter.shared.to(DetailHostController(...), from: self)
 AppRouter.shared.to(FilterHostController(...), from: self, style: .modal)
 AppRouter.shared.to(SomeHostController(...), from: self, style: .fade)
 
-// Sheet (large detent by default; destination decides whether to wrap in UINavigationController)
+// Sheet (no detents set; system defaults to large; destination decides whether to wrap in UINavigationController)
 AppRouter.shared.sheet(SomeHostController(...), from: self)
 AppRouter.shared.sheet(UINavigationController(rootViewController: SettingsHostController(...)), from: self)
 AppRouter.shared.sheet(SomeHostController(...), from: self, detents: [.medium()])

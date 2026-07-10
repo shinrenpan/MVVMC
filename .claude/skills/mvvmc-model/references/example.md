@@ -35,6 +35,8 @@ extension OrderViewModel {
 
 // MARK: - DTOs
 
+// 註：這裡的 snake_case 只是因為假設此 API 用 snake_case 回傳；
+// DTO 命名對齊 API 實際 key 即可，不強制 snake_case 或任何命名風格。
 extension OrderViewModel {
     struct OrderDTO: Codable, Sendable {
         var order_id: String
@@ -46,6 +48,8 @@ extension OrderViewModel {
             guard !order_id.isEmpty else { return nil }
             return .init(
                 id: order_id,
+                // ?? .pending 只是範例佔位；未知 enum 值如何處理（降級、丟棄、報錯）
+                // 應由業務決定，不是通則建議。
                 status: OrderStatus(rawValue: order_status) ?? .pending,
                 items: items.compactMap { $0.toDomain() },
                 totalAmount: total_amount

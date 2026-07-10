@@ -14,6 +14,8 @@ final class FeatureViewModel {
 
 ## 帶 Action 分層版
 
+> 這是簡化示範，只有 `view` + `apiRequest` 兩個 case，`handleAPIRequest` 內留空殼。實務上多數有 API 的頁面應走完 request → response 三層（View → `apiRequest` → `apiResponse` → 更新 state），完整寫法見下方「完整分層版」。
+
 ```swift
 @Observable
 @MainActor
@@ -200,6 +202,24 @@ extension PostFilterViewModel {
     enum Callback: Sendable {
         case didSelectUser(User)
         case didCancel
+    }
+}
+```
+
+### 父 HostController 端設定（不用包 Task）
+
+子 VM 用 `await onCallback?(...)` 把結果往上拋，父 HostController 只要設定 `childViewModel.onCallback` 即可接收。因為 `onCallback` 本身是 `async` 閉包，父端可以直接在裡面 `await self.viewModel.doAction(...)`，**不需要另外包一層 `Task`**——這正是 async callback 設計省下的東西：async 沿著 `doAction` 自然往上傳播，呼叫端不必手動管理 Task 生命週期。
+
+```swift
+// 父 HostController — 不需要 Task
+filterViewModel.onCallback = { [weak self] callback in
+    guard let self else { return }
+    switch callback {
+    case let .didSelectUser(user):
+        AppRouter.shared.back(from: self)
+        await self.viewModel.doAction(.view(.didFilterUser(user)))
+    case .didCancel:
+        AppRouter.shared.back(from: self)
     }
 }
 ```

@@ -113,7 +113,9 @@ Push notification payload convention: `{ "deeplink": "mvvmc://posts/1" }` — re
 | Directory | Purpose |
 |---|---|
 | `Sources/` | Demo implementation (runnable Xcode project) |
+| `Tests/` | ViewModel unit tests validating the `doAction` flow |
 | `.claude/skills/` | Claude Code skill guidelines |
+| `CLAUDE.md` | Full MVVMC specification (single source of truth) |
 
 ### Demo Project
 
@@ -139,7 +141,7 @@ Demo includes:
 ## Tech Stack
 
 - iOS 17+
-- Swift 5.9+ (Swift 6 concurrency compatible)
+- Swift 6.2+ (the test suite uses raw identifier test names, which require a Swift 6.2 toolchain)
 - SwiftUI + UIKit hybrid
 - `@Observable` (Swift Observation framework)
 - XcodeGen (`xcodegen generate` to regenerate project file)

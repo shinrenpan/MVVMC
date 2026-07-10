@@ -73,7 +73,7 @@ struct SearchBar: View {
 - **模式**：Intent-based Action Pattern（MVI/TCA 靈魂）
 - **需要對外通訊的層**必須定義自己專屬的 `enum Action`（啟動條件見下方）
 - **Action 嵌套位置**：`enum Action` 必須**嵌套在該層的 View struct 內**，與 View 緊耦合
-- **Sendable 強制**：所有 `enum Action` 必須標註 `Sendable`，與 swift-viewmodel skill 規範對齊
+- **Sendable 強制**：所有 `enum Action` 必須標註 `Sendable`，與 mvvmc-viewmodel skill 規範對齊
 - **中間層（Parent）**負責將底層（Child）的 Action 對映給上層（GrandParent）
 - **參數命名統一**：Action closure 定義端一律命名為 `let send: (Action) -> Void`；呼叫端 `send:` 為最後一個參數時，允許 trailing closure，否則用 `send:` 標籤明確標示
 - **目的**：確保每一層組件都能獨立拆卸使用，不產生跨層級的命名空間污染
@@ -313,7 +313,7 @@ private extension ProductListView {
 
 ### View 持有 ViewModel 的規範
 
-本架構搭配 `swift-hostcontroller` skill 使用，採 **UIHostingController + SwiftUI View** 模式。
+本架構搭配 `mvvmc-hostcontroller` skill 使用，採 **UIHostingController + SwiftUI View** 模式。
 
 - ✅ ViewModel 由 **HostController 建立並持有**
 - ✅ View 透過 `let viewModel: FeatureViewModel` 接收引用
@@ -334,7 +334,7 @@ struct FeatureView: View {
 **理由**：
 - ViewModel 生命週期由 HostController 管理（UIKit 導航棧）
 - 與 Router、Coordinator 整合需要外部建立 VM
-- 此規範與 `swift-hostcontroller` skill 對齊（該 skill 明確禁止 View 自建 ViewModel）
+- 此規範與 `mvvmc-hostcontroller` skill 對齊（該 skill 明確禁止 View 自建 ViewModel）
 
 ### 模板
 
@@ -386,7 +386,7 @@ private extension FeatureView {
 
 ### L1 與 ViewModel 的銜接規則
 
-L1 在處理 L2 上拋的 Action 時，必須走 `viewModel.doAction(.view(...))`，**禁止呼叫 ViewModel 上的其他 public method**。此規範與 swift-viewmodel skill 對齊（ViewModel 唯一進入點是 `doAction(_:)`）。
+L1 在處理 L2 上拋的 Action 時，必須走 `viewModel.doAction(.view(...))`，**禁止呼叫 ViewModel 上的其他 public method**。此規範與 mvvmc-viewmodel skill 對齊（ViewModel 唯一進入點是 `doAction(_:)`）。
 
 ```swift
 // ✅ 正確
@@ -591,7 +591,7 @@ var body: some View {
 }
 ```
 
-- **現代 API**：數值變動應搭配 `.contentTransition(.numericText())`
+- **現代 API**：數值變動可搭配 `.contentTransition(.numericText())` 提升過場質感（選用）
 
 ---
 
@@ -631,7 +631,7 @@ ForEach(items, id: \.id) { item in
 **狀態提升的具體做法**：把 `@State` 移出子組件，改存在 ViewModel 的 `State` 中，以 item id 作為 key：
 
 ```swift
-// ViewModel State（參考 swift-model skill）
+// ViewModel State（參考 mvvmc-model skill）
 struct State {
     var items: [Item] = []
     var expandedItemIDs: Set<Item.ID> = []   // 原本在子組件的 @State
@@ -659,7 +659,7 @@ struct ChildView: View {
 }
 ```
 
-狀態的 Model 定義放在 `FeatureViewModel+Models.swift`，詳見 `swift-model` skill。
+狀態的 Model 定義放在 `FeatureViewModel+Models.swift`，詳見 `mvvmc-model` skill。
 
 ---
 

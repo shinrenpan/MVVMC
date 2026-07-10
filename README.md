@@ -113,7 +113,9 @@ func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
 | 目錄 | 用途 |
 |---|---|
 | `Sources/` | Demo 實作（可跑的 Xcode 專案） |
+| `Tests/` | ViewModel 單元測試，驗證 `doAction` 流程 |
 | `.claude/skills/` | Claude Code skill 規範 |
+| `CLAUDE.md` | MVVMC 完整規範（單一事實來源） |
 
 ### Demo 專案
 
@@ -139,7 +141,7 @@ open MVVMCDemo.xcodeproj
 ## Tech Stack
 
 - iOS 17+
-- Swift 5.9+（Swift 6 concurrency 相容）
+- Swift 6.2+（測試套件使用 raw identifier 測試名，需 Swift 6.2 toolchain）
 - SwiftUI + UIKit 混合
 - `@Observable`（Swift Observation framework）
 - XcodeGen（`xcodegen generate` 更新 project file）

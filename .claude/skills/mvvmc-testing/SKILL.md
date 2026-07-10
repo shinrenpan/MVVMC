@@ -27,6 +27,17 @@ await vm.doAction(.apiResponse(.fetchUser(.failure(.message("Not found")))))
 - 測試意圖清晰：直接驗證「給定這個 API 回應，state 變成什麼」
 - Feature 變動快時，只有 Action enum 改動，測試跟著改即可
 
+### `state.api` 狀態容器
+
+下方範例大量出現 `state.api.<name>`。其約定是：每個 API 動作在 `State` 裡都有一個對應的狀態欄位（容器），記錄該次請求目前處於哪個階段。常見狀態：
+
+- `.prepare`：初始／尚未觸發
+- `.success`：請求成功
+- `.error(...)`：請求失敗，附帶錯誤訊息
+- （若該流程有讀取指示器，也可有 `.loading`）
+
+測試就是靠斷言這個狀態的轉移（例如 `.prepare` → `.success`）來驗證整條流程是否如預期推進。
+
 ---
 
 ## 測試結構
@@ -98,8 +109,8 @@ func `isFirstAppear guard blocks duplicate trigger`() async {
 func `fetchItems success populates items`() async {
   let vm = FeatureViewModel()
   let dtos: [FeatureViewModel.ItemDTO] = [
-    .init(id: 1, name: "Item A"),
-    .init(id: 2, name: "Item B"),
+    .init(id: 1, user_id: 1, name: "Item A"),
+    .init(id: 2, user_id: 1, name: "Item B"),
   ]
   await vm.doAction(.apiResponse(.fetchItems(.success(dtos))))
   #expect(vm.state.items.count == 2)
