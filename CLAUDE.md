@@ -56,7 +56,7 @@ Three blocks: **State / Domain Models / DTOs**. Not all required, but each block
   3. Holds a large binary blob / array (hundreds of MB) where `==` would land on a hot path — prefer storing an id/URL/version token instead; if unavoidable, hand-write `==` comparing a version/hash, not byte-by-byte
 - Value `enum`s (no associated values) are implicitly `Equatable` — no explicit conformance needed. DTOs do NOT get `Equatable` — discarded right after `toDomain()`
 - DTO is a `Codable & Sendable` struct; preserves all API response fields faithfully
-- DTO property names match API response keys directly (e.g. `user_id`, `created_at`); no `CodingKeys` needed
+- DTO property names align 1:1 with the API keys (snake_case if the API is snake_case; no forced style); no `CodingKeys`. Rationale: a DTO is throwaway "dirty" data mirroring the raw response — a 1:1 mapping is easier to debug and to talk to the backend about; the cleanup (renaming to camelCase, dropping fields) is `toDomain()`'s job
 - DTO provides `toDomain()` to convert to Domain Model; field selection is `toDomain()`'s responsibility, not the DTO's
 - State never holds DTOs; the UI layer is completely unaware of DTOs
 

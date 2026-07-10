@@ -134,7 +134,8 @@ extension FeatureViewModel {
 
 - `Codable & Sendable` struct
 - **保留 API response 所有欄位**，忠實反映 API 合約
-- property 命名直接使用 API response key（snake_case），不需要 `CodingKeys`
+- property 命名直接對齊 API response key（API 是 snake_case 就寫 snake_case，不強制任何風格），不需要 `CodingKeys`
+  - **why**：DTO 是拋棄式的「髒資料」，值得關注的是 Domain Model 而非 DTO。命名與 API 維持 1:1 有兩個好處——(1) 好 debug：log / 斷點看到的欄位名就是 API 回的原始 key；(2) 好跟 backend 溝通：兩邊講的是同一個字，中間不隔一層 CodingKeys 翻譯。清理（改 camelCase、取捨欄位）是 `toDomain()` 的責任，髒命名到 `toDomain()` 為止不得外洩
 - `toDomain()` 負責轉換與過濾，取捨欄位是 `toDomain()` 的事
 - State 不持有 DTO，UI 層對 DTO 的存在完全透明
 - **DTO 不加 `Equatable`**：解碼後立即 `toDomain()` 丟棄，從不參與相等比較，維持 `Codable & Sendable` 即可
