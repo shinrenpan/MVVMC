@@ -18,14 +18,30 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 
 6.2「Approachable Concurrency」翻轉了預設，很多舊觀念要更新：
 
-- **模組預設 `@MainActor`**：`Package.swift` 可設 `defaultIsolation(MainActor.self)`，整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。
+- **模組預設 `@MainActor`**：`Package.swift` 設 `.defaultIsolation(MainActor.self)`（Xcode：`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`、`SWIFT_APPROACHABLE_CONCURRENCY = YES`），整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。**Xcode 26 新專案預設就開這兩項。**
 - **`nonisolated async func` 預設跑在呼叫端 actor**（`nonisolated(nonsending)`，SE-0461）——**不再自動跳到背景**。所以「標了 `nonisolated` 的 async 就會脫離主 actor」這個舊觀念已不成立。
-- **要並行 / 離開 actor 得明講**：async function 標 **`@concurrent`** 才會跑到並發 pool。
+- **要並行 / 離開 actor 得明講**：用 `Task { @concurrent in ... }` 讓 Task 從主 actor 外起跑（見〈離開主 actor〉）。
 - **6.3 Region-based isolation 正式可用**：編譯器能證明更多情況的資料安全，`Sendable` 假陽性大減。
 
 ## 專案脈絡
 
-本專案所有 ViewModel 標注 `@MainActor`（或由模組層級 `defaultIsolation(MainActor.self)` 統一預設）。`doAction` 內的 `Task { }` **繼承當前 actor（即 MainActor），不會脫離**。要真正離開主 actor：async 工作用 `@concurrent`（結構化），非結構化才用 `Task.detached`；純同步運算用 `nonisolated func`。
+本專案所有 ViewModel 標注 `@MainActor`（或由模組層級 `.defaultIsolation(MainActor.self)` 統一預設）。`doAction` 內的 `Task { }` **繼承當前 actor（即 MainActor），不會脫離**。要真正離開主 actor：async 工作用 `Task { @concurrent in }`，非結構化才用 `Task.detached`；純同步運算用 `nonisolated func`。
+
+## 先確認專案設定（Fast Path）
+
+給並發建議前，先讀 `Package.swift` / `.pbxproj` 確認四件事，否則同一段 code 的正確解會不同：
+
+1. **Language mode**：`swiftLanguageModes` / Swift Language Version
+2. **Strict concurrency**：`SWIFT_STRICT_CONCURRENCY`
+3. **Default isolation**：`.defaultIsolation(MainActor.self)` / `SWIFT_DEFAULT_ACTOR_ISOLATION`（決定「未標註的型別預設在不在主 actor」）
+4. **Approachable concurrency / upcoming features**：`SWIFT_APPROACHABLE_CONCURRENCY`、`.enableUpcomingFeature(...)`
+
+## Guardrails
+
+- ❌ 別把 `@MainActor` 當萬用解——要能說出「這段確實是 UI-bound」的理由
+- ✅ 優先結構化並發（`async let` / TaskGroup），少用非結構化 `Task {}` / `Task.detached`
+- ⚠️ `@unchecked Sendable`、`nonisolated(unsafe)`、`@preconcurrency` 是逃生口——用時**必附「安全不變式 + 移除計畫」的註解**
+- ⚠️ `MainActor.assumeIsolated` 少用（不在主緒會直接 crash），優先用明確的 `@MainActor`
 
 ---
 
@@ -34,38 +50,47 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 ```
 要把工作移出主 actor 嗎？
 ├── 純 CPU 運算、不碰 actor state
-│   └── nonisolated 同步 func        ← 呼叫端決定在哪跑，零 Task 開銷
-├── async 工作要並行 / 離開主 actor（阻塞 I/O、重運算）
-│   └── @concurrent async func       ← 6.2+ 標準做法，結構化、可取消
+│   └── nonisolated 同步 func         ← 呼叫端決定在哪跑，零 Task 開銷
+├── 起一個 Task、且它的同步前綴不需要主 actor
+│   └── Task { @concurrent in ... }   ← 6.2+ 標準做法，結構化、可取消
 └── 需要「非結構化 + 脫離 priority / task-local」才用
-    └── Task.detached                ← 最後手段，罕見
+    └── Task.detached                 ← 最後手段，罕見
 ```
 
-- ❌ 純運算包 `Task.detached` 或 `@concurrent`——用 `nonisolated` 同步 func 就好
-- ⚠️ 一般 `async func`（未標 `@concurrent`）在 6.2+ 會**跟著呼叫端 actor 跑**，不會自己脫離
+- ❌ 純運算包 `Task { @concurrent in }` 或 `Task.detached`——用 `nonisolated` 同步 func 就好
+- ⚠️ 一般 `Task {}`（未標 `@concurrent`）在 6.2+ 會**跟著呼叫端 actor 跑**（主 actor 起 → 主 actor 跑），不會自己脫離
 
 ---
 
-## @concurrent：離開主 actor 的首選（6.2+）
+## 離開主 actor：`Task { @concurrent in }` 與同步前綴規則（6.2+）
 
-async 工作若要真正跑在背景（阻塞 I/O、重運算），標 `@concurrent`。它是**結構化**的，享有自動取消與 priority 繼承，優先於 `Task.detached`。
+要讓一個 Task 真正跑在主 actor 外（阻塞 I/O、重運算），用 **`Task { @concurrent in }`**——把 `@concurrent` 當 closure 的 isolation 前綴。它是**結構化**的，享有取消與 priority 繼承，優先於 `Task.detached`。
 
-在 `@MainActor` 型別上，方法預設是主 actor 隔離；要離開就同時標 `nonisolated`（脫離主 actor）與 `@concurrent`（async body 跑在並發 pool，而非呼叫端 actor）：
+**同步前綴規則**：看 `Task` 第一個 `await` 之前的**同步前綴**——
+
+- 前綴要動主 actor state / UI → 用預設 `Task {}`（保持繼承主 actor）
+- 前綴與 UI 無關、第一件事就是跳走 → 用 `Task { @concurrent in }`（從主 actor 外起跑，回頭再 `await MainActor.run { }` 更新 state）
 
 ```swift
-@Observable
-@MainActor
-final class FeatureViewModel {
+// ✅ 前綴要動主 actor state → 保持繼承
+Task {
+    state.isLoading = true      // 需要 @MainActor
+    await doAction(.apiRequest(.load))
+}
 
-    // 離開主 actor 跑重運算；回到 doAction 存 state 時，編譯器自動切回主 actor
-    nonisolated @concurrent
-    func decodeThumbnails(_ data: [Data]) async -> [UIImage] {
-        data.compactMap { UIImage(data: $0) }
-    }
+// ✅ 前綴與 UI 無關、直接跳去重運算 → @concurrent 起跑
+Task { @concurrent in
+    let images = data.compactMap { UIImage(data: $0) }   // 重解碼，不佔主 actor
+    await MainActor.run { state.thumbnails = images }     // 回主 actor 更新
+}
+
+// ❌ 空的同步前綴、第一件事就 await 跳走 → 不該用預設 Task
+Task {
+    await heavyOffMainActorWork()   // 白繞主 actor 一圈
 }
 ```
 
-- 只標 `nonisolated`（不標 `@concurrent`）→ 6.2+ 會跑在呼叫端 actor，**沒離開主 actor**
+- `@concurrent` 也可標在 async **函式宣告**上（SE-0461），但確切修飾詞組合請在本機 toolchain 驗證；日常在 `doAction` 內用 closure 形式最穩
 - 純同步、不 async 的運算 → 用下方 `nonisolated func`，不需要 `@concurrent`
 
 ---
@@ -144,21 +169,33 @@ Swift 的取消是**協作式**的：取消只是設旗標，程式要主動檢�
 - **`.task {}`（SwiftUI modifier）**：綁 View 生命週期，**離開畫面自動取消**——「run once」pattern 就靠它。
 - **`Task {}`（非結構化，如 doAction 內）**：**不會自動取消**，要自己存 handle 手動 `cancel()`。
 
-**檢查取消：** `Task.isCancelled`（Bool，自己 return/break）、`try Task.checkCancellation()`（丟 `CancellationError`）、`Task.sleep` 被取消會自動丟錯。
+**檢查取消：**
+- `guard !Task.isCancelled else { return }` — 自己處理、不丟錯
+- `try Task.checkCancellation()` — 丟 `CancellationError`、fail fast
+- `Task.sleep` 被取消會自動丟錯
 
-**典型場景：搜尋即打即查（取消前一次）：**
+**典型場景：搜尋即打即查（debounce + 取消前一次）**——兩種寫法：
 
 ```swift
+// ✅ 首選（View 驅動）：.task(id:) 綁 state，id 一變自動取消前一個
+.task(id: viewModel.state.searchQuery) {
+    try? await Task.sleep(for: .milliseconds(300))   // 使用者又打字 → 這裡被取消
+    await viewModel.doAction(.apiRequest(.search))
+}
+
+// ✅ doAction 驅動（無法綁 view modifier 時）：手動存 handle、cancel 前一次
 @ObservationIgnored private var searchTask: Task<Void, Never>?
 
 case .searchTextChanged(let text):
-    searchTask?.cancel()                                // 取消上一次
+    searchTask?.cancel()                                 // 取消上一次
     searchTask = Task {
-        try? await Task.sleep(for: .milliseconds(300))  // debounce
+        try? await Task.sleep(for: .milliseconds(300))   // debounce
         if Task.isCancelled { return }
         await doAction(.apiRequest(.search(text)))
     }
 ```
+
+- **priority 只是提示**：結構化 Task 繼承父 priority，`Task.detached` 不繼承；系統會為防優先反轉自動提權——別把 priority 當保證。
 
 - **6.3+**：`Task { try await ... }` 若**未處理**丟出的錯誤，編譯器會**警告**——要嘛在 Task 內處理，要嘛存下 Task 之後檢查。
 - **6.4（尚未 GA，屆時可用）**：關鍵清理不想被取消打斷，用 `withTaskCancellationShield { }`。目前 toolchain（6.3.1）**還沒有此 API**，先用「在清理前檢查完取消、清理本身不再檢查」的手動寫法替代：
@@ -243,7 +280,32 @@ final class DataCache {
 
 ### ⚠️ Actor 可重入（reentrancy）
 
-actor 方法遇到 `await` 會**讓出**，其他呼叫可能**插隊**進來——「檢查後再動作」的不變式可能在 `await` 前後被破壞。經典坑：token 刷新去重。
+actor 方法遇到 `await` 會**讓出**，其他呼叫可能**插隊**進來——「檢查後再動作」的不變式可能在 `await` 前後被破壞。
+
+**地基規則：在第一個 `await` 之前完成所有 actor 狀態變更；別假設 `await` 之後 state 沒變。**
+
+```swift
+actor BankAccount {
+    var balance: Double = 0
+
+    // ❌ await 後才用 balance：期間可能被別的呼叫改掉
+    func deposit(_ amount: Double) async {
+        balance += amount
+        await log("deposited \(amount)")   // ⚠️ actor 在此讓出
+        print(balance)                     // 可能已不是剛才那個值
+    }
+
+    // ✅ 先算完、先讀完，再 await
+    func depositFixed(_ amount: Double) async {
+        balance += amount
+        let snapshot = balance             // await 前先取值
+        await log("deposited \(amount)")
+        print(snapshot)
+    }
+}
+```
+
+**進階：非 `await` 不可時（如刷新去重）——快取 in-flight Task**
 
 ```swift
 actor TokenManager {
