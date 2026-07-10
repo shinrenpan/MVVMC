@@ -59,6 +59,7 @@ final class FeatureViewModel {
 - `onRoute` — HostController 設定，接收導航意圖後執行導航
   - 型別：`(@MainActor (Router) -> Void)?`，同步
   - ViewModel 呼叫：`onRoute?(.toDetail(post))`（不經過 doAction dispatch）
+  - why 不走 doAction：導航不改 state、也不需要 async，效果歸 C 層執行；`doAction` 專責狀態轉移，`onRoute`/`onCallback` 是交給 C 處理副作用的逃生口
 - `onCallback` — 父 HostController 設定，接收跨 VC 回傳值
   - 型別：`(@MainActor (Callback) async -> Void)?`，async（避免呼叫端需要包 Task）
   - ViewModel 呼叫：`await onCallback?(.didSelectUser(user))`（在 doAction 內 await）

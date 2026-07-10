@@ -52,9 +52,14 @@ final class AppRouter: NSObject {
     }
     if nav.delegate !== self {
       nav.delegate = self
+      // 自訂 nav.delegate 會壓掉系統的互動式側滑返回，故需手動重新啟用 + 設 delegate 去 gate
+      // （只在 .push 頁面放行，見 gestureRecognizerShouldBegin）。
+      // 邊緣側滑（iOS 26 以前唯一的返回手勢）
       nav.interactivePopGestureRecognizer?.isEnabled = true
       nav.interactivePopGestureRecognizer?.delegate = self
       if #available(iOS 26, *) {
+        // iOS 26 起改成「整頁」都能側滑返回，這是另一個獨立 recognizer——不是上面那個的重複，
+        // 兩個都得啟用，否則 iOS 26 上整頁側滑會失效。刪任一個都會弄壞返回手勢。
         nav.interactiveContentPopGestureRecognizer?.isEnabled = true
         nav.interactiveContentPopGestureRecognizer?.delegate = self
       }
@@ -64,6 +69,10 @@ final class AppRouter: NSObject {
   }
 
   func back(from source: UIViewController, animated: Bool = true) {
+    // fallback 到 navigationController 的原因：sheet 若包一層 UINavigationController 呈現，
+    // `.sheet` 樣式是蓋在 wrapper nav 上、不在葉子 VC 上。葉子 VC 呼叫 back 時自身讀到預設 `.push`，
+    // 只看葉子會誤走 pop（但它是 root、pop 不掉）。往上抓 wrapper nav 的樣式才能正確走 dismiss。
+    // （此複雜度屬 push-based 版：back 以 appTransitionStyle 驅動 pop/dismiss 與 .modal/.fade 自訂轉場，故需之。）
     let style = source.appTransitionStyle != .push
       ? source.appTransitionStyle
       : source.navigationController?.appTransitionStyle ?? .push

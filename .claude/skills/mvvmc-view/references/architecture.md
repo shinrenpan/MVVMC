@@ -798,7 +798,11 @@ struct UserSection: View {
 }
 ```
 
-> **規則**：`@Bindable` 一律在 `body` 內宣告，不在 func 內部重新建立。拆分後的 `@ViewBuilder private func` 若需要 Binding，必須把 `bVM: Bindable<VM>` 作為參數接收，而非自行宣告新的 `@Bindable`。
+> **建議做法**：`@Bindable` 在 `body` 內宣告一次，拆分後的 `@ViewBuilder private func` 若需要 Binding，以 `bVM: Bindable<VM>` 作為參數接收。
+>
+> **核心原則（強制）**：子元件只接收所需切片（唯讀值 + 指定 `$binding` + `send`），不整包傳入 VM、也不在下層自行重建 `@Bindable`。
+>
+> why：在 func 內自建 `@Bindable` 功能上不會壞（包的是同一個 VM 物件），但那等於把整包 VM 帶進下層，破壞「精準注入」——子元件因此無法解耦、難以獨立 Preview／測試。所以 body-only 是達成精準注入的**手段（建議）**，而「只收切片」才是**原則（強制）**。
 
 **優點：**
 - 零額外定義成本

@@ -15,6 +15,8 @@ description: |
 
 C 層如何「呼叫」導航請見 `mvvmc-hostcontroller`；此 skill 管的是導航機制「本身」怎麼設計。
 
+> **預設立場**：MVVMC **強烈建議採 `UINavigationController`（push-based）codebase**，本 skill 的 `AppRouter`（含以 `appTransitionStyle` 驅動的 `back()` 與 `.modal`/`.fade` 自訂轉場）即以此為基準。少數導航結構確實不適用時（例如常駐 sheet 疊 fullScreen modal）可改用 present-based 例外變體，其 `back()` 通常改以「nav stack 還有沒有上一層」判斷 pop/dismiss、不需 `appTransitionStyle`——但這是**例外，非通則**。
+
 詳細可貼模板見：`references/navigation-templates.md`
 
 ---

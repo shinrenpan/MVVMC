@@ -59,6 +59,8 @@ extension PostDetailViewModel {
 
 若把欄位改成 `Optional` 會讓 View 層到處 `if let`，且語意上頁面不存在「沒有資料」的狀態，才用此例外。
 
+此例外的代價：`let post` 無預設值 → **同時放棄第 46 行的無參 `.init()`**，`State()` 會編不過。因此 Preview／Mock／測試不能再用「先無參建 State 再塞值」的套路，必須改成帶參注入 `State(post: .mock)`。
+
 ---
 
 ### Domain Models
