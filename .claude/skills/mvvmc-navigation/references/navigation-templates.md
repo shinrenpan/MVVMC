@@ -29,7 +29,8 @@ private final class TransitionStyleBox {
   init(_ style: AppRouter.TransitionStyle) { self.style = style }
 }
 
-private var appTransitionStyleKey: UInt8 = 0
+// 僅作為 associated object 的位址使用、從不真正被改寫，故 nonisolated(unsafe) 安全（Swift 6 strict concurrency）
+private nonisolated(unsafe) var appTransitionStyleKey: UInt8 = 0
 
 extension UIViewController {
   fileprivate var appTransitionStyle: AppRouter.TransitionStyle {
