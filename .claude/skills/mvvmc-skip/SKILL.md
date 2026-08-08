@@ -2,7 +2,13 @@
 name: mvvmc-skip
 description: |
   MVVMC 專案透過 Skip.tools 轉 Android 的跨平台規範。涉及將既有 MVVMC iOS App 移植到 Android、撰寫需同時在 iOS/Android 運作的 M/VM/V/C 程式碼、處理 Skip 轉譯或 Kotlin 編譯錯誤、除錯 Compose 不重繪問題時觸發。確保 iOS 架構零改動，僅以 `#if !SKIP` 與 Skip 友善語法達成跨平台。
+  僅適用於有 Android 目標的專案；純 iOS 的 MVVMC 專案請用 `mvvmc-*` 系列，不要用本 skill。
+disable-model-invocation: true
 ---
+
+> **手動觸發**：本 skill 設為 `disable-model-invocation: true`，只有使用者輸入 `/mvvmc-skip` 才會載入。
+> 理由：多數 MVVMC 專案是純 iOS，不該為了少數跨平台專案讓這份規範常駐。決定要跨平台時再點名即可 ——
+> 載入後整個 session 都有效。
 
 # MVVMC × Skip Skill
 
