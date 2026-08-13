@@ -21,6 +21,7 @@ Three variants:
 | `@ViewBuilder func` | 1 | 1 | **1** |
 | separate `struct`, value injected | 1 | 1 | **0** |
 | separate `struct`, whole model passed | **0** | 1 | **0** |
+| separate `struct` wrapped in `AnyView` | 1 | 1 | **0** |
 
 Conclusions, in the spec's terms:
 
@@ -29,6 +30,8 @@ Conclusions, in the spec's terms:
 3. **Where the property is read decides whether the parent re-runs.** Passing the model down (rather than reading it and passing values) keeps the parent's body out of the update entirely.
 
 Point 3 is why `mvvmc-view` §2's "precise injection" rule is justified by **decoupling, not performance** — passing the whole object is actually cheaper to redraw.
+
+4. **`AnyView` did not stop the skip.** The unchanged section still had its body skipped. The common claim "AnyView breaks diffing" does not hold at this level on this toolchain. What `AnyView` actually costs is *structural identity* — view identity becomes unstable across type erasure, which shows up as interrupted animations and reset `@State`, plus the loss of compile-time type information. This probe does not measure those; it only rules out the "body runs more often" explanation.
 
 ## Running it
 

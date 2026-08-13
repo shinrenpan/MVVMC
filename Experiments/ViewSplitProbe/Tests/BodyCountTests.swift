@@ -59,9 +59,22 @@ struct BodyCountTests {
     let wholeA = BodyCounter.shared.count("whole.A")
     let wholeB = BodyCounter.shared.count("whole.B")
 
+    // 版本 4：AnyView 包裹
+    let m4 = ProbeModel()
+    let w4 = host(AnyViewSplitView(model: m4))
+    await settle(w4)
+    BodyCounter.shared.reset()
+    m4.a += 1
+    await settle(w4)
+    let anyParent = BodyCounter.shared.count("anyview.parent")
+    let anyA = BodyCounter.shared.count("anyview.A")
+    let anyB = BodyCounter.shared.count("anyview.B")
+
     print("PROBE_RESULT func   parent=\(funcParent) A=\(funcA) B=\(funcB)")
     print("PROBE_RESULT struct parent=\(structParent) A=\(structA) B=\(structB)")
     print("PROBE_RESULT whole  parent=\(wholeParent) A=\(wholeA) B=\(wholeB)")
+
+    print("PROBE_RESULT anyview parent=\(anyParent) A=\(anyA) B=\(anyB)")
 
     // 只驗證實驗本身有效（A 確實重繪了），B 的數字是觀測目標
     #expect(funcA >= 1)

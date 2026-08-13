@@ -105,6 +105,38 @@ private extension StructWholeModelView {
   }
 }
 
+// MARK: - 版本 4：獨立 struct View，但用 AnyView 包裹（型別抹除）
+
+struct AnyViewSplitView: View {
+  let model: ProbeModel
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("anyview.parent")
+    VStack {
+      AnyView(SectionA(value: model.a))
+      AnyView(SectionB(value: model.b))
+    }
+  }
+}
+
+private extension AnyViewSplitView {
+  struct SectionA: View {
+    let value: Int
+    var body: some View {
+      let _ = BodyCounter.shared.bump("anyview.A")
+      Text("A \(value)")
+    }
+  }
+
+  struct SectionB: View {
+    let value: Int
+    var body: some View {
+      let _ = BodyCounter.shared.bump("anyview.B")
+      Text("B \(value)")
+    }
+  }
+}
+
 @main
 struct ProbeApp: App {
   var body: some Scene {
