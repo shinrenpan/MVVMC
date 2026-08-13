@@ -192,7 +192,7 @@ func `didFilterUser sets filterUserId`() async {
 
 ## Swift Testing 實用手法（按需採用）
 
-以下不是規範，是遇到對應情境時比土法煉鋼更好的寫法。
+以下不是規範，是遇到對應情境時比土法煉鋼更好的寫法。三段範例都在 demo 的測試 target 內編譯驗證過（Swift 6.3.1 / Xcode 26.4.1，2026-08）。
 
 **參數化測試**——同一段驗證跑多組輸入，失敗時報告會指出是哪一組：
 
