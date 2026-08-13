@@ -307,6 +307,8 @@ private extension ProductListView {
 ```
 
 > **判斷原則**：一旦一個組件需要跨兩個以上的 View 檔案使用，它就不再「專屬」於任何一個，應獨立成共用組件。共用組件不屬於任何頁面的 `private extension`，也不應帶有頁面前綴。
+>
+> 提拔後**放哪個目錄**見 `mvvmc-structure`〈跨 feature 共用的 UI 組件〉。
 
 ---
 

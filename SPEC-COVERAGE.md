@@ -8,6 +8,17 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 
 ---
 
+## Structure — `mvvmc-structure`
+
+| Rule | Demonstrated in |
+|---|---|
+| One directory per feature under `Pages/` | `Sources/Pages/` (six features) |
+| Domain Model is **not** shared across features | `PostList.Post` (has `userId`) vs `PostDetail.Post` (does not) |
+| Cross-feature transfer via primitives | `PostDetailHostController(id:title:body:)` |
+| `Shared/` holds business-agnostic types only | `Sources/Shared/APIStatus.swift` (`APIStatus`, `APIError`) |
+| Shared UI component promoted out of `Pages/` | ❌ — no cross-feature component exists in the demo |
+| Feature split criteria | ❌ — all six demo features are small enough never to hit it |
+
 ## M — `mvvmc-model`
 
 | Rule | Demonstrated in |

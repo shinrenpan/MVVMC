@@ -79,6 +79,7 @@ argument-hint: [feature-path]
 - **Callback 銜接**：子 VM 的每個 `Callback` case 是否都被父 HostController 處理
 - **測試覆蓋**：ViewAction / APIResponse 的 case 是否都有對應測試（見 `mvvmc-testing`）
 - **命名前綴**：HostController / ViewModel / View 三者的 Feature prefix 是否一致
+- **feature 邊界**：有沒有直接引用其他 feature 的 Domain Model（應改傳 primitive）；`Shared/` 有沒有混入業務型別（見 `mvvmc-structure`）
 
 輸出格式：
 

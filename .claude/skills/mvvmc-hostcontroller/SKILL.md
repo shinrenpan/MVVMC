@@ -58,6 +58,8 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 
 優點：父 HostController 不需要知道子 ViewModel 的 Domain Model 型別，跨 feature 邊界以 primitive 傳遞，避免型別耦合。
 
+> 這是 MVVMC「Domain Model 不跨 feature」的執行點——**為什麼**不共用、參數多到難看時該怎麼辦，見 `mvvmc-structure`。
+
 ---
 
 ## 命名規範

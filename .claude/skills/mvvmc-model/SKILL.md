@@ -103,6 +103,7 @@ extension PostDetailViewModel {
 - 純值 `enum`（無 associated value）本身已隱含 `Equatable`，不需顯式宣告
 - `let` 用於不可變欄位，`var` 用於可變欄位
 - 禁止回傳 UI framework 型別（`Color`、`Font`、`Image`）的 computed property
+- **Domain Model 不跨 feature 共用**：兩個 feature 都要「貼文」時各自定義各自的 `Post`，只帶自己需要的欄位；跨界傳 primitive（見 `mvvmc-structure`）
 
 **L2 規則**（只被一個父 Model 使用的 enum/struct）：
 

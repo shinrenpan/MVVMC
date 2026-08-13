@@ -34,6 +34,7 @@ Cross-cutting concerns:
 
 | Concern | Rules live in |
 |---|---|
+| Where a type or component lives; feature boundaries | `mvvmc-structure` |
 | AppRouter / Deeplink / SceneDelegate | `mvvmc-navigation` |
 | ViewModel unit tests | `mvvmc-testing` |
 | async / Task / actor / Sendable | `swift-concurrency` |
