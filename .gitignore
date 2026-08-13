@@ -9,3 +9,6 @@ DerivedData/
 # 巢狀專案（Experiments/）的 xcodeproj 同樣由 xcodegen 產生
 **/*.xcodeproj/project.pbxproj
 **/*.xcodeproj/project.xcworkspace/
+
+# Experiments 編譯產物
+Experiments/ConcurrencyProbe/probe_*

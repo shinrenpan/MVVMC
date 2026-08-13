@@ -22,6 +22,7 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 
 - **模組預設 `@MainActor`**：`Package.swift` 設 `.defaultIsolation(MainActor.self)`（Xcode：`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`、`SWIFT_APPROACHABLE_CONCURRENCY = YES`），整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。**Xcode 26 新專案預設就開這兩項。**
 - **`nonisolated async func` 預設跑在呼叫端 actor**（`nonisolated(nonsending)`，SE-0461）——**不再自動跳到背景**。所以「標了 `nonisolated` 的 async 就會脫離主 actor」這個舊觀念已不成立。
+  > ⚠️ **這條依賴設定**，不是 6.2 toolchain 就自動生效：要開 `SWIFT_APPROACHABLE_CONCURRENCY: YES`（SPM 為 `.enableUpcomingFeature("NonisolatedNonsendingByDefault")`）。實測（`Experiments/ConcurrencyProbe/`，Swift 6.3.1）：同一段 `nonisolated async func` 從 `@MainActor` 呼叫，**沒開**這個 flag 時離開主緒、**開了**才留在呼叫端。判斷任何一段 `nonisolated async` 的行為前，先確認這個開關——這正是下方〈Fast Path〉存在的理由。
 - **要並行 / 離開 actor 得明講**：用 `Task { @concurrent in ... }` 讓 Task 從主 actor 外起跑（見〈離開主 actor〉）。
 - **6.3 Region-based isolation 正式可用**：編譯器能證明更多情況的資料安全，`Sendable` 假陽性大減。
 
