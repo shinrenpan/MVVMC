@@ -38,6 +38,44 @@ struct PostListViewModelTests {
     #expect(vm.state.api.fetchPosts == .error("Network error"))
   }
 
+  // 善用 State 的 Equatable：一行鎖定完整狀態，多餘的變動也會被抓出
+  @Test
+  func `fetchPosts success produces expected state`() async {
+    let vm = PostListViewModel()
+    let dtos: [PostListViewModel.PostDTO] = [
+      .init(id: 1, user_id: 1, title: "Title A", body: "Body A"),
+    ]
+    await vm.doAction(.apiResponse(.fetchPosts(.success(dtos))))
+
+    var expected = PostListViewModel.State()
+    expected.posts = [.init(id: 1, userId: 1, title: "Title A", body: "Body A")]
+    expected.api.fetchPosts = .success
+    #expect(vm.state == expected)
+  }
+
+  // MARK: - Router（驗證導航意圖，不驗證導航行為）
+
+  @Test
+  func `postDidTap routes to detail`() async {
+    let vm = PostListViewModel()
+    var received: PostListViewModel.Router?
+    vm.onRoute = { received = $0 }
+
+    let post = PostListViewModel.Post(id: 1, userId: 1, title: "Title A", body: "Body A")
+    await vm.doAction(.view(.postDidTap(post)))
+    #expect(received == .toDetail(post))
+  }
+
+  @Test
+  func `userDidTap routes to user detail`() async {
+    let vm = PostListViewModel()
+    var received: PostListViewModel.Router?
+    vm.onRoute = { received = $0 }
+
+    await vm.doAction(.view(.userDidTap(3)))
+    #expect(received == .toUserDetail(3))
+  }
+
   // MARK: - filter
 
   @Test

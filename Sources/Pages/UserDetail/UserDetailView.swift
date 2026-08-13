@@ -12,7 +12,7 @@ struct UserDetailView: View {
         ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
       default:
         if let user = viewModel.state.user {
-          UserInfoView(user: user)
+          InfoSection(user: user)
         }
       }
     }
@@ -27,7 +27,8 @@ struct UserDetailView: View {
 // MARK: - Subviews
 
 private extension UserDetailView {
-  struct UserInfoView: View {
+  // L2：純展示元件 —— 無使用者互動，依規範不需要 enum Action
+  struct InfoSection: View {
     let user: UserDetailViewModel.User
 
     var body: some View {

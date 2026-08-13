@@ -65,7 +65,7 @@ extension PostListViewModel {
 // MARK: - Router
 
 extension PostListViewModel {
-  enum Router: Sendable {
+  enum Router: Equatable, Sendable {
     case toDetail(Post)
     case toUserDetail(Int)
     case toFilter

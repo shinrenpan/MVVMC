@@ -3,7 +3,7 @@ import Foundation
 // MARK: - State
 
 extension PostDetailViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     let post: Post
   }
 }
@@ -11,7 +11,7 @@ extension PostDetailViewModel {
 // MARK: - Domain Models
 
 extension PostDetailViewModel {
-  struct Post: Identifiable, Sendable {
+  struct Post: Identifiable, Equatable, Sendable {
     let id: Int
     var title: String
     var body: String

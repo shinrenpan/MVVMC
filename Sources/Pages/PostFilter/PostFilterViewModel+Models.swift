@@ -3,7 +3,7 @@ import Foundation
 // MARK: - State
 
 extension PostFilterViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     let users: [User] = (1...5).map { .init(id: $0) }
   }
 }

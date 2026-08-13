@@ -3,14 +3,14 @@ import Foundation
 // MARK: - State
 
 extension PostListViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     var isFirstAppear: Bool = true
     var api: API = .init()
     var posts: [Post] = []
     var filterUserId: Int? = nil
   }
 
-  struct API: Sendable {
+  struct API: Equatable, Sendable {
     var fetchPosts: APIStatus = .prepare
   }
 }
@@ -18,7 +18,7 @@ extension PostListViewModel {
 // MARK: - Domain Models
 
 extension PostListViewModel {
-  struct Post: Identifiable, Sendable {
+  struct Post: Identifiable, Equatable, Sendable {
     let id: Int
     let userId: Int
     var title: String

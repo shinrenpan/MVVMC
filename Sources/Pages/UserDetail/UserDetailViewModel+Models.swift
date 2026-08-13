@@ -3,13 +3,13 @@ import Foundation
 // MARK: - State
 
 extension UserDetailViewModel {
-  struct State: Sendable {
+  struct State: Equatable, Sendable {
     var isFirstAppear: Bool = true
     var api: API = .init()
     var user: User? = nil
   }
 
-  struct API: Sendable {
+  struct API: Equatable, Sendable {
     var fetchUser: APIStatus = .prepare
   }
 }
@@ -17,7 +17,7 @@ extension UserDetailViewModel {
 // MARK: - Domain Models
 
 extension UserDetailViewModel {
-  struct User: Sendable {
+  struct User: Equatable, Sendable {
     let id: Int
     var name: String
     var email: String
