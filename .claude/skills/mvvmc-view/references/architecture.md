@@ -98,7 +98,16 @@ struct SearchBar: View {
 - **Sendable 強制**：所有 `enum Action` 必須標註 `Sendable`，與 mvvmc-viewmodel skill 規範對齊
 - **中間層（Parent）**負責將底層（Child）的 Action 對映給上層（GrandParent）
 - **參數命名統一**：Action closure 定義端一律命名為 `let send: @MainActor (Action) -> Void`；呼叫端 `send:` 為最後一個參數時，允許 trailing closure，否則用 `send:` 標籤明確標示
-- **`@MainActor` 標註**：與 VM 的 `onRoute` / `onCallback` 同一套風格，把「這個回呼保證在主 actor 執行」寫進型別。附帶好處：global actor 隔離的函式型別隱含 `Sendable`，日後把 `send` 帶進 `Task` / async 情境不會卡在 strict concurrency（未標註的 `(Action) -> Void` 屆時得補 `@Sendable`）
+- **`@MainActor` 標註**：與 VM 的 `onRoute` / `onCallback` 同一套風格，把「這個回呼保證在主 actor 執行」寫進型別
+
+  <details><summary>這個標註的實際效果（Swift 6.3.1 實測）</summary>
+
+  - **隱含 `@Sendable`**：編譯器把 `@MainActor (Action) -> Void` 的實際型別顯示為 `@MainActor @Sendable (Action) -> Void`，跨並發邊界傳遞不必再自己標
+  - **但不是「不標就會壞」**：未標註的 `(Action) -> Void` 在單純情況下靠 region-based isolation（Swift 6.3）也能通過檢查——編譯器逐案證明它沒被別處引用。那是證明不是保證，closure 一旦被存進會跨邊界傳遞的型別就會擋
+  - **代價**：`@MainActor` 函式型別**不能**轉成非隔離的 `@Sendable (Action) -> Void`（編譯器報 `loses global actor 'MainActor'`）。若有 API 要求非隔離回呼，這裡會卡——SwiftUI 場景幾乎都在主 actor 上，所以實務上碰不到，但要知道它存在
+
+  所以標註的主要理由是**語意一致**（與 VM 的 closure 同一套），不是「不標會編不過」。
+  </details>
 - **目的**：確保每一層組件都能獨立拆卸使用，不產生跨層級的命名空間污染
 
 ```swift
