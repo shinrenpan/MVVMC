@@ -67,6 +67,15 @@ final class FeatureViewModel {
 - ✅ 必須標注 `@ObservationIgnored`
 - ✅ 非 UI 相關的 property 一律標注 `@ObservationIgnored`
 
+**什麼算「導航」——`onRoute` 的邊界：**
+
+| 副作用 | 誰做 | 判準 |
+|---|---|---|
+| push / pop / sheet / tab 切換 / dismiss | `onRoute?(...)` → C 層 | **會改變 App 內的畫面堆疊** |
+| 開啟外部 URL（`UIApplication.shared.open`）、分享、Haptic、複製到剪貼簿 | ViewModel 直接執行 | 不改變畫面堆疊，做完就結束 |
+
+VM 直接做第二類是刻意的——為它們繞一圈 `onRoute` 只是把單行呼叫拆成三個地方（Router case、handleRouter 分支、C 層實作），換不到任何解耦。判準是「畫面堆疊」而不是「有沒有碰到 UIKit」。
+
 > `@Observable` 追蹤所有 stored property；closure 或非 UI 狀態若未標注 `@ObservationIgnored`，會觸發不必要的 View re-render。
 
 ---
@@ -108,6 +117,63 @@ case .pullToRefresh:
 - guard 寫在 VM，**View 不碰 State**，state 的所有權仍在 ViewModel
 - `isFirstAppear` 用名字表達「只跑一次」的語意；`loadData` 保持乾淨，不帶生命週期假設
 - 兩個入口分開，日後要讓下拉刷新多做一件事（清快取、重置分頁）不必動到首次載入
+
+---
+
+## 錯誤的流動
+
+**`Error` 與 DTO 同構：兩者都是髒資料，都止步於 `handleAPIResponse`。**
+
+```
+network throws  →  handleAPIRequest 接住，包成自訂錯誤
+                →  .apiResponse(.xxx(.failure(...)))
+                →  handleAPIResponse 翻成「可以直接顯示的東西」寫進 state
+                →  View 直接顯示，不做任何錯誤判讀
+```
+
+```swift
+// handleAPIRequest：接住 throw，轉成 Action，不在這裡改 state 的資料欄位
+do {
+  let dtos = try await PostListAPI.fetch()
+  await doAction(.apiResponse(.fetchPosts(.success(dtos))))
+} catch {
+  await doAction(.apiResponse(.fetchPosts(.failure(.message(error.localizedDescription)))))
+}
+
+// handleAPIResponse：翻譯 → 寫 state
+case let .fetchPosts(.failure(.message(msg))):
+  state.api.fetchPosts = .error(msg)
+```
+
+- ✅ State 存的是**已翻譯的結果**（訊息字串，或自訂的 `Equatable` 錯誤 enum）
+- ❌ State 不存 `any Error` / `URLError` / `DecodingError`——網路細節不該滲進 UI，且 `Error` 不 `Equatable`，會讓 `State` 失去 `Equatable`（見 `mvvmc-model`〈State 欄位型別〉）
+- ❌ View 不做錯誤判讀（`if error is URLError`）——要顯示什麼在 VM 就決定完
+- 💡 錯誤要分流（可重試 / 需重新登入 / 純提示）時，做成自訂的 `Equatable` 錯誤 enum 存進 state，讓 View 用 `switch` 顯示；仍然不是把原始 `Error` 丟過去
+
+---
+
+## 多個 API 的並發
+
+一個 feature 同時要打多支 API 時，**每支各自一組 `APIRequest` / `APIResponse` case、各自一個狀態欄位**，不要合併成一個「載入中」旗標：
+
+```swift
+enum APIRequest: Sendable {
+  case fetchProfile
+  case fetchOrders
+}
+
+// State
+var api: API = .init()
+struct API: Equatable, Sendable {
+  var fetchProfile: APIStatus = .prepare
+  var fetchOrders: APIStatus = .prepare
+}
+```
+
+- ✅ 併發用 `async let` / `TaskGroup`（見 `swift-concurrency`），結果各自 dispatch 回自己的 `.apiResponse`
+- ✅ 分開追蹤才能表達「A 好了 B 還在轉」「A 失敗但 B 成功」這類真實狀態
+- ❌ 合併成單一 `isLoading` 會讓任一支失敗就整頁報錯，也無法局部重試
+- 💡 防重入的 `guard !state.api.xxx.isLoading else { return }` 也因此是**每支各自判斷**
 
 ---
 

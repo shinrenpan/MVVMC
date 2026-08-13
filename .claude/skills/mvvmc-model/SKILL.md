@@ -55,6 +55,7 @@ extension FeatureViewModel {
 |------|--------|
 | **DTO**（任何未經 `toDomain()` 的解碼結果） | DTO 是拋棄式髒資料。一旦進 State 就會被 View 讀到，API 欄位改名會直接打穿到 UI——這是 M 層三段抽象存在的唯一理由 |
 | **UI framework 型別**（`Color` / `Font` / `Image` / `UIImage` / View 型別） | 顯示決策屬 V 層。寫進 State 會讓 Model 綁死 UI framework，也讓單元測試被迫 import SwiftUI |
+| **未翻譯的 `Error`**（`any Error`、`URLError`、`DecodingError`） | 與 DTO 同構的問題：網路層細節不該滲進 UI。而且 `Error` 不是 `Equatable`，存進去會直接讓 `State` 失去 `Equatable`。翻成訊息字串、或自訂的 `Equatable` 錯誤 enum 再存 |
 
 除此之外皆可，包含：
 
@@ -78,6 +79,25 @@ extension FeatureViewModel {
   }
 }
 ```
+
+#### State 的 computed property
+
+由現有欄位推導、且**只被 UI 使用**的值，寫成 `State` 的 computed property，不要另存一個會不同步的 stored 欄位：
+
+```swift
+struct State: Equatable, Sendable {
+  var items: [Item] = []
+  var keyword: String = ""
+
+  // ✅ 推導值：不佔 stored 欄位、不可能與來源不同步
+  var filteredItems: [Item] { items.filter { keyword.isEmpty || $0.name.contains(keyword) } }
+  var isEmpty: Bool { items.isEmpty }
+}
+```
+
+- computed property 不參與 `Equatable` 合成（只比 stored 欄位），因此零成本
+- 推導成本高（大量排序／分組）且每次 `body` 都會讀時，改為在 `handleAPIResponse` 算好存進 stored 欄位——這是效能取捨，不是預設做法
+- 需要 UI 型別（`Color` / `Image`）的推導**不屬於這裡**，那是 V 層的 display helper（見 `mvvmc-view`）
 
 **例外：Detail View 必帶初始資料**
 
