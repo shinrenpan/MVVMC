@@ -118,4 +118,12 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 ## Concurrency — `swift-concurrency`
 
-Not exercised: the demo's only async work is a `Task.sleep` stub in `*ViewModel+APIs.swift`. There is no `@concurrent`, `Task.detached`, `actor`, or `nonisolated` computation to compile-check. Rules in that skill are validated against external references, not this demo.
+| Rule | Demonstrated in |
+|---|---|
+| Whole demo compiles under **Swift 6 language mode**, `SWIFT_STRICT_CONCURRENCY: complete`, `SWIFT_APPROACHABLE_CONCURRENCY: YES` | `project.yml` — zero errors, zero warnings |
+| `@MainActor` ViewModels + `Sendable` Action enums survive complete checking | all `*ViewModel.swift` |
+| `nonisolated(unsafe)` escape hatch with a written justification | `AppRouter.swift` (associated-object key) |
+| `@concurrent` / `Task.detached` / `actor` / `nonisolated` computation | 🚫 — no demo screen has work heavy enough to leave the main actor; inventing one would be decoration. Validated by `Experiments/` and external references instead |
+| Module-default `MainActor` isolation (`SWIFT_DEFAULT_ACTOR_ISOLATION`) | ❌ — deliberately not enabled; see `TODO.md`, it would change the VM-layer rule |
+
+> Until 2026-08 the demo built with `SWIFT_STRICT_CONCURRENCY: targeted` and no explicit `SWIFT_VERSION` — meaning this repo claimed Swift 6.2+ while never actually having its Swift 6 compatibility checked by a compiler. It now builds clean in full Swift 6 mode, and that took zero source changes.

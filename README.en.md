@@ -143,7 +143,8 @@ Demo includes:
 ## Tech Stack
 
 - iOS 17+
-- Swift 6.2+ (the test suite uses raw identifier test names, which require a Swift 6.2 toolchain)
+- Swift 6.2+ toolchain
+- Swift 6 language mode with `SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES` (builds warning-free) (the test suite uses raw identifier test names, which require a Swift 6.2 toolchain)
 - SwiftUI + UIKit hybrid
 - `@Observable` (Swift Observation framework)
 - XcodeGen (`xcodegen generate` to regenerate project file)

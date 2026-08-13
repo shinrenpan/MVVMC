@@ -38,6 +38,8 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 3. **Default isolation**：`.defaultIsolation(MainActor.self)` / `SWIFT_DEFAULT_ACTOR_ISOLATION`（決定「未標註的型別預設在不在主 actor」）
 4. **Approachable concurrency / upcoming features**：`SWIFT_APPROACHABLE_CONCURRENCY`、`.enableUpcomingFeature(...)`
 
+> MVVMC demo 的設定可當參考（`project.yml`）：Swift 6 language mode + `SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES`，零警告通過。**刻意沒開** `SWIFT_DEFAULT_ACTOR_ISOLATION`——開了之後 ViewModel 還要不要逐一標 `@MainActor` 是未定案的議題。所以本 skill 的建議預設「每個型別自己標註隔離」，不假設模組預設。
+
 ## Guardrails
 
 - ❌ 別把 `@MainActor` 當萬用解——要能說出「這段確實是 UI-bound」的理由

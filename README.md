@@ -143,7 +143,8 @@ open MVVMCDemo.xcodeproj
 ## Tech Stack
 
 - iOS 17+
-- Swift 6.2+（測試套件使用 raw identifier 測試名，需 Swift 6.2 toolchain）
+- Swift 6.2+ toolchain（測試套件使用 raw identifier 測試名）
+- Swift 6 language mode，`SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES`（零警告通過）
 - SwiftUI + UIKit 混合
 - `@Observable`（Swift Observation framework）
 - XcodeGen（`xcodegen generate` 更新 project file）

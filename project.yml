@@ -28,7 +28,9 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.joe.mvvmc.demo
         TARGETED_DEVICE_FAMILY: "1"
-        SWIFT_STRICT_CONCURRENCY: targeted
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
 
   MVVMCDemoTests:
     type: bundle.unit-test
@@ -40,5 +42,7 @@ targets:
     settings:
       base:
         TARGETED_DEVICE_FAMILY: "1"
-        SWIFT_STRICT_CONCURRENCY: targeted
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        SWIFT_APPROACHABLE_CONCURRENCY: YES
         GENERATE_INFOPLIST_FILE: YES
