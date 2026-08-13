@@ -1,7 +1,7 @@
 ---
 name: mvvmc-viewmodel
 description: |
-  MVVMC VM 層架構規範。涉及建立、審查、重構 @Observable ViewModel 時觸發。確保遵守 @Observable + @MainActor + final class 三合一規範，以及 doAction 單一進入點。
+  MVVMC VM 層架構規範。涉及建立、審查、重構 @Observable ViewModel，或處理 doAction / Action enum（ViewAction、APIRequest、APIResponse）、onRoute、onCallback、API 請求與錯誤如何寫進 state 時觸發。確保遵守 @Observable + @MainActor + final class 三合一規範，以及 doAction 單一進入點。
 ---
 
 # MVVMC ViewModel Skill

@@ -1,7 +1,7 @@
 ---
 name: mvvmc-testing
 description: |
-  MVVMC 單元測試規範。涉及為 ViewModel 撰寫、審查、重構測試時觸發。核心哲學：透過 doAction(.apiResponse(...)) 直接注入結果，不需要 protocol 或 mock class。
+  MVVMC 單元測試規範。涉及為 ViewModel 撰寫、審查、重構測試，或使用 Swift Testing（@Test、#expect、#require、confirmation）測試 MVVMC 程式碼時觸發。核心哲學：透過 doAction(.apiResponse(...)) 直接注入結果，不需要 protocol 或 mock class。
 ---
 
 # MVVMC Testing Skill

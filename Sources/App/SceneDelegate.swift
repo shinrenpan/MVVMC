@@ -5,6 +5,7 @@ import UserNotifications
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   var window: UIWindow?
 
+  // 進入點 1：前景 / 背景 URL Scheme
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
     guard let url = URLContexts.first?.url,
           let deeplink = Deeplink(url: url) else { return }
@@ -29,12 +30,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     let window = UIWindow(windowScene: windowScene)
     window.rootViewController = tabBar
-    window.backgroundColor = .systemBackground
+    window.backgroundColor = .systemBackground   // 防止自訂轉場期間露出黑底
     window.makeKeyAndVisible()
     self.window = window
 
     UNUserNotificationCenter.current().delegate = self
 
+    // 進入點 2：冷啟動 URL Scheme（必須在 makeKeyAndVisible() 之後，確保 rootVC 已存在）
     if let url = connectionOptions.urlContexts.first?.url,
        let deeplink = Deeplink(url: url) {
       AppRouter.shared.deeplink(deeplink.makeHostController())
@@ -45,6 +47,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 // MARK: - UNUserNotificationCenterDelegate
 
 extension SceneDelegate: UNUserNotificationCenterDelegate {
+  // 進入點 3：Push 點擊（全狀態通用）— nonisolated，用 Task 跳回主執行緒
   nonisolated func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,

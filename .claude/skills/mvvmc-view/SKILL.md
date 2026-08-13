@@ -1,7 +1,7 @@
 ---
 name: mvvmc-view
 description: |
-  MVVMC V 層架構規範。涉及建立、審查、重構 SwiftUI 視圖或組件時觸發。確保遵守三層架構、private extension 嵌套、enum Action Pattern、@Observable 數據流等規範。
+  MVVMC V 層架構規範。涉及建立、審查、重構 SwiftUI 視圖或組件，或處理 send closure、@Bindable 綁定、SwiftUI Preview、View 拆分與重繪效能時觸發。確保遵守三層架構、private extension 嵌套、enum Action Pattern、@Observable 數據流等規範。
 ---
 
 # MVVMC View Skill

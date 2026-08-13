@@ -1,7 +1,7 @@
 ---
 name: mvvmc-model
 description: |
-  MVVMC M 層建模規範。涉及建立 State、Domain Model、DTO、FeatureViewModel+Models.swift 時觸發。確保三層抽象正確分離，DTO 透過 toDomain() 轉換為 Domain Model。
+  MVVMC M 層建模規範。涉及建立 State、Domain Model、DTO、FeatureViewModel+Models.swift，或決定 State 欄位型別、Equatable 要不要加、Mock 資料怎麼寫時觸發。確保三層抽象正確分離，DTO 透過 toDomain() 轉換為 Domain Model。
 ---
 
 # MVVMC Model Skill
