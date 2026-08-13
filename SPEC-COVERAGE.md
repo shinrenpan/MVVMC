@@ -4,7 +4,9 @@ Maps each load-bearing rule to the demo file that proves it compiles.
 
 `Sources/` and `Tests/` are the spec's **compile-time test**: a rule no demo file exercises has never been checked by a compiler. When you change a rule in `.claude/skills/`, update the demo and this table in the same pass — that is how the spec and the demo stay in sync.
 
-Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessarily a defect)
+Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demonstrated
+
+**❌ vs 🚫**: ❌ means the demo *could* show it and doesn't — those are candidate work, listed in `TODO.md`. 🚫 means demonstrating it would require bending the demo out of shape (inventing a feature, adding a navigation level, or breaking an existing demonstration). A 🚫 rule is validated by reasoning and by other projects, not by this demo — and that is a deliberate trade, because a demo that shows everything stops showing anything clearly.
 
 ---
 
@@ -17,7 +19,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Cross-feature transfer via primitives | `PostDetailHostController(id:title:body:)` |
 | `Shared/` holds business-agnostic types only | `Sources/Shared/APIStatus.swift` (`APIStatus`, `APIError`) |
 | Shared UI component promoted out of `Pages/` | ❌ — no cross-feature component exists in the demo |
-| Feature split criteria | ❌ — all six demo features are small enough never to hit it |
+| Feature split criteria | 🚫 — a judgement rule, not code; six small features never trigger it |
 
 ## M — `mvvmc-model`
 
@@ -28,14 +30,14 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Detail-view exception: `let post` with no parameterless `init()` | `PostDetail/PostDetailViewModel+Models.swift` |
 | Field-type blacklist — UI state container is legal | `PostList` / `UserDetail` (`var api: API`) |
 | Field-type blacklist — no raw `Error` in State | `PostList` / `UserDetail` (`.error(String)`, not `.error(Error)`) |
-| `State` computed property for derived values | ❌ — no demo State derives anything |
+| `State` computed property for derived values | 🚫 — no demo screen has a value worth deriving; adding one would be decoration |
 | Domain Model is `Identifiable` when it has an `id` | `PostList.Post`, `PostFilter.User` |
 | DTO property names mirror API keys 1:1, no `CodingKeys` | `PostList.PostDTO` (`user_id`) |
 | `toDomain()` filters invalid rows (returns `Optional`) | `UserDetail.UserDTO` |
 | DTO does **not** conform to `Equatable` | all DTOs |
 | Mocks hang off Domain Models, whole file `#if DEBUG` | `PostList/PostListMocks.swift`, `PostDetail/PostDetailMocks.swift` |
 | L2 nested type with parent prefix (`OrderStatus` style) | ❌ |
-| Equatable exceptions (closure member / fire-and-forget / large blob) | ❌ — edge cases, may stay undemonstrated |
+| Equatable exceptions (closure member / fire-and-forget / large blob) | 🚫 — edge cases; demonstrating them means inventing a State that shouldn't exist |
 
 ## VM — `mvvmc-viewmodel`
 
@@ -47,7 +49,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | `onRoute` set by HostController, `@ObservationIgnored` | `PostListViewModel.swift` |
 | `onCallback` async closure for cross-VC results | `PostFilterViewModel.swift` |
 | Run once: `isFirstAppear` + guard | `PostList`, `UserDetail` |
-| Run once: `pullToRefresh` sharing the same APIRequest | ❌ — demo has no `.refreshable` |
+| Run once: `pullToRefresh` sharing the same APIRequest | `PostList` (`.refreshable` → same `fetchPosts`) |
 | Network layer is out of scope (endpoint layout is one option) | `PostList/PostListViewModel+APIs.swift` |
 | Error translated before it reaches State | `PostListViewModel.handleAPIResponse` |
 | Multiple concurrent requests, one status field each | ❌ — every demo VM has exactly one request |
@@ -69,7 +71,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | `@Bindable` inside `body` for a `TextField` binding | ❌ — demo has no text input |
 | Display helper (`private extension Model { var color: Color }`) | ❌ |
 | Slot pattern (`@ViewBuilder` container) | ❌ |
-| `ForEach` + child `@State` identity trap | ❌ — no child holds `@State` |
+| `ForEach` + child `@State` identity trap | 🚫 — showing the trap means shipping the anti-pattern the spec tells you to avoid |
 
 ## C — `mvvmc-hostcontroller`
 
@@ -90,9 +92,9 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Stateless `AppRouter`, nav resolved from `source.navigationController` | `Sources/App/AppRouter.swift` |
 | `to()` with `.push` / `.modal` / `.fade` | `PostList` → `PostFilter` (modal), `UserDetail` (fade) |
 | `sheet()` | `Settings` |
-| `sheet()` with custom `detents` | ❌ |
+| `sheet()` with custom `detents` | `Profile` → `Settings` (`[.medium(), .large()]`) |
 | `back()` auto-detecting sheet → dismiss | `PostFilter`, `Settings` |
-| `backTo()` / `backToRoot()` | ❌ |
+| `backTo()` / `backToRoot()` | 🚫 — the demo's deepest stack is two levels, where these are indistinguishable from `back()` |
 | `tab()` | `Profile` |
 | `deeplink()` with injected Close button | `Sources/App/Deeplink.swift` |
 | Three SceneDelegate entry points (foreground / cold start / push) | `Sources/App/SceneDelegate.swift` |
@@ -112,7 +114,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Router (navigation intent) assertion | `PostListViewModelTests` |
 | Whole-state comparison via `Equatable` | `PostListViewModelTests` |
 | ViewAction that chains into an API request (annotated, slow) | `PostListViewModelTests.didFilterUser` |
-| Parameterised tests / `#require` / `confirmation` | ❌ — optional techniques, none needed by the demo yet |
+| Parameterised tests / `#require` / `confirmation` | 🚫 — optional techniques; the demo's tests don't need them |
 
 ## Concurrency — `swift-concurrency`
 

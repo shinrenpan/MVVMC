@@ -27,6 +27,9 @@ struct PostListView: View {
         }
       }
     }
+    .refreshable {
+      await viewModel.doAction(.view(.pullToRefresh))
+    }
     .task {
       await viewModel.doAction(.view(.isFirstAppear))
     }

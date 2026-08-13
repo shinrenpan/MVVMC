@@ -30,7 +30,7 @@ private extension ProfileHostController {
       AppRouter.shared.tab(0, from: self)
     case .toSettings:
       let nav = UINavigationController(rootViewController: SettingsHostController(viewModel: .init()))
-      AppRouter.shared.sheet(nav, from: self)
+      AppRouter.shared.sheet(nav, from: self, detents: [.medium(), .large()])
     }
   }
 }

@@ -28,6 +28,7 @@ final class PostListViewModel {
 extension PostListViewModel {
   enum ViewAction: Sendable {
     case isFirstAppear
+    case pullToRefresh
     case postDidTap(Post)
     case userDidTap(Int)
     case showFilter
@@ -42,6 +43,9 @@ extension PostListViewModel {
       guard state.isFirstAppear else { return }
       state.isFirstAppear = false
       await doAction(.apiRequest(.fetchPosts(userId: nil)))
+    case .pullToRefresh:
+      // 與 isFirstAppear 是兩個語意不同的入口，導向同一個 APIRequest
+      await doAction(.apiRequest(.fetchPosts(userId: state.filterUserId)))
     case let .postDidTap(post):
       onRoute?(.toDetail(post))
     case let .userDidTap(userId):
