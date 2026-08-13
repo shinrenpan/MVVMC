@@ -177,17 +177,33 @@ struct API: Equatable, Sendable {
 
 ---
 
-## 網路層不在規範範圍
+## 明確不在規範範圍的事
 
-`handleAPIRequest` 裡怎麼發請求——endpoint 定義在哪個檔、叫什麼名字、用 `URLSession` 還是第三方、錯誤怎麼包——**MVVMC 不規範**，那屬於各人／各團隊既有的習慣。
+以下都屬於各人／各團隊的既有習慣，**MVVMC 不表態**。列在這裡是為了讓「沒寫」是個明確的決定，而不是遺漏——避免有人（或 AI）自行發明一套再宣稱那是 MVVMC 的要求。
 
-MVVMC 只要求兩條邊界：
+**1. 網路層怎麼發請求**
 
-- ✅ `handleAPIRequest` 拿到結果後一律轉成 `.apiResponse(...)` 回到 `doAction`，不在 request 端直接改 state
+endpoint 定義在哪個檔、叫什麼名字、用 `URLSession` 還是第三方、錯誤怎麼包——不規範。
+
+> demo 把 endpoint 放在 `FeatureViewModel+APIs.swift`（見 `Sources/Pages/PostList/`），那只是**其中一種擺法**。
+
+**2. ViewModel 怎麼取得依賴**（service / repository / 快取）
+
+DI 從 `init` 注入、singleton、static 方法——都可以，看團隊習慣。
+
+> 補充一點事實供選擇時參考：MVVMC 的測試從 `.apiResponse` 注入結果（見 `mvvmc-testing`），**不需要換掉 service 就能測 ViewModel**。所以在這個架構裡，DI 是工程偏好，不是為了可測試性而被迫付出的成本。
+
+**3. 非父子關係的跨 VM 通訊**
+
+Tab A 改了資料要讓 Tab B 反映——共享 store、通知機制、回到畫面時重新載入，都由專案自行決定。`onRoute` / `onCallback` 只處理父子關係，不會被擴充成通用的事件匯流排。
+
+---
+
+**但這三件事不在「不規範」之列**——它們是 MVVMC 的邊界，一律遵守：
+
+- ✅ `handleAPIRequest` 拿到結果後轉成 `.apiResponse(...)` 回到 `doAction`，不在 request 端直接改 state 的資料欄位
 - ✅ 寫進 state 的必須是 Domain Model（`toDomain()` 之後），DTO 止步於 `handleAPIResponse`
-- ❌ 審查時不得以「endpoint 沒有獨立檔案」「沒有 APIManager」這類理由開單
-
-> demo 把 endpoint 放在 `FeatureViewModel+APIs.swift`（見 `Sources/Pages/PostList/`），那只是**其中一種擺法**，不是規範。
+- ❌ 審查時不得以「endpoint 沒有獨立檔案」「沒有 APIManager」「沒有用 DI」這類理由開單
 
 ---
 

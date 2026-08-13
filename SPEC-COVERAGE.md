@@ -27,6 +27,8 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | `State` is `Equatable, Sendable`, every field defaulted | all six `*ViewModel+Models.swift` |
 | Detail-view exception: `let post` with no parameterless `init()` | `PostDetail/PostDetailViewModel+Models.swift` |
 | Field-type blacklist — UI state container is legal | `PostList` / `UserDetail` (`var api: API`) |
+| Field-type blacklist — no raw `Error` in State | `PostList` / `UserDetail` (`.error(String)`, not `.error(Error)`) |
+| `State` computed property for derived values | ❌ — no demo State derives anything |
 | Domain Model is `Identifiable` when it has an `id` | `PostList.Post`, `PostFilter.User` |
 | DTO property names mirror API keys 1:1, no `CodingKeys` | `PostList.PostDTO` (`user_id`) |
 | `toDomain()` filters invalid rows (returns `Optional`) | `UserDetail.UserDTO` |
@@ -47,6 +49,9 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Run once: `isFirstAppear` + guard | `PostList`, `UserDetail` |
 | Run once: `pullToRefresh` sharing the same APIRequest | ❌ — demo has no `.refreshable` |
 | Network layer is out of scope (endpoint layout is one option) | `PostList/PostListViewModel+APIs.swift` |
+| Error translated before it reaches State | `PostListViewModel.handleAPIResponse` |
+| Multiple concurrent requests, one status field each | ❌ — every demo VM has exactly one request |
+| Non-navigation side effect run directly in the VM (open URL / share) | ❌ — demo has no such action |
 
 ## V — `mvvmc-view`
 
