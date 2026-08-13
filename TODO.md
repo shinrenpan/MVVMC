@@ -6,7 +6,7 @@ Pending work tracker. Not part of the spec — see `CLAUDE.md` for the architect
 
 - [ ] **Module-default `@MainActor` vs `mvvmc-viewmodel`** — Swift 6.2 lets a module default to main-actor isolation (`.defaultIsolation(MainActor.self)` / `SWIFT_DEFAULT_ACTOR_ISOLATION=MainActor`; Xcode 26 new projects enable it by default). Decide whether ViewModels still need an explicit per-class `@MainActor`. This would change the VM-layer skill and CLAUDE.md.
 - [ ] **`withMainSerialExecutor` in `mvvmc-testing`** — adopt from AvdLee's Swift Concurrency skill (`references/testing.md`) for deterministic concurrency tests.
-- [ ] **Verify `@concurrent` declaration form** — `swift-concurrency` SKILL.md confirms the closure form `Task { @concurrent in }`; the function-declaration form `nonisolated @concurrent func` (SE-0461) is flagged "verify locally". Compile-check on the local toolchain (Swift 6.3.1) and finalize.
+- [x] ~~**Verify `@concurrent` declaration form**~~ — done 2026-08 on Swift 6.3.1: `@concurrent func` (member and top-level) compiles, `Task { @concurrent in }` compiles, but `nonisolated @concurrent func` fails to parse (`@concurrent` already implies nonisolated). Recorded in `swift-concurrency` SKILL.md.
 
 - [ ] **Demo coverage gaps** — rules marked ❌ in `SPEC-COVERAGE.md` have never been compile-checked: `pullToRefresh`, `@Bindable` + `TextField`, display helper, Slot pattern, `ForEach` + `@State` identity trap, `sheet` detents, `backTo` / `backToRoot`, L2 nested type with parent prefix.
 

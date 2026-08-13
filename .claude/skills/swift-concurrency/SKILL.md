@@ -92,7 +92,21 @@ Task {
 }
 ```
 
-- `@concurrent` 也可標在 async **函式宣告**上（SE-0461），但確切修飾詞組合請在本機 toolchain 驗證；日常在 `doAction` 內用 closure 形式最穩
+- `@concurrent` 也可標在 async **函式宣告**上（SE-0461）——型別成員與頂層函式都可以：
+
+```swift
+@MainActor
+final class Loader {
+    @concurrent func decode(_ data: Data) async -> Image? { ... }   // ✅
+}
+
+// ❌ 不要與 nonisolated 併寫：`nonisolated @concurrent func` 連 parse 都過不了
+//    （@concurrent 本身已隱含 nonisolated）
+```
+
+> 實測 Swift 6.3.1（2026-08）：`@concurrent func` ✅、`Task { @concurrent in }` ✅、`nonisolated @concurrent func` ❌ `expected declaration`。
+
+日常在 `doAction` 內仍以 closure 形式最直觀；需要讓一個 async 方法「總是離開呼叫端 actor」時才用宣告形式
 - 純同步、不 async 的運算 → 用下方 `nonisolated func`，不需要 `@concurrent`
 
 ---
