@@ -71,6 +71,60 @@ final class FeatureViewModel {
 
 ---
 
+## 常見模式：Run once（viewDidLoad 等價）
+
+**問題**：SwiftUI 的 `.onAppear` / `.task` 每次畫面出現都會觸發，沒有 UIKit `viewDidLoad` 的等價物。
+
+**做法**：`isFirstAppear` 與 `pullToRefresh` 是兩個**語意不同**的 ViewAction，但導向同一個 APIRequest：
+
+```swift
+enum ViewAction: Sendable {
+  case isFirstAppear
+  case pullToRefresh
+}
+
+enum APIRequest: Sendable {
+  case loadData
+}
+```
+
+```swift
+// View
+.task { await viewModel.doAction(.view(.isFirstAppear)) }
+.refreshable { await viewModel.doAction(.view(.pullToRefresh)) }
+```
+
+```swift
+// ViewModel
+case .isFirstAppear:
+  guard state.isFirstAppear else { return }
+  state.isFirstAppear = false
+  await doAction(.apiRequest(.loadData))
+
+case .pullToRefresh:
+  await doAction(.apiRequest(.loadData))
+```
+
+- guard 寫在 VM，**View 不碰 State**，state 的所有權仍在 ViewModel
+- `isFirstAppear` 用名字表達「只跑一次」的語意；`loadData` 保持乾淨，不帶生命週期假設
+- 兩個入口分開，日後要讓下拉刷新多做一件事（清快取、重置分頁）不必動到首次載入
+
+---
+
+## 網路層不在規範範圍
+
+`handleAPIRequest` 裡怎麼發請求——endpoint 定義在哪個檔、叫什麼名字、用 `URLSession` 還是第三方、錯誤怎麼包——**MVVMC 不規範**，那屬於各人／各團隊既有的習慣。
+
+MVVMC 只要求兩條邊界：
+
+- ✅ `handleAPIRequest` 拿到結果後一律轉成 `.apiResponse(...)` 回到 `doAction`，不在 request 端直接改 state
+- ✅ 寫進 state 的必須是 Domain Model（`toDomain()` 之後），DTO 止步於 `handleAPIResponse`
+- ❌ 審查時不得以「endpoint 沒有獨立檔案」「沒有 APIManager」這類理由開單
+
+> demo 把 endpoint 放在 `FeatureViewModel+APIs.swift`（見 `Sources/Pages/PostList/`），那只是**其中一種擺法**，不是規範。
+
+---
+
 ## 三種任務模式
 
 ### 模式 A：生成新 ViewModel

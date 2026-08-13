@@ -44,8 +44,38 @@ extension FeatureViewModel {
 
 - `struct`（值類型），遵守 `Equatable` 與 `Sendable`
 - 所有屬性給定預設值（確保 `.init()` 無參數可用）
-- 欄位只能是 Domain Model、Swift 原生型別、`Optional`
 - **預設加 `Equatable`**（例外見下方〈Equatable 規則〉）
+- 欄位型別採**黑名單**：只禁兩類，其餘自由（見下方〈State 欄位型別〉）
+
+#### State 欄位型別
+
+| 禁止 | 為什麼 |
+|------|--------|
+| **DTO**（任何未經 `toDomain()` 的解碼結果） | DTO 是拋棄式髒資料。一旦進 State 就會被 View 讀到，API 欄位改名會直接打穿到 UI——這是 M 層三段抽象存在的唯一理由 |
+| **UI framework 型別**（`Color` / `Font` / `Image` / `UIImage` / View 型別） | 顯示決策屬 V 層。寫進 State 會讓 Model 綁死 UI framework，也讓單元測試被迫 import SwiftUI |
+
+除此之外皆可，包含：
+
+- Domain Model 與其集合
+- Swift 原生型別、`Optional`
+- **純 UI 狀態**：請求狀態容器、展開中的 id 集合、捲動位置、選取狀態、分頁游標等
+
+> **純 UI 狀態的形狀不在規範範圍**——要不要包成 `api` 容器、狀態 enum 有哪些 case、叫什麼名字，屬個人／團隊習慣，本 skill 不介入，審查時也不得以此開單。唯一要求：若該型別讓 `State` 失去 `Equatable`，走〈Equatable 規則〉的例外處理並註明原因。
+
+```swift
+extension FeatureViewModel {
+  struct State: Equatable, Sendable {
+    var isFirstAppear: Bool = true       // ✅ 原生型別
+    var items: [Item] = []               // ✅ Domain Model
+    var selectedID: Item.ID? = nil       // ✅ Optional
+    var api: API = .init()               // ✅ 純 UI 狀態容器（形狀自訂）
+    var expandedIDs: Set<Item.ID> = []   // ✅ 純 UI 狀態
+
+ // var dtos: [ItemDTO] = []             // ❌ DTO 外洩
+ // var titleColor: Color = .primary     // ❌ UI framework 型別
+  }
+}
+```
 
 **例外：Detail View 必帶初始資料**
 
@@ -139,7 +169,7 @@ extension FeatureViewModel {
 - property 命名直接對齊 API response key（API 是 snake_case 就寫 snake_case，不強制任何風格），不需要 `CodingKeys`
   - **why**：DTO 是拋棄式的「髒資料」，值得關注的是 Domain Model 而非 DTO。命名與 API 維持 1:1 有兩個好處——(1) 好 debug：log / 斷點看到的欄位名就是 API 回的原始 key；(2) 好跟 backend 溝通：兩邊講的是同一個字，中間不隔一層 CodingKeys 翻譯。清理（改 camelCase、取捨欄位）是 `toDomain()` 的責任，髒命名到 `toDomain()` 為止不得外洩
 - `toDomain()` 負責轉換與過濾，取捨欄位是 `toDomain()` 的事
-- State 不持有 DTO，UI 層對 DTO 的存在完全透明
+- State 不持有 DTO（見〈State 欄位型別〉），UI 層對 DTO 的存在完全透明
 - **DTO 不加 `Equatable`**：解碼後立即 `toDomain()` 丟棄，從不參與相等比較，維持 `Codable & Sendable` 即可
 
 ---

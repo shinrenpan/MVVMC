@@ -7,6 +7,8 @@ argument-hint: [file-path]
 
 深度審查：`$ARGUMENTS`
 
+> 未取得檔案路徑時，先請使用者指定，不要自行猜測；建議優先審查業務邏輯集中的檔案（ViewModel、HostController）。
+
 > **注意**：本 skill 僅分析單一檔案內可見的資訊。需跨檔案確認的問題會標示 ⚠️ 跨檔案，供人工複查。
 
 請依照以下三個 Pass 逐一執行，每個 Pass 輸出獨立報告區塊。
@@ -38,7 +40,7 @@ argument-hint: [file-path]
 - **冗餘寫法**：
   - ❌ 不必要的 `self.`（非 closure / init 內）
   - ⚠️ 可省略但不影響閱讀的型別標注
-  - ❌ 多餘的 `Void` return type、`return` 在多行 closure 最後一行但不在單表達式 closure
+  - ❌ 多餘的 `Void` return type；單表達式 closure / func 內多餘的 `return`（多行 closure 最後一行的 `return` 是必要的，不算問題）
 
 - **Magic number / string**：
   - ❌ 業務邏輯中未命名的數字常數，應提取為 `static let` 或附上說明

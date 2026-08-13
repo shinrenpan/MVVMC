@@ -29,14 +29,14 @@ await vm.doAction(.apiResponse(.fetchUser(.failure(.message("Not found")))))
 
 ### `state.api` 狀態容器
 
-下方範例大量出現 `state.api.<name>`。其約定是：每個 API 動作在 `State` 裡都有一個對應的狀態欄位（容器），記錄該次請求目前處於哪個階段。常見狀態：
+下方範例大量出現 `state.api.<name>`。這是 **demo 採用的做法**：每個 API 動作在 `State` 裡有一個對應的狀態欄位，記錄該次請求目前處於哪個階段。demo 用的狀態值：
 
 - `.prepare`：初始／尚未觸發
 - `.success`：請求成功
 - `.error(...)`：請求失敗，附帶錯誤訊息
 - （若該流程有讀取指示器，也可有 `.loading`）
 
-測試就是靠斷言這個狀態的轉移（例如 `.prepare` → `.success`）來驗證整條流程是否如預期推進。
+> **形狀不強制**：要不要包成 `api` 容器、狀態 enum 有哪些 case、怎麼命名，屬個人／團隊習慣（見 `mvvmc-model`〈State 欄位型別〉）。本 skill 只借它示範測試手法——**重點是「斷言請求狀態的轉移」這個做法**，不是這個特定形狀。專案若用別的表達方式（`isLoading: Bool` + `errorMessage: String?` 等），把下方斷言換成對應欄位即可。
 
 ---
 
@@ -84,7 +84,7 @@ Raw identifier 格式：`描述主語` + `條件/輸入` + `預期結果`
 
 ---
 
-## 三類測試情境
+## 四類測試情境
 
 ### 1. Guard 邏輯（防重複觸發）
 
@@ -138,9 +138,9 @@ func `fetchItems failure sets error status`() async {
 >
 > 逐欄位斷言仍適用於「只想驗證單一欄位、不在意其餘」的情境；要「鎖定完整狀態」時用整體比對。
 
-### 3. Callback 驗證
+### 3. Callback / Router 驗證
 
-驗證 `onCallback` 是否以正確參數被呼叫：
+`onCallback` 與 `onRoute` 都只是 closure，測法完全相同——設好 closure，觸發 action，斷言收到的值：
 
 ```swift
 @Test
@@ -153,7 +153,40 @@ func `didSelectUser calls correct callback`() async {
   await vm.doAction(.view(.didSelectUser(user)))
   #expect(received == .didSelectUser(user))
 }
+
+@Test
+func `postDidTap routes to detail`() async {
+  let vm = FeatureViewModel()
+  var received: FeatureViewModel.Router?
+  vm.onRoute = { received = $0 }
+
+  let post = FeatureViewModel.Post.mock
+  await vm.doAction(.view(.postDidTap(post)))
+  #expect(received == .toDetail(post))
+}
 ```
+
+- 測的是**導航意圖**（VM 有沒有發出正確的 Router case），不是導航行為（HostController 有沒有真的 push）——後者需要 UIKit 環境，屬整合／UI 測試
+- 要用 `#expect(received == ...)` 斷言，`Router` / `Callback` enum 需為 `Equatable`；帶 associated value 時，裡面的 Domain Model 也要 `Equatable`（M 層預設全加，見 `mvvmc-model`）
+
+### 4. ViewAction 連鎖觸發 API 時
+
+有些 ViewAction 會在更新 state 後直接轉發 `.apiRequest`（例如套用篩選、切換排序）。此時 `await doAction(.view(...))` 會**一路等到請求跑完**，測試實質上變成整合測試。處理原則：
+
+```swift
+@Test
+func `didFilterUser sets filterUserId`() async {
+  let vm = FeatureViewModel()
+  vm.state.isFirstAppear = false
+  // 註明：此 action 會連鎖走完 request 路徑，故此測試較慢
+  await vm.doAction(.view(.didFilterUser(3)))
+  #expect(vm.state.filterUserId == 3)   // 只斷言這個 ViewAction 自己造成的 state 變更
+}
+```
+
+- ✅ 斷言只放**該 ViewAction 自身造成的 state 變更**，API 結果交給 `.apiResponse` 注入測試（第 2 類）
+- ✅ 在測試上註明它會走 request 路徑，讓後人知道它為何慢
+- ❌ request 路徑會打**真實網路**時，這個測試不該進單元測試套件——改為只測 `.apiResponse` 注入，「ViewAction 有沒有正確轉發 APIRequest」靠 code review 覆蓋。為了測試而引入 protocol / DI 框架違反本 skill 的設計哲學
 
 ---
 
@@ -165,6 +198,7 @@ func `didSelectUser calls correct callback`() async {
 | API 成功路徑 | 注入 `.success(dto)`，驗證 state 欄位正確 |
 | API 失敗路徑 | 注入 `.failure(.message(...))`，驗證 error status |
 | Callback 觸發 | 設定 `onCallback` closure，驗證回傳值 |
+| 導航意圖（`onRoute`） | 設定 `onRoute` closure，驗證收到的 Router case |
 | State 欄位計算 | 直接操作 state，驗證 computed property |
 
 ## 什麼不值得測試
@@ -173,8 +207,7 @@ func `didSelectUser calls correct callback`() async {
 |------|------|
 | 實際 API 網路呼叫 | 非確定性、速度慢，交給整合測試 |
 | SwiftUI View render | UI 測試範疇，非單元測試 |
-| HostController 導航 | 依賴 UIKit 環境，不在單元測試範圍 |
-| `onRoute` 是否被呼叫 | 屬於整合測試，驗證導航意圖即可 |
+| HostController 的導航**行為**（push / pop / present 真的發生） | 依賴 UIKit 環境；VM 端只驗證意圖（`onRoute` 收到什麼），見上表 |
 
 ---
 

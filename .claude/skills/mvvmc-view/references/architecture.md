@@ -27,6 +27,26 @@
   private var userSection: some View { ... }
   ```
 
+### Display Helper（Model → UI 型別）
+
+Domain Model 禁止回傳 UI framework 型別（`Color` / `Font` / `Image`，見 `mvvmc-model`），所以「這個狀態該顯示成什麼顏色／圖示」是 **V 層的決策**。寫成 Model 的 `private extension`，放在 View 檔案**頂端**：
+
+```swift
+// FeatureView.swift 頂端
+private extension FeatureViewModel.OrderStatus {
+    var color: Color {
+        switch self {
+        case .pending:   .orange
+        case .confirmed: .blue
+        case .shipped:   .green
+        }
+    }
+}
+```
+
+- `private` 確保不外洩；同一個 Model 在不同頁面可以有各自的顯示決策
+- 放檔案頂端、而非塞進 `private extension FeatureView`——它擴充的是 Model，不是 View
+
 ---
 
 ## 2. 數據流管理 (Data Flow)
@@ -58,7 +78,7 @@ struct SearchBar: View {
 struct SearchBar: View {
     enum Action: Sendable { case submitDidTap }
     @Binding var query: String
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
     var body: some View {
         TextField("Search", text: $query)
         Button("Submit") { send(.submitDidTap) }
@@ -75,7 +95,8 @@ struct SearchBar: View {
 - **Action 嵌套位置**：`enum Action` 必須**嵌套在該層的 View struct 內**，與 View 緊耦合
 - **Sendable 強制**：所有 `enum Action` 必須標註 `Sendable`，與 mvvmc-viewmodel skill 規範對齊
 - **中間層（Parent）**負責將底層（Child）的 Action 對映給上層（GrandParent）
-- **參數命名統一**：Action closure 定義端一律命名為 `let send: (Action) -> Void`；呼叫端 `send:` 為最後一個參數時，允許 trailing closure，否則用 `send:` 標籤明確標示
+- **參數命名統一**：Action closure 定義端一律命名為 `let send: @MainActor (Action) -> Void`；呼叫端 `send:` 為最後一個參數時，允許 trailing closure，否則用 `send:` 標籤明確標示
+- **`@MainActor` 標註**：與 VM 的 `onRoute` / `onCallback` 同一套風格，把「這個回呼保證在主 actor 執行」寫進型別。附帶好處：global actor 隔離的函式型別隱含 `Sendable`，日後把 `send` 帶進 `Task` / async 情境不會卡在 strict concurrency（未標註的 `(Action) -> Void` 屆時得補 `@Sendable`）
 - **目的**：確保每一層組件都能獨立拆卸使用，不產生跨層級的命名空間污染
 
 ```swift
@@ -84,7 +105,7 @@ struct ListSection: View {
     enum Action: Sendable {
         case addToCart(Product)
     }
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 
 // ❌ 錯誤：Action 在 View 外的獨立命名空間
@@ -133,7 +154,7 @@ struct UserCardSection: View {
 struct OverviewSection: View {
     let chartData: [ChartItem]
     let listData: [ListItem]
-    let send: (ListSection.Action) -> Void
+    let send: @MainActor (ListSection.Action) -> Void
 
     var body: some View {
         VStack {
@@ -152,7 +173,7 @@ struct OverviewSection: View {
 // ❌ 為形式而存在的空 enum
 struct UserCardSection: View {
     enum Action: Sendable {}
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 
 // ❌ 單 case 包裹子層 enum，毫無資訊量
@@ -160,7 +181,7 @@ struct OverviewSection: View {
     enum Action: Sendable {
         case list(ListSection.Action)
     }
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 ```
 
@@ -361,7 +382,7 @@ private extension FeatureView {
 
         @Binding var text: String
         let val: Int
-        let send: (Action) -> Void
+        let send: @MainActor (Action) -> Void
         var body: some View {
             SubComponent(value: val) { childAction in
                 switch childAction {
@@ -376,7 +397,7 @@ private extension FeatureView {
         enum Action: Sendable { case triggerDidTap }
 
         let value: Int
-        let send: (Action) -> Void
+        let send: @MainActor (Action) -> Void
         var body: some View {
             Button("\(value)") { send(.triggerDidTap) }
         }
@@ -468,15 +489,16 @@ struct FeatureView: View {
         }
     }
 
-    private func handleTopAction(_ action: TopSection.Action) {
+    // handler 標 @MainActor，與 send 的型別完全匹配
+    @MainActor private func handleTopAction(_ action: TopSection.Action) {
         switch action {
         case .orderHistoryButtonDidTap:
             Task { await viewModel.doAction(.view(.orderHistoryButtonDidTap)) }
         }
     }
 
-    private func handleInvestAction(_ action: InvestSection.Action) { ... }
-    private func handleListAction(_ action: ListSection.Action) { ... }
+    @MainActor private func handleInvestAction(_ action: InvestSection.Action) { ... }
+    @MainActor private func handleListAction(_ action: ListSection.Action) { ... }
 }
 
 // private extension 內只放子組件 struct，不放 handler func
@@ -655,7 +677,7 @@ struct ChildView: View {
     enum Action: Sendable { case expandDidTap }
     let item: Item
     let isExpanded: Bool
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 ```
 
@@ -715,7 +737,7 @@ struct CardContainer<Content: View>: View {
 struct TappableCard<Content: View>: View {
     enum Action: Sendable { case cardDidTap }
     @ViewBuilder let content: Content
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 
     var body: some View {
         RoundedRectangle(cornerRadius: 12)
@@ -794,7 +816,7 @@ struct UserSection: View {
 
     let user: User
     @Binding var bio: String
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 ```
 
@@ -830,7 +852,7 @@ struct UserSection: View {
         let friendCount: Int
     }
     let config: Config
-    let send: (Action) -> Void
+    let send: @MainActor (Action) -> Void
 }
 ```
 
