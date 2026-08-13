@@ -5,3 +5,7 @@ xcuserdata/
 *.xcworkspace/xcuserdata/
 DerivedData/
 .build/
+
+# 巢狀專案（Experiments/）的 xcodeproj 同樣由 xcodegen 產生
+**/*.xcodeproj/project.pbxproj
+**/*.xcodeproj/project.xcworkspace/

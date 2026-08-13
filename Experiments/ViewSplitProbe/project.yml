@@ -1,0 +1,25 @@
+name: ViewSplitProbe
+options:
+  bundleIdPrefix: com.probe
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  ViewSplitProbe:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+  ViewSplitProbeTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources: [Tests]
+    dependencies:
+      - target: ViewSplitProbe
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1"

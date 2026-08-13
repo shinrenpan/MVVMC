@@ -55,6 +55,8 @@ private extension FeatureViewModel.OrderStatus {
 - **精準注入**：子組件只拿取「最小必要」數據
 - **禁止**：將整個 ViewModel 實例直接傳入子組件
 
+> **精準注入是解耦的要求，不是效能的要求。** 實測（見 §7）顯示整包傳 `@Observable` 物件的重繪成本**還比較低**——因為父層 `body` 不讀取任何被追蹤的屬性，連父層都不用重跑。真正的理由是：子組件一旦握有整個 ViewModel，就無法獨立 Preview、無法獨立測試、也無法搬到另一個頁面重用。拿效能替這條規則辯護會在遇到內行人時站不住腳。
+
 **傳遞機制：**
 | 情境 | 方式 |
 |------|------|
@@ -545,6 +547,26 @@ ListSection(items: state.items, send: send)
 | 適用場景 | 提升可讀性，無效能需求 | 需要效能隔離 |
 | 代碼成本 | 低（直接寫 func） | 高（需定義 struct、Action、參數） |
 
+### 實測數據
+
+上表不是推論，是量到的。實驗設計：一個 `@Observable` model 有 `a` / `b` 兩個屬性，A 區塊只讀 `a`、B 區塊只讀 `b`，用 `UIHostingController` 掛進 window 渲染後**只改 `a`**，數各層 `body` 執行次數（Xcode 26.4.1 / iOS 模擬器 / Swift 6.3.1）：
+
+| 拆分方式 | 父層 body | A body | B body |
+|---|---|---|---|
+| 兩區塊都是 `@ViewBuilder func` | 1 | 1 | **1** ← 無關的 B 跟著重跑 |
+| 兩區塊都是獨立 `struct`，只傳需要的值 | 1 | 1 | **0** ← B 被跳過 |
+| 兩區塊都是獨立 `struct`，整包傳 model | **0** | 1 | **0** ← 連父層都不用重跑 |
+
+三件事因此確定：
+
+1. **`@ViewBuilder func` 確實無法被跳過**——它就是父層 body 的一部分，父層重跑它就重跑
+2. **獨立 `struct` 確實會被跳過**——props 相同時 SwiftUI 不執行它的 body
+3. **讀取位置決定父層要不要重跑**：第三列的父層 body 是 0，因為它只把 model 傳下去、自己沒讀任何被追蹤的屬性；第二列的父層必須讀 `model.a` 才能傳值，所以它自己也被追蹤到
+
+第 3 點就是本節末〈延遲讀取〉的機制。它同時說明了 §2 的「精準注入」**不是靠效能站住的**——見 §2 的註解。
+
+> 實驗可重跑：MVVMC repo 的 `Experiments/ViewSplitProbe/`。SwiftUI 的行為會隨版本改變，上表若與你的環境不符，以重跑結果為準並回報。
+
 ---
 
 ### 拆與不拆的決策準則
@@ -614,6 +636,8 @@ var body: some View {
     StatsSection(stats: viewModel.stats)
 }
 ```
+
+> **這條與 §2「精準注入」的界線**：延遲讀取傳的是**一份資料**（Domain Model），子組件仍然可以獨立 Preview 與測試；§2 禁止的是傳**整個 ViewModel**，那會把 `doAction`、`onRoute`、所有其他 feature 的狀態一起交出去。判準是「傳資料」還是「傳控制器」，不是參數的顆粒大小。
 
 - **現代 API**：數值變動可搭配 `.contentTransition(.numericText())` 提升過場質感（選用）
 
