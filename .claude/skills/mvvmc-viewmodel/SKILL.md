@@ -154,26 +154,21 @@ case let .fetchPosts(.failure(.message(msg))):
 
 ## 多個 API 的並發
 
-一個 feature 同時要打多支 API 時，**每支各自一組 `APIRequest` / `APIResponse` case、各自一個狀態欄位**，不要合併成一個「載入中」旗標：
+一個 feature 同時要打多支 API 時，**每支各自一組 `APIRequest` / `APIResponse` case、狀態也各自追蹤**：
 
 ```swift
 enum APIRequest: Sendable {
   case fetchProfile
   case fetchOrders
 }
-
-// State
-var api: API = .init()
-struct API: Equatable, Sendable {
-  var fetchProfile: APIStatus = .prepare
-  var fetchOrders: APIStatus = .prepare
-}
 ```
 
 - ✅ 併發用 `async let` / `TaskGroup`（見 `swift-concurrency`），結果各自 dispatch 回自己的 `.apiResponse`
 - ✅ 分開追蹤才能表達「A 好了 B 還在轉」「A 失敗但 B 成功」這類真實狀態
-- ❌ 合併成單一 `isLoading` 會讓任一支失敗就整頁報錯，也無法局部重試
-- 💡 防重入的 `guard !state.api.xxx.isLoading else { return }` 也因此是**每支各自判斷**
+- ❌ 合併成單一「載入中」旗標會讓任一支失敗就整頁報錯，也無法局部重試
+- 💡 有防重入需求時，也是**每支各自判斷**，不是共用一個閘門
+
+> 狀態欄位長什麼樣（要不要包成容器、有哪些 case）是 M 層的事，且**形狀不在規範範圍**——見 `mvvmc-model`〈State 欄位型別〉。
 
 ---
 
