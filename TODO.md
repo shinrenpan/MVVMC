@@ -8,6 +8,8 @@ Pending work tracker. Not part of the spec — see `CLAUDE.md` for the architect
 - [ ] **`withMainSerialExecutor` in `mvvmc-testing`** — adopt from AvdLee's Swift Concurrency skill (`references/testing.md`) for deterministic concurrency tests.
 - [ ] **Verify `@concurrent` declaration form** — `swift-concurrency` SKILL.md confirms the closure form `Task { @concurrent in }`; the function-declaration form `nonisolated @concurrent func` (SE-0461) is flagged "verify locally". Compile-check on the local toolchain (Swift 6.3.1) and finalize.
 
+- [ ] **Demo coverage gaps** — rules marked ❌ in `SPEC-COVERAGE.md` have never been compile-checked: `pullToRefresh`, `@Bindable` + `TextField`, display helper, Slot pattern, `ForEach` + `@State` identity trap, `sheet` detents, `backTo` / `backToRoot`, L2 nested type with parent prefix.
+
 ## Environment notes
 
 - Local toolchain: Swift 6.3.1, Target arm64-apple-macosx26.0
