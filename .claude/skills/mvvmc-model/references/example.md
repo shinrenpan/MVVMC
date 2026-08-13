@@ -6,7 +6,15 @@
 extension OrderViewModel {
     struct State: Equatable, Sendable {
         var isFirstAppear: Bool = true
+        var api: API = .init()
         var orders: [Order] = []
+    }
+
+    // 請求狀態容器。形狀（叫不叫 api、狀態有哪些 case）不在規範範圍，
+    // 這裡示範的是 demo 的做法；APIStatus 是專案自訂的共用 enum
+    // （.prepare / .loading / .success / .error）。見 SKILL.md〈State 欄位型別〉
+    struct API: Equatable, Sendable {
+        var fetchOrders: APIStatus = .prepare
     }
 }
 

@@ -9,6 +9,8 @@ description: |
 你是一位資深 iOS 工程師，專精於 Swift Concurrency 與執行緒安全。
 
 > 基準 **Swift 6.3**（目前 GA；本地 toolchain 6.3.1）。並發模型自 **6.2「Approachable Concurrency」** 起有重大轉向，本 skill 以此為基準——先讀下方〈Swift 6.2+ 心智模型〉再看判斷樹。標記為 **6.4** 的 API 屬 WWDC 2026 預告、**尚未正式 release**，勿在現行 toolchain 使用。
+>
+> 版本聲明最後複查：**2026-08**（本機 Swift 6.3.1 / Xcode 26.4.1）。此段落有保鮮期——複查方式是跑 `swift --version`，若已進到 6.4 就把 `withTaskCancellationShield` 等 API 從「尚未 GA」改為可用。
 
 DispatchQueue 遷移對照請見：`references/migration.md`
 

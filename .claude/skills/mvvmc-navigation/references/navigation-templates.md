@@ -2,6 +2,8 @@
 
 MVVMC 導航地基的完整可貼實作。三個檔案住在 `Sources/App/`。
 
+> ⚠️ **本檔與 demo 的 `Sources/App/` 是同一份程式碼的兩個副本**（差異僅在此處註解較密）。改動任一邊都要同步另一邊，否則「可貼的模板」會與「跑得起來的實作」漸行漸遠。
+
 ---
 
 ## AppRouter.swift
@@ -127,6 +129,8 @@ final class AppRouter: NSObject {
       assertionFailure("AppRouter.deeplink(): 找不到 rootViewController")
       return
     }
+    // 標 .sheet 不是因為它長得像 sheet（這裡是 fullScreen），而是因為 .sheet 的語意是
+    // 「以 present 呈現 → back() 要走 dismiss」。改成別的樣式會讓 back() 誤走 pop。
     destination.appTransitionStyle = .sheet
     destination.navigationItem.leftBarButtonItem = UIBarButtonItem(
       systemItem: .close,

@@ -13,6 +13,28 @@ description: |
 
 ---
 
+## 核心規範速查
+
+下表只是索引，**判斷與範例一律以 `references/architecture.md` 為準**（章節編號對應該檔）。
+
+| # | 規範 | 章節 |
+|---|------|------|
+| 1 | 子視圖一律 `private extension` 嵌套，禁止 top-level 平鋪；`body` 拆分用 `@ViewBuilder private func`，禁止 computed property | §1 |
+| 2 | Model → UI 型別的 display helper 寫成 Model 的 `private extension`，放在 View 檔頂端 | §1 |
+| 3 | 精準注入：子組件只拿最小必要資料，禁止整包傳入 ViewModel | §2 |
+| 4 | 值的雙向同步用 `@Binding`；事件的語意通知用 `enum Action` | §2 |
+| 5 | `enum Action` 嵌套在該層 View struct 內並標 `Sendable`；closure 一律 `let send: @MainActor (Action) -> Void` | §3 |
+| 6 | 純展示 / 純佈局透傳層不需要 `enum Action`，禁止為形式定義空 enum 或單 case 包裝 | §3 |
+| 7 | 子層 Action 從自身視角命名，中間層做真正的 Mapping；純 Forwarding 是設計缺陷訊號 | §3 |
+| 8 | L2 省略 View 前綴 + `Section` 後綴；同前綴組件放同一個 `private extension` | §4 |
+| 9 | 跨 Section 共用的組件提拔為獨立 L1 檔案，不塞進任一 Section 的 `private extension` | §4 |
+| 10 | 拆成獨立 `struct View` 是效能決策（SwiftUI diffing 可跳過）；`@ViewBuilder func` 只換來可讀性 | §7 |
+| 11 | View 以 `let viewModel` 接收注入、禁止自建；互動一律 `Task { await viewModel.doAction(.view(...)) }`，禁止繞過 `doAction` | §6 |
+| 12 | `@Bindable` 在 `body` 內宣告一次，拆分 func 以 `bVM: Bindable<VM>` 參數接收；**子元件只收切片**（強制） | §11 |
+| 13 | Preview 以 `#if DEBUG` 包裹，注入 M 層的 `.mock` / `.mocks`，禁止觸發真實網路 | §12 |
+
+---
+
 ## 三種任務模式
 
 ### 模式 A：生成新視圖

@@ -10,6 +10,8 @@ description: |
 
 此 Skill 的職責範圍是 **`FeatureViewModel+Models.swift` 的內容**，不涉及 ViewModel 本身的實作。
 
+完整範例（State / Domain Models / DTOs 三區塊齊全）見：`references/example.md`
+
 ---
 
 ## 設計哲學

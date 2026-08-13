@@ -208,7 +208,7 @@ VStack(spacing: 8) {
 #if !SKIP
 .contentShape(Rectangle())   // SkipUI 尚未實作
 #endif
-.onTapGesture { onTap() }
+.onTapGesture { send(.rowDidTap) }
 ```
 
 💡 與 #2 的差別：#2 是整檔隱形，#8 是**就地補一小段**，跨平台的主體保留。

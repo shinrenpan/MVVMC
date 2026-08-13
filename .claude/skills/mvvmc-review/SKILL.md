@@ -8,7 +8,7 @@ argument-hint: [feature-path]
 
 審查 Feature：$ARGUMENTS
 
-> 未取得 feature 路徑時，先列出 `Sources/Pages/` 下的目錄請使用者指定，不要自行猜測。
+> 未取得 feature 路徑時，先列出專案的 feature 目錄（MVVMC 慣例是 `Sources/Pages/`，其他專案依實際結構）請使用者指定，不要自行猜測。
 
 請依照以下三個 Pass 逐一執行，每個 Pass 輸出獨立報告區塊。
 
@@ -45,6 +45,8 @@ argument-hint: [feature-path]
 ## Pass 2 — Swift 品質與 Swift 6（套用 deep-review 判準）
 
 本 Pass **不另立檢查清單**——直接套用 `mvvmc-deep-review` 的 Pass 1（Swift 寫法品質）與 Pass 2（Concurrency & Swift 6）判準逐檔執行。清單只維護在 deep-review 一處，避免兩份規範各自漂移。
+
+> 執行方式：`mvvmc-deep-review` 是手動觸發的 skill，模型不會自動載入——用 **Read 讀取 `.claude/skills/mvvmc-deep-review/SKILL.md`** 取得完整判準清單，再逐檔套用。
 
 涉及 async/await / Task / actor 的代碼另套用 `swift-concurrency` 規範。
 

@@ -190,6 +190,53 @@ func `didFilterUser sets filterUserId`() async {
 
 ---
 
+## Swift Testing 實用手法（按需採用）
+
+以下不是規範，是遇到對應情境時比土法煉鋼更好的寫法。
+
+**參數化測試**——同一段驗證跑多組輸入，失敗時報告會指出是哪一組：
+
+```swift
+@Test(arguments: [0, 1, 5])
+func `fetchItems maps every DTO`(count: Int) async {
+  let vm = FeatureViewModel()
+  let dtos = (0..<count).map { FeatureViewModel.ItemDTO(item_id: "\($0)", item_name: "Item") }
+  await vm.doAction(.apiResponse(.fetchItems(.success(dtos))))
+  #expect(vm.state.items.count == count)
+}
+```
+
+**`#require` 解 Optional**——比 `!` 安全：失敗即中止該測試，不會讓後續斷言連環爆：
+
+```swift
+@Test
+func `fetchUser success sets user`() async throws {   // 注意 throws
+  let vm = FeatureViewModel()
+  await vm.doAction(.apiResponse(.fetchUser(.success(dto))))
+
+  let user = try #require(vm.state.user)   // nil → 測試在此失敗中止
+  #expect(user.name == "Alice")
+}
+```
+
+**`confirmation` 驗證呼叫次數**——「有沒有被呼叫」用前面的變數捕捉即可，但「**剛好被呼叫幾次**」（防重入、防重複觸發）用它才精準：
+
+```swift
+@Test
+func `duplicate trigger fires callback exactly once`() async {
+  await confirmation("callback fired", expectedCount: 1) { fired in
+    let vm = FeatureViewModel()
+    vm.onCallback = { _ in fired() }
+    await vm.doAction(.view(.didSelectItem(.mock)))
+    await vm.doAction(.view(.didSelectItem(.mock)))   // 第二次應被 guard 擋掉
+  }
+}
+```
+
+`#expect(throws:)` 在 MVVMC 的 VM 測試裡通常用不到——`doAction` 不 throws，錯誤走 `.apiResponse(.failure(...))`。它適用的是 endpoint 層的獨立測試。
+
+---
+
 ## 什麼值得測試
 
 | 情境 | 測試方式 |

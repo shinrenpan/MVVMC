@@ -96,6 +96,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated (candidate work, not necessaril
 | Router (navigation intent) assertion | `PostListViewModelTests` |
 | Whole-state comparison via `Equatable` | `PostListViewModelTests` |
 | ViewAction that chains into an API request (annotated, slow) | `PostListViewModelTests.didFilterUser` |
+| Parameterised tests / `#require` / `confirmation` | ❌ — optional techniques, none needed by the demo yet |
 
 ## Concurrency — `swift-concurrency`
 

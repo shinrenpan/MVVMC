@@ -90,6 +90,7 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 - ✅ `onRoute` closure 用 `[weak self]`
 - ✅ 導航邏輯集中在 `handleRouter(_:)`
 - ✅ 所有導航透過 `AppRouter.shared`（`to / sheet / back / backTo / backToRoot / tab`）
+- ℹ️ `AppRouter.shared.deeplink(_:)` 也是導航 API，但它從 rootVC present、不需要 `from:`，呼叫端是 SceneDelegate 而非 HostController（見 `mvvmc-navigation`）
 - ❌ 禁止直接呼叫 `navigationController?.pushViewController` / `present` / `dismiss`
 - ❌ 禁止 ViewModel 直接持有 UIViewController 或做導航
 - ❌ 不需要 `viewDidDisappear` 清空 closure（ViewModel 由 HostController 持有，`[weak self]` 已足夠）
