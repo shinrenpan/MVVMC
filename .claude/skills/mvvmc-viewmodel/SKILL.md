@@ -120,7 +120,9 @@ case .pullToRefresh:
   await doAction(.apiRequest(.loadData))
 ```
 
-- guard 寫在 VM，**View 不碰 State**，state 的所有權仍在 ViewModel
+- guard 寫在 VM：**View 不自行判讀 State 做流程決策**（不由 View 檢查 `isFirstAppear` 決定要不要打 API），流程控制權留在 ViewModel
+
+  > 這與 V 層允許用 `@Binding` 綁 state 欄位（`TextField` 輸入）**不衝突**：綁定是「值的雙向同步」，流程判斷才是 VM 的專屬職責。兩者的分界見 `mvvmc-view` §2〈Binding vs Action 的選擇邊界〉——會改變「接下來要做什麼」的一律走 Action。
 - `isFirstAppear` 用名字表達「只跑一次」的語意；`loadData` 保持乾淨，不帶生命週期假設
 - 兩個入口分開，日後要讓下拉刷新多做一件事（清快取、重置分頁）不必動到首次載入
 
@@ -170,6 +172,19 @@ enum APIRequest: Sendable {
 ```
 
 - ✅ 併發用 `async let` / `TaskGroup`（見 `swift-concurrency`），結果各自 dispatch 回自己的 `.apiResponse`
+
+```swift
+// 兩支一起發，各自走自己的 request → response 鏈
+case .isFirstAppear:
+  guard state.isFirstAppear else { return }
+  state.isFirstAppear = false
+  async let categories: Void = doAction(.apiRequest(.fetchCategories))
+  async let products: Void = doAction(.apiRequest(.fetchProducts))
+  _ = await (categories, products)
+```
+
+> 這裡沒有違反「`doAction` 單一進入點」——併發的是**兩次對 `doAction` 的呼叫**，不是繞過它。單一進入點管的是「誰能觸發狀態轉移」，不是「一次只能觸發一個」。
+
 - ✅ 分開追蹤才能表達「A 好了 B 還在轉」「A 失敗但 B 成功」這類真實狀態
 - ❌ 合併成單一「載入中」旗標會讓任一支失敗就整頁報錯，也無法局部重試
 - 💡 有防重入需求時，也是**每支各自判斷**，不是共用一個閘門

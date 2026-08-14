@@ -27,6 +27,29 @@
   private var userSection: some View { ... }
   ```
 
+### 四態呈現（loading / error / empty / content）
+
+一個資料區塊幾乎都有四種狀態。建議骨架（非強制）：
+
+```swift
+switch viewModel.state.api.fetchItems {
+case .loading where viewModel.state.items.isEmpty:
+    ProgressView()                                   // 只有首次載入才蓋掉整塊
+case let .error(message):
+    ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+default:
+    if viewModel.state.items.isEmpty {
+        ContentUnavailableView("沒有資料", systemImage: "tray")
+    } else {
+        ListSection(items: viewModel.state.items, send: handleListAction)
+    }
+}
+```
+
+- `.loading where items.isEmpty` 是關鍵：沒有這個條件，下拉刷新會把既有內容換成轉圈
+- **「載入成功但結果為空」與「還沒載入」怎麼分**：看資料不看狀態——`items.isEmpty` 搭配狀態是否已離開 `.prepare`。請求狀態容器不需要為此多開一個 case
+- 同一套骨架在兩個以上 Section 重複出現時，才考慮提拔成共用組件（見 §4）；只重複一次時它是 body 拆分，不是組件
+
 ### Display Helper（Model → UI 型別）
 
 Domain Model 禁止回傳 UI framework 型別（`Color` / `Font` / `Image`，見 `mvvmc-model`），所以「這個狀態該顯示成什麼顏色／圖示」是 **V 層的決策**。寫成 Model 的 `private extension`，放在 View 檔案**頂端**：
@@ -46,6 +69,7 @@ private extension FeatureViewModel.OrderStatus {
 
 - `private` 確保不外洩；同一個 Model 在不同頁面可以有各自的顯示決策
 - 放檔案頂端、而非塞進 `private extension FeatureView`——它擴充的是 Model，不是 View
+- **顯示文案（`String`）比照辦理**：`Color` 是硬性規定（M 層禁止 UI framework 型別），文案雖然型別上放 M 層也不違規，但它與顏色是同一個顯示決策——`enum` 帶語意、V 層決定怎麼呈現。Domain Model 保持「只有業務語意，沒有任何呈現」
 
 ---
 

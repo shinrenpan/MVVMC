@@ -147,6 +147,8 @@ extension FeatureViewModel {
 
 被多個 Model 共用 → 各自獨立 `extension`。
 
+**同一 feature 內的 Model 可以互相持有**（`Order` 持有 `[OrderItem]`）。但若兩份資料來自**各自獨立的 API**，優先只存 id 參照（`categoryID: String` 而非 `category: Category`）——否則其中一支請求失敗時，另一支的資料就組不出來，等於把兩支請求的成敗綁死。跨 **feature** 則一律不共用，見 `mvvmc-structure`。
+
 ---
 
 ### Equatable 規則
