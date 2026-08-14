@@ -67,7 +67,8 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | Same-prefix components share one `private extension` | `PostListView` (`ListSection` + `ListRow`) |
 | Action handler extracted as `@MainActor private func`, kept beside `body` | `PostListView.handleListAction` |
 | Every interaction goes through `Task { await doAction(.view(...)) }` | `PostListView`, `PostFilterView` |
-| Preview injects mock state, wrapped in `#if DEBUG` | `PostListView`, `UserDetailView` |
+| Preview injects mock state, wrapped in `#if DEBUG` | `PostListView`, `UserDetailView` (both spell out `Post.mocks` in full — the `.mocks` shorthand does not compile) |
+| Four-state block (loading / error / empty / content) | `PostListView` — covers loading / error / content; **empty state not shown** |
 | `@Bindable` inside `body` for a `TextField` binding | ❌ — demo has no text input |
 | Display helper (`private extension Model { var color: Color }`) | ❌ |
 | Slot pattern (`@ViewBuilder` container) | ❌ |

@@ -75,6 +75,7 @@ argument-hint: [feature-path]
 
 - **Action 命名**：ViewAction 是否為事件風格（`xxxDidTap`）；子層 Action 是否被父層業務語意污染；是否存在純 Forwarding 的中間層
 - **State 欄位**：View 讀取的欄位是否都在 State；是否有已無人使用的殘留欄位
+  > 找到沒有呼叫者的 Action case / 沒人讀的 State 欄位時：**標記，不要替使用者刪**。「這個功能是還沒接完，還是已經不要了」是產品決策，不是審查決策。報告寫「無觸發點，請確認是待接線或應移除」即可
 - **Router 銜接**：VM 的每個 `Router` case 是否都在 C 層 `handleRouter` 有對應分支，反之亦然
 - **Callback 銜接**：子 VM 的每個 `Callback` case 是否都被父 HostController 處理
 - **測試覆蓋**：ViewAction / APIResponse 的 case 是否都有對應測試（見 `mvvmc-testing`）
