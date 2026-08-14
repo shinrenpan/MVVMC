@@ -8,6 +8,16 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 **❌ vs 🚫**: ❌ means the demo *could* show it and doesn't — those are candidate work, listed in `TODO.md`. 🚫 means demonstrating it would require bending the demo out of shape (inventing a feature, adding a navigation level, or breaking an existing demonstration). A 🚫 rule is validated by reasoning and by other projects, not by this demo — and that is a deliberate trade, because a demo that shows everything stops showing anything clearly.
 
+## Why the spec reaches further than the demo
+
+As of 2026-08 this table carries 16 ❌ against 10 🚫. **That gap is deliberate, not drift.**
+
+The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
+
+Those scenario rules are **not unverified — they're verified somewhere else**. `Experiments/GenerationProbe/` holds five features built from the spec alone, by agents forbidden to read `Sources/`, each typechecked under Swift 6 with strict concurrency. Pagination, forms, polling, wizards and deep returns were each implemented that way at least once, and the gaps those runs exposed are what produced the current wording of those rules.
+
+So read ❌ as **"not in the demo"**, not as "never checked". The demo is the compile-time test for *structure*; the generation probes are the test for *scenarios*.
+
 ---
 
 ## Structure — `mvvmc-structure`
