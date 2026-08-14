@@ -22,6 +22,7 @@ argument-hint: [feature-path]
    - `*ViewModel.swift` + `*ViewModel+APIs.swift`：套用 `mvvmc-viewmodel` 規範
    - `*View.swift`：套用 `mvvmc-view` 規範
    - `*HostController.swift`：套用 `mvvmc-hostcontroller` 規範
+   - **跨 feature 型別引用**：套用 `mvvmc-structure` 規範——檢查 State / Domain Model 有沒有引用其他 `XxxViewModel.` 命名空間的型別，這是最容易漏掉的一類違規
    - 對應的 `Tests/*ViewModelTests.swift`（若存在）：套用 `mvvmc-testing` 規範
    - 審查範圍若含 `Sources/App/`（AppRouter / Deeplink / SceneDelegate）：套用 `mvvmc-navigation` 規範
 3. 每層輸出：

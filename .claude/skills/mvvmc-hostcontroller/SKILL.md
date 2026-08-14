@@ -32,6 +32,23 @@ final class FeatureHostController: UIHostingController<FeatureView> {
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
+
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    viewModel.onRoute = { [weak self] router in
+      self?.handleRouter(router)
+    }
+  }
+}
+
+// 導航邏輯一律集中在這裡，不 inline 在 closure 裡
+private extension FeatureHostController {
+  func handleRouter(_ router: FeatureViewModel.Router) {
+    switch router {
+    case let .toDetail(item):
+      AppRouter.shared.to(DetailHostController(id: item.id), from: self)
+    }
+  }
 }
 ```
 

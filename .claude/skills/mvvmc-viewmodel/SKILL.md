@@ -68,6 +68,7 @@ final class FeatureViewModel {
   - 型別：`(@MainActor (Callback) async -> Void)?`，async（避免呼叫端需要包 Task）
   - ViewModel 呼叫：`await onCallback?(.didSelectUser(id: user.id))`（在 doAction 內 await）
   - **payload 傳 primitive，不傳 Domain Model**——與 HostController 的 init 同一個理由：耦合是雙向的（見 `mvvmc-structure`）
+- ℹ️ **`Router` 與 `Callback` 的 payload 規則不同**：`Router` 是 feature **內部**的 VM → C 通道，可以帶 Domain Model（`toDetail(post)`）；`Callback` 會**跨出 feature 邊界**到父層，所以必須 primitive。跨 feature 的 primitive 化在 C 層的 `handleRouter` 完成（`OrderDetailHostController(id: order.id)`）
 - ✅ 兩者只在有實際需求時才宣告
 - ✅ **`Router` / `Callback` enum 預設加 `Equatable`**——`mvvmc-testing` 用 `#expect(received == .toDetail(post))` 驗證導航意圖與跨 VC 回傳，沒有 `Equatable` 就寫不出這類測試。純值 enum 隱含 `Equatable`，帶 associated value 時要顯式加（裡面的 Domain Model 本來就該是 `Equatable`）
 - ✅ 必須標注 `@ObservationIgnored`
