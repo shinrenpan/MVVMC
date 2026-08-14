@@ -158,7 +158,7 @@ enum Callback: Equatable, Sendable {
 「步驟 1 → 2 → 3 → 送出」這種流程，表面上符合上面兩條拆分訊號（ViewAction 分三簇、State 欄位群不共讀），但**預設應該做成一個 feature**，用 `step` enum 驅動畫面切換：
 
 - **判準是「這幾頁是否共用同一份還沒送出的資料」**。是 → 一個 feature；否（每頁各自完成一件獨立的事）→ 才分開
-- **why**：拆成三個 feature 後，草稿得在三者之間傳遞——中間每一層都被迫帶著不屬於自己的欄位（prop drilling），而且最後一步的結果要逐層中繼回起點（見 `mvvmc-viewmodel`〈深層回傳〉）。兩者都是純成本，換不到任何解耦，因為這三頁本來就一起生、一起死
+- **why**：拆成三個 feature 後，草稿得在三者之間傳遞——中間每一層都被迫帶著不屬於自己的欄位（prop drilling），而且最後一步的結果要逐層中繼回起點（見 `mvvmc-viewmodel` 的 `references/patterns.md`〈深層回傳〉）。兩者都是純成本，換不到任何解耦，因為這三頁本來就一起生、一起死
 - 反過來說，若某一步**可以獨立進入**（例如從別的入口直接編輯地址），那它就是獨立 feature，不是 wizard 的一步
 - ⚠️ **合成一個 feature 之後，記得擋掉系統返回鈕**：三個步驟住在同一個 VC 裡，系統返回鈕會把整個 feature 一次 pop 掉，但使用者以為那是「上一步」。要 `.navigationBarBackButtonHidden(true)` 並自己提供「上一步」按鈕。（側滑手勢擋不掉，見 `mvvmc-navigation` 的已知限制）
 
