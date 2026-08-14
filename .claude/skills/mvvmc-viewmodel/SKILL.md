@@ -40,6 +40,12 @@ final class FeatureViewModel {
 - ❌ 禁止繼承任何 ViewModel protocol
 - ❌ 禁止 `ObservableObject` / `@Published`
 
+> **即使模組已經開了 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`（Xcode 26 新專案的預設），`@MainActor` 仍然明標**——這是定案的取捨，不是還沒決定：
+>
+> - 本 skill 設計成可以搬到任何專案，而那些專案的並發設定不在你的控制範圍。規範的正確性不該取決於 build setting
+> - 更實際的理由：`nonisolated async func` 的行為**已經**取決於一個 flag（實測見 `swift-concurrency`〈Swift 6.2+ 心智模型〉），同一段程式碼在開與不開之下行為相反。既然並發語意已經有一處交給設定決定，就不該再有第二處
+> - 成本是一個 attribute，換到的是「讀程式碼就知道它在哪個 actor」
+
 **doAction 規範：**
 - ✅ 唯一進入點，內部只做 `switch` dispatch
 - ❌ 禁止可從 View 直接呼叫的業務邏輯 func（應透過 doAction）

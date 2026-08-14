@@ -27,6 +27,13 @@ await vm.doAction(.apiResponse(.fetchUser(.failure(.message("Not found")))))
 - 測試意圖清晰：直接驗證「給定這個 API 回應，state 變成什麼」
 - Feature 變動快時，只有 Action enum 改動，測試跟著改即可
 
+> **也不引入 `withMainSerialExecutor`**（`swift-concurrency-extras`）——這是定案，不是還沒評估。那個工具是用來讓 async 測試的排程變確定、解 flaky test 的，但：
+>
+> - 從 `.apiResponse` 注入結果的測試**本來就是確定性的**：沒有真實網路、沒有計時、沒有競態
+> - 唯一的 flaky 來源是「ViewAction 連鎖觸發 API」那類測試，而規範已經在源頭處理掉了（見〈什麼值得測試〉：會碰真網路的不該進單元測試套件）
+>
+> **問題在源頭被解決，就不必在下游加工具。** 依賴的成本是永久的、收益是假設性的——真的遇到 flaky 再談。
+
 ### `state.api` 狀態容器
 
 下方範例大量出現 `state.api.<name>`。這是 **demo 採用的做法**：每個 API 動作在 `State` 裡有一個對應的狀態欄位，記錄該次請求目前處於哪個階段。demo 用的狀態值：
