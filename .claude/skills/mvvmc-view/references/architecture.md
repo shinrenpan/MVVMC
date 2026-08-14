@@ -317,7 +317,17 @@ private extension ProductListView {
 
 ### 跨 Section 共用組件的處理
 
-當一個 L3 零件需要被**多個不同 Section 共用**時，不應強行塞進某一個 Section 的 `private extension`（會造成反向依賴）。這種情況代表該組件已超出單一 Section 的範疇，應**提拔為獨立的 L1 檔案**：
+共用的程度有三階，**不要跳級**：
+
+| 誰在用 | 放哪 | 是否 private |
+|---|---|---|
+| 只有一個 Section | 該 Section 的家族 `private extension` | ✅ private |
+| **同一個 View 檔案內的多個 Section** | 同檔案的 `private extension FeatureView`，但不歸屬任何家族 | ✅ 仍然 private |
+| **跨兩個以上 View 檔案** | 獨立檔案，不帶頁面前綴（目錄見 `mvvmc-structure`） | ❌ internal |
+
+中間那階最容易被跳過——同檔案內兩個 Section 共用一個零件，**不需要**提拔成獨立檔案，留在 `private extension` 裡就沒有反向依賴問題。只有當第二個 **View 檔案**要用它時，才真的離開這個頁面。
+
+以下示範的是第三階（跨檔案）：
 
 ```swift
 // ❌ 錯誤：TagBadge 塞進 ListSection 的 extension，FilterSection 反向依賴
