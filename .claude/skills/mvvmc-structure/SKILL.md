@@ -99,6 +99,15 @@ enum Callback: Equatable, Sendable {
 
 去程傳 primitive、回程卻帶 Domain Model 是不對稱的——**耦合是雙向的**，型別跟著回程走一樣會把兩個 feature 綁死。而且實務上父層通常只用得到其中一兩個欄位（demo 的父層就只用了 `user.id`），帶整個 Model 過去並沒有換到什麼。
 
+### 要傳的是「一整組資料」時
+
+有時子 feature 需要的不是一兩個 id，而是一整組東西（例如退貨頁需要訂單的所有品項）。這時候 primitive 傳不動，處理順序是：
+
+1. **優先讓子 feature 自己取**：只傳 `orderID`，子 feature 打自己的 API 拿它要的形狀
+   > 代價是多一支 API、兩邊可能看到不同時間點的資料；換到的是兩個 feature 各自擁有完整的生命週期
+2. **退而求其次：合成同一個 feature**。若「子頁」根本不能獨立存在（沒有父頁給的那組資料就無事可做），那它本來就不是獨立 feature——見〈feature 邊界〉與 wizard 那條
+3. ❌ **不要用平行陣列硬拆**（`[String]` ids + `[String]` names + `[Int]` counts）。那是把一個 Model 拆成三個不變式無人維護的陣列，比傳 Model 更糟
+
 ---
 
 ## Shared/ 放什麼
@@ -151,6 +160,7 @@ enum Callback: Equatable, Sendable {
 - **判準是「這幾頁是否共用同一份還沒送出的資料」**。是 → 一個 feature；否（每頁各自完成一件獨立的事）→ 才分開
 - **why**：拆成三個 feature 後，草稿得在三者之間傳遞——中間每一層都被迫帶著不屬於自己的欄位（prop drilling），而且最後一步的結果要逐層中繼回起點（見 `mvvmc-viewmodel`〈深層回傳〉）。兩者都是純成本，換不到任何解耦，因為這三頁本來就一起生、一起死
 - 反過來說，若某一步**可以獨立進入**（例如從別的入口直接編輯地址），那它就是獨立 feature，不是 wizard 的一步
+- ⚠️ **合成一個 feature 之後，記得擋掉系統返回鈕**：三個步驟住在同一個 VC 裡，系統返回鈕會把整個 feature 一次 pop 掉，但使用者以為那是「上一步」。要 `.navigationBarBackButtonHidden(true)` 並自己提供「上一步」按鈕。（側滑手勢擋不掉，見 `mvvmc-navigation` 的已知限制）
 
 ---
 

@@ -113,6 +113,12 @@ private extension FeatureViewModel.OrderStatus {
 | ReadOnly | 直接透過 `let` 參數傳遞 |
 | Read-Write | 透過 `@Binding` 傳遞，父層藉由 `@Bindable` 產生綁定 |
 
+**「依 state 決定長什麼樣」不算流程決策：**
+
+子組件依 `step` 決定按鈕文案、依 `isValid` 決定 disabled、依狀態決定顯示哪個圖示——這些都是**版面**，View 自己判斷沒問題。「按下去之後要做什麼」才是流程，一律送回 VM（例如統一發 `primaryButtonDidTap`，由 VM 依 `state.step` 分歧）。
+
+> 判準：**這個分支影響的是「畫面長怎樣」還是「接下來做什麼」**。前者屬 V，後者屬 VM。`mvvmc-viewmodel` 的「View 不自行判讀 State 做流程決策」指的是後者。
+
 **Binding vs Action 的選擇邊界：**
 - **值的雙向同步** → `@Binding`：子組件需要回寫一個值給父層（例如 TextField 輸入、Toggle 開關），不帶語意，只是資料同步
 - **事件的語意通知** → `enum Action`：子組件發生了某件事，需要通知父層決策（例如按鈕點擊、選單選取），帶有明確的業務語意
@@ -659,6 +665,8 @@ ListSection(items: state.items, send: send)
 2. 區塊**非常簡單**，拆出去只增加樣板代碼
 3. 區塊資料與父層高度耦合，拆了反而需要傳很多參數
 
+> ⚠️ **拆 View 之前，先確認 M 層已經拆好**：如果高頻變動的欄位（即時狀態、進度）住在低頻 Model 裡，那個 Model 每次都 `!=` 自己，子組件的 props 比較永遠不相等——**View 拆得再細也沒用**。第一道閘門在 M 層，見 `mvvmc-model`〈高頻變動的欄位不要塞進低頻 Model〉。
+
 **灰色地帶判斷：**
 > 問自己：「這個區塊的資料，在其他區塊更新時會跟著變嗎？」
 > - 會 → `@ViewBuilder func` 即可，反正都要重跑
@@ -907,14 +915,14 @@ struct UserProfileView: View {
 
     var body: some View {
         @Bindable var bVM = viewModel
-        userSection(bVM: bVM)
+        userSection(bVM: $bVM)            // ← 傳 $bVM
     }
 
-    // bVM 透過參數傳入，避免在 func 內重新宣告
+    // 參數型別已經是 Bindable<VM>，所以 func 內直接寫 bVM.xxx 取 Binding，不再加 $
     @ViewBuilder private func userSection(bVM: Bindable<UserProfileViewModel>) -> some View {
         UserSection(
             user: viewModel.state.user,   // Model slice（ReadOnly）
-            bio: $bVM.state.user.bio      // Binding 單獨傳（Read-Write）
+            bio: bVM.state.user.bio       // Binding 單獨傳（Read-Write）
         ) { action in ... }
     }
 }
@@ -931,6 +939,8 @@ struct UserSection: View {
 }
 ```
 
+> **`$` 的位置很容易寫反**（實測 Swift 6.3.1）：`@Bindable var bVM = viewModel` 之後，`bVM` 是 **VM 本身**、`$bVM` 才是 `Bindable<VM>`。所以**呼叫端傳 `$bVM`**、**func 內直接用 `bVM.state.x`**（`Bindable` 本身是 dynamicMemberLookup，會給你 Binding）。寫成 `userSection(bVM: bVM)` 會得到 `cannot convert value of type 'VM' to expected argument type 'Bindable<VM>'`。
+>
 > **建議做法**：`@Bindable` 在 `body` 內宣告一次，拆分後的 `@ViewBuilder private func` 若需要 Binding，以 `bVM: Bindable<VM>` 作為參數接收。
 >
 > **核心原則（強制）**：子元件只接收所需切片（唯讀值 + 指定 `$binding` + `send`），不整包傳入 VM、也不在下層自行重建 `@Bindable`。

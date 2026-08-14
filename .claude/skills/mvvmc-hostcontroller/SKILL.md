@@ -60,6 +60,13 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 
 > 這是 MVVMC「Domain Model 不跨 feature」的執行點——**為什麼**不共用、參數多到難看時該怎麼辦，見 `mvvmc-structure`。
 
+**兩種 init 形狀怎麼選**（同一個專案裡並存是正常的）：
+
+| 這一頁需要回傳結果給父層嗎 | 用哪種 | 為什麼沒得選 |
+|---|---|---|
+| 不需要 | **變體**：父層傳 primitive，子 C 層自己組 VM | 父層完全不需要認識子 ViewModel 的型別 |
+| 需要（要接 `onCallback`） | **標準**：父層先建子 VM、掛好 `onCallback`，再 `init(viewModel:)` | 要掛 callback 就必須先拿到那個 VM 實例，沒有別的辦法 |
+
 ---
 
 ## 命名規範

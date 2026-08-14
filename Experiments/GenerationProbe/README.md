@@ -74,6 +74,32 @@ This run hit the architecture's edges rather than its details:
 
 The agent also **deliberately deviated** from the four-state skeleton and said so in a code comment — it could see the rule would break the stated requirement. It wrote what this review cycle later concluded was correct, before the spec said so.
 
+## Fourth run: the same requirement, the corrected spec (`GeneratedFeature4/`)
+
+A **regression test** rather than a new probe: identical requirement to run 3, handed to a fresh agent after this cycle's fixes landed. The question was not "what else is missing" but "did the fixes work".
+
+**Three and a half of the four named problems were answered outright**, with the agent citing the section it followed:
+
+- *Wizard: one feature or three?* — answered, including the test to apply ("do these pages share one unsubmitted draft")
+- *Deep return across pages* — answered, **and then not needed**: once the wizard collapsed into one feature there was only a single callback level left. An upstream rule dissolved a downstream problem
+- *Confirmation dialog* — answered; the agent noted the example was nearly the requirement verbatim
+- *High-frequency redraw* — the V-layer half was answered; the M-layer half was still missing (below)
+
+The agent also singled out the swipe-back limitation as useful precisely *because* it says no solution exists: **"明講沒解比沒寫更有用"**.
+
+Eight gaps remained, and their character had shifted — from "this scenario is missing entirely" to "these two rules interact badly":
+
+| Gap | Outcome |
+|---|---|
+| **Splitting Views isn't enough.** A high-frequency field living inside a low-frequency Model makes that Model `!=` itself every tick, so every child holding it redraws — no amount of View splitting helps. The real gate is in M | 🔴 new rule: high-frequency fields become parallel State fields; §7 now says the first gate is in M, not V |
+| **§11's `@Bindable` example doesn't compile** — the `$` is on the wrong side. Verified: `cannot convert value of type 'VM' to expected argument type 'Bindable<VM>'` | 🔴 fixed: `$bVM` at the call site, `bVM.state.x` inside |
+| **Optimistic update races the silent poll** — both rules were added in this same cycle, and an in-flight poll response overwrites the optimistic value | 🔴 race documented with its two common resolutions; the point is knowing it exists, since it only appears on slow networks |
+| `.task` can only live on the L1 — a child's `send` is synchronous, so `.task { send(...) }` cancels the moment it returns. Two rules multiplied into a third that neither states | 🔴 stated |
+| Bool flags guarding poll re-entry can latch permanently (fail-closed: polling never restarts) | 🔴 stated as a prohibition |
+| Passing "a whole set" across features when primitives can't carry it | 🟡 three-step fallback added |
+| A state-driven wizard must hide the system back button, or it pops the whole feature | 🟡 stated |
+| Where a `Step` enum lives; whether "layout decided from state" counts as a flow decision | 🟡 both given a test: "does it appear in the API contract" / "does this branch change the screen or the next step" |
+
 ## Why this code is not in the demo
 
 It is deliberately kept out of `Sources/`. The demo's six features already cover every structural rule; adding a seventh to tick boxes on `SPEC-COVERAGE.md` would contradict the reasoning behind the 🚫 markers there — a demo that shows everything stops showing anything clearly. This directory keeps the artefact as evidence without growing the demo's maintenance surface.

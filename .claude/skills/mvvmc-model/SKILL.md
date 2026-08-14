@@ -61,7 +61,9 @@ extension FeatureViewModel {
 
 - Domain Model 與其集合
 - Swift 原生型別、`Optional`
-- **純 UI 狀態**：請求狀態容器、展開中的 id 集合、捲動位置、選取狀態、分頁游標等
+- **純 UI 狀態**：請求狀態容器、展開中的 id 集合、捲動位置、選取狀態、分頁游標、wizard 的 `step` 等
+
+> **某個 enum 該歸 State 還是 Domain Models？** 判準是「**它會不會出現在 API 合約裡**」。`ReturnReason`（會變成 `reason_code` 送出去）是 Domain Model；`Step`（只驅動畫面切換，伺服器不知道它存在）是 UI 狀態。
 
 > 這類容器型別放在 **State 區塊**（它是 UI 狀態，不是業務語意），與 `State` 本身同一個 `extension` 或緊鄰的 `extension` 皆可。
 >
@@ -148,6 +150,23 @@ extension FeatureViewModel {
 ```
 
 被多個 Model 共用 → 各自獨立 `extension`。
+
+**高頻變動的欄位不要塞進低頻 Model。** 即時狀態、進度、倒數這種每幾秒就變的資料，若住在 `Order` 這類整包 Model 裡，每次變動都讓 `Order != Order`，於是**所有拿著 `Order` 的子組件全部重繪**——V 層再怎麼拆成獨立 `struct` 都擋不住，因為 props 真的變了。
+
+```swift
+// ❌ 每 5 秒輪詢一次 status，整個 Order 就變一次
+struct State: Equatable, Sendable {
+  var order: Order?          // Order 內含 status
+}
+
+// ✅ 高頻欄位獨立成平行欄位，兩者各自比較
+struct State: Equatable, Sendable {
+  var order: Order?          // 低頻：進頁面載入一次
+  var liveStatus: LiveStatus?  // 高頻：每 5 秒更新
+}
+```
+
+> **這是效能隔離的第一道閘門，而且它在 M 層不在 V 層**——`mvvmc-view` §7 講的拆 View 是第二道。第一道沒做，第二道就形同虛設。
 
 **同一 feature 內的 Model 可以互相持有**（`Order` 持有 `[OrderItem]`）。但若兩份資料來自**各自獨立的 API**，優先只存 id 參照（`categoryID: String` 而非 `category: Category`）——否則其中一支請求失敗時，另一支的資料就組不出來，等於把兩支請求的成敗綁死。跨 **feature** 則一律不共用，見 `mvvmc-structure`。
 
