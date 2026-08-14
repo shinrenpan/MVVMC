@@ -46,6 +46,7 @@ private extension UserDetailView {
 #if DEBUG
 #Preview {
   let vm = UserDetailViewModel(userId: 1)
+  vm.state.isFirstAppear = false   // 否則 .task 會在 Preview 觸發真實 API
   vm.state.user = .init(id: 1, name: "Alice Chen", email: "alice@example.com", company: "MVVMC Corp")
   return NavigationStack {
     UserDetailView(viewModel: vm)

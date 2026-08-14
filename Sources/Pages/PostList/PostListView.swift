@@ -115,6 +115,7 @@ private extension PostListView {
 #if DEBUG
 #Preview {
   let vm = PostListViewModel()
+  vm.state.isFirstAppear = false   // 否則 .task 會在 Preview 觸發真實 API
   vm.state.posts = PostListViewModel.Post.mocks
   return NavigationStack {
     PostListView(viewModel: vm)

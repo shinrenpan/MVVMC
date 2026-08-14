@@ -960,6 +960,11 @@ struct UserSection: View {
 以下情況才考慮引入 Config：
 - 參數來源混雜（非單一 Model）
 - 需要跨多個 ViewModel 組合數據
+- **表單頁的多欄位 Binding**（見下）
+
+> **表單頁是方案 B 用不上的地方**：一個表單有四五個欄位、每個都要 `@Binding`，而 Binding **無法被打包成 Model slice**（slice 是唯讀的一份值，Binding 是四條各自的讀寫通道）。所以表單子組件收 4-5 個 `@Binding` 是**合理的**，不算違反參考點；真的想收斂就用方案 A 把 Binding 裝進 Config。
+>
+> 唯一不能做的是「乾脆整包傳 `Bindable<VM>` 下去」——那等於把整個 ViewModel 交出去（§2）。
 
 ```swift
 struct UserSection: View {
@@ -1005,6 +1010,18 @@ Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是�
 
 - ✅ 整段 `#Preview` 用 `#if DEBUG` 包住
 - ✅ 透過 `vm.state.xxx = .mock/.mocks` 注入狀態，**不是**在 Preview 裡呼叫 API 或 `doAction`
+- ⚠️ **注入狀態時，記得一併關掉 run-once 旗標**：`vm.state.isFirstAppear = false`
+
+  ```swift
+  #Preview("列表有資料") {
+      let vm = FeatureViewModel()
+      vm.state.isFirstAppear = false        // ← 少了這行，下面那句就白做了
+      vm.state.items = FeatureViewModel.Item.mocks
+      return FeatureView(viewModel: vm)
+  }
+  ```
+
+  Preview 一樣會渲染 View，所以 `.task { doAction(.view(.isFirstAppear)) }` **一定會執行**——接著就是真實的 API 請求，正好違反下面那條「禁止觸發真實網路」。而且它不會報錯：你只會看到 Preview 轉圈、或顯示了伺服器來的資料而不是你注入的 mock，然後開始懷疑人生
 - ✅ mock 資料來源是 M 層的 `.mock` / `.mocks`（見 `mvvmc-model` 的 Mock 規範），Preview 不自己造資料
 - ✅ ViewModel 用 `let` 注入 View，與 HostController 的注入路徑一致
 - ✅ 多個 `#Preview` 覆蓋不同狀態（有資料 / 空 / 載入中 / 錯誤）時，各給具描述性的名稱
