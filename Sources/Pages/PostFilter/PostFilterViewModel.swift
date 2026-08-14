@@ -31,7 +31,7 @@ extension PostFilterViewModel {
   private func handleViewAction(_ action: ViewAction) async {
     switch action {
     case let .didSelectUser(user):
-      await onCallback?(.didSelectUser(user))
+      await onCallback?(.didSelectUser(id: user.id))
     case .showAll:
       await onCallback?(.showAll)
     case .cancel:

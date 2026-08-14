@@ -12,7 +12,8 @@ struct PostFilterViewModelTests {
 
     let user = PostFilterViewModel.User(id: 2)
     await vm.doAction(.view(.didSelectUser(user)))
-    #expect(received == .didSelectUser(user))
+    // Callback 回傳的是 primitive，不是 Domain Model
+    #expect(received == .didSelectUser(id: 2))
   }
 
   @Test

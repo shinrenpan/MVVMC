@@ -191,7 +191,8 @@ extension PostFilterViewModel {
     private func handleViewAction(_ action: ViewAction) async {
         switch action {
         case let .didSelectUser(user):
-            await onCallback?(.didSelectUser(user))
+            // payload 傳 primitive：父層不需要認識本 feature 的 User 型別
+            await onCallback?(.didSelectUser(id: user.id))
         case .cancel:
             await onCallback?(.didCancel)
         }
@@ -200,7 +201,7 @@ extension PostFilterViewModel {
 
 extension PostFilterViewModel {
     enum Callback: Equatable, Sendable {
-        case didSelectUser(User)
+        case didSelectUser(id: Int)
         case didCancel
     }
 }
@@ -215,9 +216,9 @@ extension PostFilterViewModel {
 filterViewModel.onCallback = { [weak self] callback in
     guard let self else { return }
     switch callback {
-    case let .didSelectUser(user):
+    case let .didSelectUser(id):
         AppRouter.shared.back(from: self)
-        await self.viewModel.doAction(.view(.didFilterUser(user)))
+        await self.viewModel.doAction(.view(.didFilterUser(id)))
     case .didCancel:
         AppRouter.shared.back(from: self)
     }

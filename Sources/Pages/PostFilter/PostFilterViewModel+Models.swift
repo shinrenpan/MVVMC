@@ -21,7 +21,8 @@ extension PostFilterViewModel {
 
 extension PostFilterViewModel {
   enum Callback: Equatable, Sendable {
-    case didSelectUser(User)
+    // payload 傳 primitive：父 feature 不需要認識 PostFilterViewModel.User（見 mvvmc-structure）
+    case didSelectUser(id: Int)
     case showAll
     case didCancel
   }

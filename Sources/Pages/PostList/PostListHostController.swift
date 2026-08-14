@@ -39,9 +39,9 @@ private extension PostListHostController {
       filterVM.onCallback = { [weak self] callback in
         guard let self else { return }
         switch callback {
-        case let .didSelectUser(user):
+        case let .didSelectUser(id):
           AppRouter.shared.back(from: self)
-          await self.viewModel.doAction(.view(.didFilterUser(user.id)))
+          await self.viewModel.doAction(.view(.didFilterUser(id)))
         case .showAll:
           AppRouter.shared.back(from: self)
           await self.viewModel.doAction(.view(.clearFilter))

@@ -36,6 +36,25 @@ The generated feature (`GeneratedFeature/`) came out largely compliant, includin
 
 Two further observations were judged **not** to need spec changes: the agent flagged that `Category` as a Domain Model name shadows `ObjectiveC.Category` (real, but scoped access makes it harmless), and that endpoint naming can collide with the `API` state container (different scopes, no actual collision).
 
+## Second run: a requirement with *flow* (`GeneratedFeature2/`)
+
+The first requirement was display-shaped — load things, show things. The second deliberately had process and intermediate state: a paginated order list (load more, "no more", first-page vs Nth-page failure), an order creation form (validation, disabled while submitting, preserve input on failure), and the list needing to reflect a newly created order.
+
+This run dug deeper than the first, and the very first finding landed on a rule added *during this same review cycle*:
+
+| Finding | Severity |
+|---|---|
+| **The four-state skeleton actively leads to wrong code.** It guarded `.loading` with `items.isEmpty` but not `.error` — so "pull-to-refresh failed" and "page 2 failed" both replace the user's existing list with an error screen. Invisible when reading the code; only shows up in that specific scenario | 🔴 rewritten: check content first, *then* status |
+| Mock rules are unsatisfiable on a form screen: mocks must hang off a Domain Model, but a pure form has none (a draft isn't a business entity) — while §12 requires Previews to use M-layer mocks | 🔴 exception added |
+| `Router`/`Callback` declared without `Equatable` in templates, while the testing skill asserts `received == .toDetail(post)` | 🔴 templates fixed, rule stated |
+| Pagination absent entirely — which of the two loads owns the status field, who decides to fetch the next page, what happens after a failed page | 🟡 new section |
+| Forms absent entirely — where validation lives, how "submitting" is expressed, preserving input on failure | 🟡 new section |
+| Nav bar title/buttons: unassigned. Putting a button in `navigationItem` forces a C-layer `Task`, which the C rules forbid — so the answer was derivable but never stated | 🟡 stated |
+| `back(from:)` — is `from:` "who is leaving" or "whose nav stack"? | 🟡 clarified |
+| Callback payload: `mvvmc-structure` says primitives cross feature boundaries, but the templates and the demo both passed a Domain Model | 🔴 settled — primitives both ways; demo updated |
+
+Notably the agent **deviated from the spec on purpose** for the four-state skeleton, and said so in a code comment — it could tell the rule would break the stated requirement. A spec that produces a visible conflict is better than one that quietly produces bad code, but this one should not have had the conflict.
+
 ## Why this code is not in the demo
 
 It is deliberately kept out of `Sources/`. The demo's six features already cover every structural rule; adding a seventh to tick boxes on `SPEC-COVERAGE.md` would contradict the reasoning behind the 🚫 markers there — a demo that shows everything stops showing anything clearly. This directory keeps the artefact as evidence without growing the demo's maintenance surface.

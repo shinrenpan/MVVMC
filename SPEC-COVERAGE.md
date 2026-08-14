@@ -54,6 +54,8 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | Error translated before it reaches State | `PostListViewModel.handleAPIResponse` |
 | Multiple concurrent requests, one status field each | ❌ — every demo VM has exactly one request |
 | Non-navigation side effect run directly in the VM (open URL / share) | ❌ — demo has no such action |
+| Pagination (first-load vs load-more tracked separately) | ❌ — the fake API returns a fixed 5 rows |
+| Form screen (validation, submitting lock, preserve input on failure) | ❌ — demo has no form |
 
 ## V — `mvvmc-view`
 
@@ -84,6 +86,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | `viewDidLoad` wires `viewModel.onRoute` with `[weak self]` | `PostListHostController.swift` |
 | Routing centralised in `handleRouter(_:)` in a `private extension` | same |
 | Child `onCallback` set before navigating, no `Task` wrapper | `PostListHostController.swift` → `PostFilter` |
+| Callback payload is a primitive, not a Domain Model | `PostFilterViewModel.Callback.didSelectUser(id:)` |
 | `required init?(coder:)` marked `@available(*, unavailable)` | all |
 
 ## Navigation — `mvvmc-navigation`

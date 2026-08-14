@@ -62,7 +62,8 @@ final class FeatureViewModel {
   - why 不走 doAction：導航不改 state、也不需要 async，效果歸 C 層執行；`doAction` 專責狀態轉移，`onRoute`/`onCallback` 是交給 C 處理副作用的逃生口
 - `onCallback` — 父 HostController 設定，接收跨 VC 回傳值
   - 型別：`(@MainActor (Callback) async -> Void)?`，async（避免呼叫端需要包 Task）
-  - ViewModel 呼叫：`await onCallback?(.didSelectUser(user))`（在 doAction 內 await）
+  - ViewModel 呼叫：`await onCallback?(.didSelectUser(id: user.id))`（在 doAction 內 await）
+  - **payload 傳 primitive，不傳 Domain Model**——與 HostController 的 init 同一個理由：耦合是雙向的（見 `mvvmc-structure`）
 - ✅ 兩者只在有實際需求時才宣告
 - ✅ **`Router` / `Callback` enum 預設加 `Equatable`**——`mvvmc-testing` 用 `#expect(received == .toDetail(post))` 驗證導航意圖與跨 VC 回傳，沒有 `Equatable` 就寫不出這類測試。純值 enum 隱含 `Equatable`，帶 associated value 時要顯式加（裡面的 Domain Model 本來就該是 `Equatable`）
 - ✅ 必須標注 `@ObservationIgnored`

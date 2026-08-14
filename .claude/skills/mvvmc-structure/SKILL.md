@@ -83,6 +83,22 @@ PostDetailHostController(post: post)
 
 詳見 `mvvmc-hostcontroller`〈變體：傳入原始參數〉。參數多到難看時，那是**拆 feature 的訊號**，不是放寬這條規則的理由。
 
+**回程也一樣**——子 feature 透過 `onCallback` 回傳結果時，同樣傳 primitive：
+
+```swift
+// ✅ 父層只需要知道一個 Int
+enum Callback: Equatable, Sendable {
+  case didSelectUser(id: Int)
+}
+
+// ❌ 父層被迫認識 PostFilterViewModel.User 這個型別
+enum Callback: Equatable, Sendable {
+  case didSelectUser(User)
+}
+```
+
+去程傳 primitive、回程卻帶 Domain Model 是不對稱的——**耦合是雙向的**，型別跟著回程走一樣會把兩個 feature 綁死。而且實務上父層通常只用得到其中一兩個欄位（demo 的父層就只用了 `user.id`），帶整個 Model 過去並沒有換到什麼。
+
 ---
 
 ## Shared/ 放什麼
