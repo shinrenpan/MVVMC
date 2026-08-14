@@ -1022,6 +1022,14 @@ Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是�
   ```
 
   Preview 一樣會渲染 View，所以 `.task { doAction(.view(.isFirstAppear)) }` **一定會執行**——接著就是真實的 API 請求，正好違反下面那條「禁止觸發真實網路」。而且它不會報錯：你只會看到 Preview 轉圈、或顯示了伺服器來的資料而不是你注入的 mock，然後開始懷疑人生
+
+- ⚠️ **頁面有輪詢時，關 run-once 旗標不夠**：輪詢的 `.task` 沒有 `isFirstAppear` 這種旗標可關，Preview 一渲染就開始每 N 秒打一次 API。做法是在 `State` 放一個**明確的暫停開關**，Preview 注入時打開：
+
+  ```swift
+  var isPollingSuspended: Bool = false   // Preview 專用；正式流程永遠是 false
+  ```
+
+  > 這**不是** `mvvmc-viewmodel` 禁止的那種「防重入旗標」。那條禁令針對的是「用旗標擋住重複啟動」——它會因為舊迴圈收尾與新迴圈啟動的順序無保證而 fail-closed。這裡的開關是「**要不要開始**」，由 Preview 端一次性設定、不參與執行期競態，兩者語意不同
 - ✅ mock 資料來源是 M 層的 `.mock` / `.mocks`（見 `mvvmc-model` 的 Mock 規範），Preview 不自己造資料
 - ✅ ViewModel 用 `let` 注入 View，與 HostController 的注入路徑一致
 - ✅ 多個 `#Preview` 覆蓋不同狀態（有資料 / 空 / 載入中 / 錯誤）時，各給具描述性的名稱

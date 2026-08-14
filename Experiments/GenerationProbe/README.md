@@ -100,6 +100,27 @@ Eight gaps remained, and their character had shifted — from "this scenario is 
 | A state-driven wizard must hide the system back button, or it pops the whole feature | 🟡 stated |
 | Where a `Step` enum lives; whether "layout decided from state" counts as a flow decision | 🟡 both given a test: "does it appear in the API contract" / "does this branch change the screen or the next step" |
 
+## Fifth run: does the *thinning* hold? (`GeneratedFeature5/`)
+
+After the spec was cut down — seven VM scenarios and four test-case templates moved out of `SKILL.md` into `references/patterns.md` — an obvious risk appeared: **reviewing only needs "is this right?", but generating needs "how do I do it?"**. The material moved out was exactly the material generation depends on. A review probe had already passed; this run asked whether *generation* survived the cut.
+
+The requirement deliberately hit all four relocated topics: paginated list with two distinct failure modes, a validated form with submit-locking, a 10-second polling row, and unit tests for both ViewModels.
+
+**The index held.** The agent's own words: *"決定機制很單純：SKILL.md 自己會明講"* — `mvvmc-viewmodel`'s scenario table says "遇到時先查該節再動手", and that sentence is what sent it to `patterns.md`. It read 14 files in four parallel batches and correctly skipped four more (Skip.tools, deep-review, navigation templates, DispatchQueue migration), giving a reason for each skip.
+
+**One precondition worth knowing**: before reading anything it ran a `find` over `.claude/skills/` — and said so explicitly: *"這一步決定了後面所有事——如果我直接讀 SKILL.md 開寫，很可能只會讀到那 46 行的 view SKILL.md 就以為讀完了"*. The index works, but it works better for an agent that surveys the directory first.
+
+Four real problems came back, one of them created by the previous round's own fixes:
+
+| Problem | Fix |
+|---|---|
+| **Preview × polling deadlock.** Preview must not hit the network and must clear the run-once flag — but a polling `.task` has no run-once flag to clear, while "never use a Bool flag" (added the same round) made the agent reluctant to add one | 🔴 Spec now distinguishes a *suspend switch* (set once by Preview, no runtime race) from a *re-entry guard* (the fail-closed hazard the ban targets) |
+| The four-state ordering rule — which the agent initially got backwards — was **not in the V-layer quick table**, only in `architecture.md` §1 | 🔴 promoted into the quick table |
+| `.task` must live on the L1: the table said where, not that putting it on a child **fails silently** (a child's `send` is synchronous, so the task ends the moment it returns) | 🔴 warning added to the index row |
+| The first redraw gate for polling is in **M** (splitting high-frequency fields out), which the polling index row never pointed at | 🔴 cross-reference added |
+
+**`architecture.md` stays whole.** The 1011 lines were a candidate for splitting, but this run used §1, §7 and §11 — spread across the file. Splitting would mean opening more files, not fewer.
+
 ## Why this code is not in the demo
 
 It is deliberately kept out of `Sources/`. The demo's six features already cover every structural rule; adding a seventh to tick boxes on `SPEC-COVERAGE.md` would contradict the reasoning behind the 🚫 markers there — a demo that shows everything stops showing anything clearly. This directory keeps the artefact as evidence without growing the demo's maintenance surface.

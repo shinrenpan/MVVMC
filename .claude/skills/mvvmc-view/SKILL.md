@@ -33,7 +33,8 @@ description: |
 | 10 | 拆成獨立 `struct View` 是效能決策（SwiftUI diffing 可跳過）；`@ViewBuilder func` 只換來可讀性 | §7 |
 | 11 | View 以 `let viewModel` 接收注入、禁止自建；互動一律 `Task { await viewModel.doAction(.view(...)) }`，禁止繞過 `doAction` | §6 |
 | 12 | `@Bindable` 在 `body` 內宣告一次，拆分 func 以 `bVM: Bindable<VM>` 參數接收；**子元件只收切片**（強制） | §11 |
-| 13 | Preview 與 Mocks 檔都是**選用**的；但只要有 Preview，就必須 `#if DEBUG` 包裹、注入 M 層的 `.mock` / `.mocks`、並關掉 run-once 旗標，禁止觸發真實網路 | §12 |
+| 13 | **四態呈現的判斷順序**：先看 `items.isEmpty` 再看 status。順序顛倒會讓「刷新失敗」「第 N 頁失敗」把使用者眼前的內容整個換成錯誤畫面 | §1 |
+| 14 | Preview 與 Mocks 檔都是**選用**的；但只要有 Preview，就必須 `#if DEBUG` 包裹、注入 M 層的 `.mock` / `.mocks`、並關掉 run-once 旗標，禁止觸發真實網路 | §12 |
 
 ---
 

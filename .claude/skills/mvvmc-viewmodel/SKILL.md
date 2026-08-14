@@ -105,7 +105,7 @@ VM 直接做第二類是刻意的——為它們繞一圈 `onRoute` 只是把單
 | **錯誤的流動** | `Error` 與 DTO 同構，都止步於 `handleAPIResponse`；State 只存已翻譯的結果。樂觀更新合法 |
 | **多支 API 併發** | 每支各自一組 Request/Response case、狀態各自追蹤；併發用 `async let` |
 | **深層回傳** | 逐層中繼，中繼層不 pop、只有終點做一次 `backTo`。鏈長到第三層就回頭考慮合併 feature |
-| **週期性更新（輪詢）** | 迴圈在 VM、由 L1 的 `.task` 啟動；不要用 Bool 旗標防重入（會 fail-closed） |
+| **週期性更新（輪詢）** | 迴圈在 VM、**`.task` 只能掛 L1**（掛在子組件上會靜默失效，因為 `send` 是同步 closure）；不要用 Bool 旗標防重入（會 fail-closed）。另外**先確認 M 層已把高頻欄位拆出低頻 Model**（見 `mvvmc-model`），否則 View 拆得再細也沒用 |
 | **分頁載入** | 「首次載入」與「載入更多」是兩件事，即使打同一支 endpoint 也要各自追蹤狀態 |
 | **表單頁** | 輸入緩衝屬 State 不是 Domain Model；驗證是 computed property；防重送 guard 在 VM |
 
