@@ -71,10 +71,16 @@ final class FeatureViewModel {
 
 | 副作用 | 誰做 | 判準 |
 |---|---|---|
-| push / pop / sheet / tab 切換 / dismiss | `onRoute?(...)` → C 層 | **會改變 App 內的畫面堆疊** |
-| 開啟外部 URL（`UIApplication.shared.open`）、分享、Haptic、複製到剪貼簿 | ViewModel 直接執行 | 不改變畫面堆疊，做完就結束 |
+| push / pop / sheet / tab 切換 / dismiss<br>**以及任何需要 present 一個 VC 的東西**（`UIActivityViewController` 分享面板、系統相機、`SFSafariViewController`…） | `onRoute?(...)` → C 層 | **會改變 App 內的畫面堆疊** |
+| 開啟外部 URL（`UIApplication.shared.open`）、Haptic、寫剪貼簿、寫 UserDefaults | ViewModel 直接執行 | 不改變畫面堆疊，做完就結束 |
 
 VM 直接做第二類是刻意的——為它們繞一圈 `onRoute` 只是把單行呼叫拆成三個地方（Router case、handleRouter 分支、C 層實作），換不到任何解耦。判準是「畫面堆疊」而不是「有沒有碰到 UIKit」。
+
+> ⚠️ **「分享」是最容易判錯的一個**，因為它聽起來不像導航：
+> - SwiftUI 的 `ShareLink` —— V 層自己處理，VM 完全不介入
+> - `UIActivityViewController` —— **必須 present**，所以走 `onRoute?(.toShare(url))` → C 層 `AppRouter.shared.sheet(...)`
+>
+> 判斷時問的是「**這件事會不會 present 東西上來**」，不是「這件事聽起來像不像導航」。凡是需要一個 presenting VC 才做得到的，一律歸 C——否則 VM 就得持有 `UIViewController`，那是 `mvvmc-hostcontroller` 的硬性禁令。
 
 > `@Observable` 追蹤所有 stored property；closure 或非 UI 狀態若未標注 `@ObservationIgnored`，會觸發不必要的 View re-render。
 

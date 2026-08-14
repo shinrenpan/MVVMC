@@ -737,11 +737,14 @@ struct ChildView: View {
 struct CardContainer<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .overlay(content)
+        content
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 12).fill(.background))
     }
 }
 ```
+
+> 寫成 `RoundedRectangle(...).overlay(content)` 是常見的直覺錯誤：`overlay` 不會被內容撐開，卡片會沒有高度。**容器要讓內容決定尺寸**，所以是 content 加 `.background(...)`，不是形狀加 `.overlay(...)`。
 
 ### 適用層級
 
@@ -903,7 +906,9 @@ Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是�
 #if DEBUG
 #Preview("列表有資料") {
     let vm = FeatureViewModel()
-    vm.state.items = .mocks       // .mocks 由 M 層 FeatureNameMocks.swift 提供
+    // ⚠️ 寫全名。mocks 掛在 Domain Model 上（見 mvvmc-model），不是 [Item] 的 static member，
+    //    寫成 `vm.state.items = .mocks` 會編不過（且錯誤訊息會誤導成 ViewBuilder 的 return 問題）
+    vm.state.items = FeatureViewModel.Item.mocks
     return FeatureView(viewModel: vm)
 }
 
