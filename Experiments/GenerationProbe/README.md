@@ -55,6 +55,25 @@ This run dug deeper than the first, and the very first finding landed on a rule 
 
 Notably the agent **deviated from the spec on purpose** for the four-state skeleton, and said so in a code comment — it could tell the rule would break the stated requirement. A spec that produces a visible conflict is better than one that quietly produces bad code, but this one should not have had the conflict.
 
+## Third run: multi-level navigation and polling (`GeneratedFeature3/`)
+
+Third requirement: an order detail screen with a **5-second polling status bar** (only that bar may redraw), plus a **three-step return wizard** whose final submission must land back on the detail screen — skipping the intermediate pages — and update it.
+
+This run hit the architecture's edges rather than its details:
+
+| Finding | Outcome |
+|---|---|
+| **The §7 performance measurements used the wrong shape.** The probe modelled two independent properties; MVVMC forces a single `var state: State`. Re-measured — the core claim survives (child structs still skip), but row 3 (`parent = 0`) is **unreachable in MVVMC**: an L1 must read `state.x` to pass values down, and handing the whole `@Observable` object to a child is forbidden by §2 | 🔴 spec corrected; "the L1 body always re-runs" is now stated as the architecture's cost |
+| Deep return across intermediate pages — `onCallback` only ever defined one level | 🔴 new section: relay upward, only the endpoint pops, and a warning that a three-level relay means the pages should probably be one feature |
+| Alert / confirmation dialog never mentioned anywhere. Applying the "anything that presents goes to C" rule literally forces `UIAlertController`, which then forces C to hold interaction logic and start a `Task` — both explicitly banned | 🔴 new section; the rule's intent restated as "do you have to obtain a VC yourself?" |
+| Polling: C can't start Tasks, View can't make flow decisions, a VM-held Task has no one to cancel it | 🔴 new section — `.task` starts it, the loop lives in the VM. Plus the honest limitation: UIKit push doesn't remove the lower view, so polling continues underneath |
+| Wizard: one feature or three? `mvvmc-structure`'s split signals said "split", its other line said "don't" | 🔴 exception added: wizards default to **one** feature; the test is whether the pages share one unsubmitted draft |
+| Optimistic update — is a VM allowed to construct a Domain Model that never came from a DTO? | 🟡 yes; the rule constrains the data *source*, not authorship |
+| Callback results are stuffed into `ViewAction` despite not being "what the user did here" | 🟡 stated explicitly, rather than adding a fourth Action category |
+| Edge-swipe can't be disabled per page — gesture policy is welded to `TransitionStyle` | 🟡 recorded as an unresolved design limitation |
+
+The agent also **deliberately deviated** from the four-state skeleton and said so in a code comment — it could see the rule would break the stated requirement. It wrote what this review cycle later concluded was correct, before the spec said so.
+
 ## Why this code is not in the demo
 
 It is deliberately kept out of `Sources/`. The demo's six features already cover every structural rule; adding a seventh to tick boxes on `SPEC-COVERAGE.md` would contradict the reasoning behind the 🚫 markers there — a demo that shows everything stops showing anything clearly. This directory keeps the artefact as evidence without growing the demo's maintenance surface.

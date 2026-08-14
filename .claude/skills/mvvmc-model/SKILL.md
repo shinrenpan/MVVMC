@@ -63,6 +63,8 @@ extension FeatureViewModel {
 - Swift 原生型別、`Optional`
 - **純 UI 狀態**：請求狀態容器、展開中的 id 集合、捲動位置、選取狀態、分頁游標等
 
+> 這類容器型別放在 **State 區塊**（它是 UI 狀態，不是業務語意），與 `State` 本身同一個 `extension` 或緊鄰的 `extension` 皆可。
+>
 > **純 UI 狀態的形狀不在規範範圍**——要不要包成 `api` 容器、狀態 enum 有哪些 case、叫什麼名字，屬個人／團隊習慣，本 skill 不介入，審查時也不得以此開單。唯一要求：若該型別讓 `State` 失去 `Equatable`，走〈Equatable 規則〉的例外處理並註明原因。
 
 ```swift

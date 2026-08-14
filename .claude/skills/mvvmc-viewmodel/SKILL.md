@@ -54,6 +54,8 @@ final class FeatureViewModel {
 
 所有 Action enum 需為 `Sendable`，依情境放在合適的 `extension` 下。
 
+> **子頁 callback 回傳的結果也歸 `ViewAction`**（例如 `didFilterUser(id:)`）。它嚴格說不是「使用者在本頁做了什麼」，但它是**這個畫面收到的輸入**，仍屬 View 層的入口。不需要為它多開第四種 Action 類別——多一種分類換不到任何清晰度。
+
 **onRoute / onCallback：**
 
 - `onRoute` — HostController 設定，接收導航意圖後執行導航
@@ -83,6 +85,8 @@ VM 直接做第二類是刻意的——為它們繞一圈 `onRoute` 只是把單
 > - `UIActivityViewController` —— **必須 present**，所以走 `onRoute?(.toShare(url))` → C 層 `AppRouter.shared.sheet(...)`
 >
 > 判斷時問的是「**這件事會不會 present 東西上來**」，不是「這件事聽起來像不像導航」。凡是需要一個 presenting VC 才做得到的，一律歸 C——否則 VM 就得持有 `UIViewController`，那是 `mvvmc-hostcontroller` 的硬性禁令。
+>
+> **但 SwiftUI 原生的 `.alert` / `.confirmationDialog` 不算**：它們不需要你拿到 presenting VC，V 層自己就做得到。硬套「會 present 就走 C 層」會逼出 `UIAlertController`，讓 C 層寫互動邏輯又得起 Task 呼叫 `doAction`——那兩件事都是 hostcontroller 明文禁止的。判準的精神是「**你得自己弄到一個 VC 才做得到嗎**」，見 `mvvmc-view`〈Alert 與確認對話框〉。
 
 > `@Observable` 追蹤所有 stored property；closure 或非 UI 狀態若未標注 `@ObservationIgnored`，會觸發不必要的 View re-render。
 
@@ -158,6 +162,7 @@ case let .fetchPosts(.failure(.message(msg))):
 - ✅ State 存的是**已翻譯的結果**（訊息字串，或自訂的 `Equatable` 錯誤 enum）
 - ❌ State 不存 `any Error` / `URLError` / `DecodingError`——網路細節不該滲進 UI，且 `Error` 不 `Equatable`，會讓 `State` 失去 `Equatable`（見 `mvvmc-model`〈State 欄位型別〉）
 - ❌ View 不做錯誤判讀（`if error is URLError`）——要顯示什麼在 VM 就決定完
+- ✅ **樂觀更新是允許的**：送出成功後直接把 state 改成預期結果（不等重新載入），即使那個 Domain Model 是 VM 自己構造的。「寫進 state 的必須是 `toDomain()` 之後的東西」約束的是**資料來源**（DTO 不得外洩到 UI），不是禁止 VM 生成 Domain Model
 - 💡 錯誤要分流（可重試 / 需重新登入 / 純提示）時，做成自訂的 `Equatable` 錯誤 enum 存進 state，讓 View 用 `switch` 顯示；仍然不是把原始 `Error` 丟過去
 
 ---
@@ -192,6 +197,30 @@ case .isFirstAppear:
 - 💡 有防重入需求時，也是**每支各自判斷**，不是共用一個閘門
 
 > 狀態欄位長什麼樣（要不要包成容器、有哪些 case）是 M 層的事，且**形狀不在規範範圍**——見 `mvvmc-model`〈State 欄位型別〉。
+
+---
+
+## 深層回傳（結果要跨越中間頁）
+
+`onCallback` 定義的是**單層**父子關係。但 wizard（步驟 1→2→3，最後一步的結果要回到起點）這類流程需要跨層回傳，做法是**逐層中繼**：
+
+- ✅ 每一層把子層的 callback 轉成自己的 callback 往上拋
+- ✅ **中繼層不做 pop**，只轉發；**只有終點做一次** `AppRouter.shared.backTo(目標VC, from: self)` 一次退到位
+  > 照 `mvvmc-hostcontroller` 模板「每個 callback 分支都配一個 `back(from:)`」寫，深層回傳會連放三次 pop 動畫
+- ✅ 中繼層的 `ViewAction` 會多出 `childDidFinish` 這種與自身業務無關的 case——那是中繼的必要成本，審查時不該當成違規
+- ⚠️ **中繼鏈到第三層還在長，回頭問「這幾頁是不是該合併成一個 feature」**（見 `mvvmc-structure`〈feature 邊界〉）。wizard 的每一步共用同一份草稿、只服務同一個流程，合成一個 feature 用 `step` enum 驅動往往更簡單
+
+「回上一步」則相反：子層回報 `didGoBack`，由**父層** `AppRouter.shared.back(from: self)`。
+
+---
+
+## 週期性更新（輪詢）
+
+- ✅ **迴圈寫在 VM，由 View 的 `.task` 啟動**：`.task { await viewModel.doAction(.view(.statusDidAppear)) }`，VM 內 `while !Task.isCancelled { ... try await Task.sleep(...) }`
+  > 這是唯一同時滿足三條硬規則的做法：C 層不得起 Task、View 不做流程決策、取消要有人負責。`.task` 綁 View 生命週期，離開畫面時**結構化地**取消整條鏈
+- ✅ 每輪之間用 `try await Task.sleep(...)`，被取消時自動丟錯結束迴圈
+- ✅ 只有首次才寫 `.loading`，之後的輪詢靜默更新——否則畫面每 N 秒閃一次
+- ⚠️ **已知限制**：UIKit 的 push **不會**移除下層 View，所以這一頁被推到下一頁之後 `.task` 不會取消，輪詢繼續跑。若這有成本（電量、API 額度），需要另外設計暫停機制——MVVMC 目前沒有標準做法，這是 UIKit 導航與 SwiftUI 生命週期的語意落差
 
 ---
 

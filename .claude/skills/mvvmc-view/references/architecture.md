@@ -54,6 +54,28 @@ if viewModel.state.items.isEmpty {
 - **已經有內容時失敗要怎麼呈現**（靜默、底部重試列、toast）是產品決策，規範不指定；但「不可以清空既有內容」是架構要求
 - 同一套骨架在兩個以上 Section 重複出現時，才考慮提拔成共用組件（見 §4）；只重複一次時它是 body 拆分，不是組件
 
+### Alert 與確認對話框
+
+`.alert` / `.confirmationDialog` **寫在 V 層**，由 state 的 Bool 欄位驅動：
+
+```swift
+// L1 body 內
+@Bindable var bVM = viewModel
+...
+.alert("尚未儲存的內容會遺失", isPresented: $bVM.state.isShowingCancelAlert) {
+    Button("繼續填寫", role: .cancel) { }
+    Button("放棄", role: .destructive) {
+        Task { await viewModel.doAction(.view(.discardDidConfirm)) }
+    }
+}
+```
+
+- ✅ 「要不要顯示」是 state 欄位，用 `@Bindable` 綁定——關閉對話框屬於**值的雙向同步**，不需要繞 `doAction`
+- ✅ 按鈕**做了什麼**才是事件，走 `doAction(.view(...))`
+- ❌ 不要因為「alert 底層也是 present」就送去 C 層：那會逼出 `UIAlertController`，讓 C 層寫互動邏輯並起 Task，兩者都是 `mvvmc-hostcontroller` 禁止的
+
+VM 的〈onRoute 邊界〉說「需要 present VC 的東西走 C 層」，指的是**你得自己拿到一個 presenting VC 才做得到**的東西（分享面板、系統相機）。SwiftUI 原生的 alert 不需要。
+
 ### Display Helper（Model → UI 型別）
 
 Domain Model 禁止回傳 UI framework 型別（`Color` / `Font` / `Image`，見 `mvvmc-model`），所以「這個狀態該顯示成什麼顏色／圖示」是 **V 層的決策**。寫成 Model 的 `private extension`，放在 View 檔案**頂端**：

@@ -66,6 +66,7 @@ final class AppRouter: NSObject {
 
 - ✅ 自訂轉場透過 `UINavigationControllerDelegate.animationControllerFor` 回傳 `AppTransitionAnimator`；`.push` / `.sheet` 回傳 `nil` 走系統預設
 - ✅ 側滑返回只在 `.push` 樣式的頁面啟用（`gestureRecognizerShouldBegin` 檢查 `topViewController.appTransitionStyle == .push`）——避免自訂轉場 VC 側滑造成黑畫面
+- ⚠️ **已知限制：無法「只關掉某一頁的側滑」**。手勢政策與視覺轉場綁在同一個 `TransitionStyle` enum 上，所以想擋掉側滑（例如表單填到一半不該被隨手滑掉）就只能把該頁改成 `.modal` / `.fade`，連帶改變轉場動畫。`.navigationBarBackButtonHidden(true)` 只擋得住返回鈕、擋不住側滑。真的需要時，得在 `TransitionStyle` 之外另加一個手勢旗標——目前規範沒有這條，屬未解決的設計限制
 - ✅ `AppTransitionAnimator` 為 `private`，push/pop 對稱處理 modal（上下滑）與 fade（透明度）
 
 ---
