@@ -137,43 +137,11 @@ CFBundleURLTypes:
 
 ## 三種任務模式
 
-### 模式 A：生成 / 建立導航地基
+| 模式 | 做什麼 |
+|---|---|
+| **A：生成** | 依上方規範產生代碼。使用者未要求就只給代碼；要說明時講這幾件事：**AppRouter** 提供的導航 API、**Deeplink** 支援的 host 與新增步驟、**SceneDelegate** 三進入點是否齊全 |
+| **B：審查** | 輸出報告：✅ 符合規範 / ❌ 違規（表格：位置、問題、規範依據、建議修正）/ ⚠️ 灰色地帶（說明判斷理由） |
+| **C：重構** | 先出審查報告（同 B）→ 重構後完整代碼 → 「重構說明」列出每項改動對應的規範條目 |
 
-依上方規範產生代碼（完整實作見 `references/navigation-templates.md`），附上：
 
-```
-[完整 Swift 代碼]
-
----
-### 架構說明
-- **AppRouter**：列出提供的導航 API 與 stateless 設計
-- **Deeplink**：列出支援的 host、新增目標的步驟
-- **SceneDelegate**：確認三進入點齊全、backgroundColor 已設
-```
-
-### 模式 B：審查現有導航地基
-
-```
-### 審查報告
-
-✅ 符合規範：
-- ...
-
-❌ 違規項目：
-| 位置 | 問題 | 規範依據 | 建議修正 |
-|------|------|----------|----------|
-
-⚠️ 常見風險點：
-- AppRouter 是否持有 stored state（應 stateless）
-- back() 是否被 dismiss 取代
-- 自訂轉場 VC 側滑是否會黑畫面（gesture 是否限定 .push）
-- 冷啟動 deeplink 是否在 makeKeyAndVisible() 之後
-- window.backgroundColor 是否遺漏
-- URL 解析是否散落在 Deeplink 之外
-```
-
-### 模式 C：重構導航地基
-
-1. 先輸出審查報告（同模式 B）
-2. 輸出重構後完整代碼
-3. 附上「重構說明」，列出每項改動對應的規範
+審查時的常見風險點：AppRouter 是否持有 stored state、`back()` 是否被 `dismiss` 取代、自訂轉場 VC 側滑是否會黑畫面、冷啟動 deeplink 是否在 `makeKeyAndVisible()` 之後、`window.backgroundColor` 是否遺漏、URL 解析是否散落在 `Deeplink` 之外。
