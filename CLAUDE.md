@@ -84,4 +84,12 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
 
 - **Never restate a skill's rules in this file.** Duplicated rules drift: that is exactly how the `send` closure type ended up with two conflicting definitions living in two files for months. When a rule changes, change it in the owning skill only.
 - This file may hold only what belongs to no single layer: the layer table, creation order, file structure, layer boundaries, and data flow.
+- **A new skill needs a symlink in `~/.claude/skills/`**, or it only exists while working inside this repo — which is precisely when you least need it. The skills are meant to travel to whatever project you are actually writing MVVMC code in.
+
+  ```bash
+  ln -s "$PWD/.claude/skills/<name>/" ~/.claude/skills/<name>
+  ```
+
+  This is the step most easily forgotten: `mvvmc-structure` was added, documented, cross-referenced and verified — and still went a whole session without a symlink, meaning it worked nowhere except here.
+
 - `Sources/` and `Tests/` are the spec's compile-time test. After changing a rule, check whether the demo still demonstrates it — and if the demo cannot compile the new rule, the rule is wrong. `SPEC-COVERAGE.md` maps each rule to the demo file that proves it; update it in the same pass.
