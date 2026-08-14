@@ -117,7 +117,7 @@ Push notification payload convention: `{ "deeplink": "mvvmc://posts/1" }` — re
 | `.claude/skills/` | **The MVVMC specification** (each skill is the single source of truth for its layer) |
 | `CLAUDE.md` | Architecture overview and skill index (does not restate layer rules) |
 | `SPEC-COVERAGE.md` | Rule → demo mapping |
-| `Experiments/` | Re-runnable measurements backing the spec's performance claims |
+| `Experiments/` | Verification assets: performance and concurrency measurements, review/generation probes, and the methodology in its `README.md` |
 
 ### Demo Project
 

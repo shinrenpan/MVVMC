@@ -92,4 +92,5 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
 
   This is the step most easily forgotten: `mvvmc-structure` was added, documented, cross-referenced and verified — and still went a whole session without a symlink, meaning it worked nowhere except here.
 
+- **Before another round of spec work, read `Experiments/README.md`** — it records which kind of check finds which kind of problem, and the pitfalls that cost the most to learn (a perfect enforcement score is not evidence of a good spec; every round of fixes creates the next round's bugs).
 - `Sources/` and `Tests/` are the spec's compile-time test. After changing a rule, check whether the demo still demonstrates it — and if the demo cannot compile the new rule, the rule is wrong. `SPEC-COVERAGE.md` maps each rule to the demo file that proves it; update it in the same pass.
