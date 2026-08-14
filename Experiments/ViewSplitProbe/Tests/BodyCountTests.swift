@@ -70,11 +70,24 @@ struct BodyCountTests {
     let anyA = BodyCounter.shared.count("anyview.A")
     let anyB = BodyCounter.shared.count("anyview.B")
 
+    // 版本 5：MVVMC 形狀（單一 state struct）
+    let m5 = MVVMCModel()
+    let w5 = host(MVVMCSplitView(viewModel: m5))
+    await settle(w5)
+    BodyCounter.shared.reset()
+    m5.state.a += 1
+    await settle(w5)
+    let mvvmcParent = BodyCounter.shared.count("mvvmc.parent")
+    let mvvmcA = BodyCounter.shared.count("mvvmc.A")
+    let mvvmcB = BodyCounter.shared.count("mvvmc.B")
+
     print("PROBE_RESULT func   parent=\(funcParent) A=\(funcA) B=\(funcB)")
     print("PROBE_RESULT struct parent=\(structParent) A=\(structA) B=\(structB)")
     print("PROBE_RESULT whole  parent=\(wholeParent) A=\(wholeA) B=\(wholeB)")
 
     print("PROBE_RESULT anyview parent=\(anyParent) A=\(anyA) B=\(anyB)")
+
+    print("PROBE_RESULT mvvmc  parent=\(mvvmcParent) A=\(mvvmcA) B=\(mvvmcB)")
 
     // 只驗證實驗本身有效（A 確實重繪了），B 的數字是觀測目標
     #expect(funcA >= 1)

@@ -137,6 +137,48 @@ private extension AnyViewSplitView {
   }
 }
 
+// MARK: - 版本 5：MVVMC 形狀（單一 var state: State）
+
+@Observable
+@MainActor
+final class MVVMCModel {
+  struct State: Equatable, Sendable {
+    var a: Int = 0
+    var b: Int = 0
+  }
+  var state = State()
+}
+
+struct MVVMCSplitView: View {
+  let viewModel: MVVMCModel
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("mvvmc.parent")
+    VStack {
+      SectionA(value: viewModel.state.a)
+      SectionB(value: viewModel.state.b)
+    }
+  }
+}
+
+private extension MVVMCSplitView {
+  struct SectionA: View {
+    let value: Int
+    var body: some View {
+      let _ = BodyCounter.shared.bump("mvvmc.A")
+      Text("A \(value)")
+    }
+  }
+
+  struct SectionB: View {
+    let value: Int
+    var body: some View {
+      let _ = BodyCounter.shared.bump("mvvmc.B")
+      Text("B \(value)")
+    }
+  }
+}
+
 @main
 struct ProbeApp: App {
   var body: some Scene {

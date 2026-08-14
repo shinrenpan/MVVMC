@@ -22,6 +22,7 @@ Three variants:
 | separate `struct`, value injected | 1 | 1 | **0** |
 | separate `struct`, whole model passed | **0** | 1 | **0** |
 | separate `struct` wrapped in `AnyView` | 1 | 1 | **0** |
+| **MVVMC shape** (single `var state: State`, values injected) | 1 | 1 | **0** |
 
 Conclusions, in the spec's terms:
 
@@ -31,7 +32,9 @@ Conclusions, in the spec's terms:
 
 Point 3 is why `mvvmc-view` §2's "precise injection" rule is justified by **decoupling, not performance** — passing the whole object is actually cheaper to redraw.
 
-4. **`AnyView` did not stop the skip.** The unchanged section still had its body skipped. The common claim "AnyView breaks diffing" does not hold at this level on this toolchain. What `AnyView` actually costs is *structural identity* — view identity becomes unstable across type erasure, which shows up as interrupted animations and reset `@State`, plus the loss of compile-time type information. This probe does not measure those; it only rules out the "body runs more often" explanation.
+4. **The MVVMC shape behaves like the value-injected case, but cannot reach row 3.** MVVMC forces a single `var state: State` on the ViewModel, so the first three rows — written with two independent properties — did not obviously transfer. Re-measured with the real shape: the child struct is still skipped, so the core claim holds. What is *not* reachable is `parent = 0`: an L1 in MVVMC must read `viewModel.state.x` to pass values down, and the only way to avoid that is to hand the whole `@Observable` object to the child — which the spec forbids for decoupling reasons. **In MVVMC, the L1 body always re-runs on any state change; the child struct's prop comparison is the only isolation gate you get.**
+
+5. **`AnyView` did not stop the skip.** The unchanged section still had its body skipped. The common claim "AnyView breaks diffing" does not hold at this level on this toolchain. What `AnyView` actually costs is *structural identity* — view identity becomes unstable across type erasure, which shows up as interrupted animations and reset `@State`, plus the loss of compile-time type information. This probe does not measure those; it only rules out the "body runs more often" explanation.
 
 ## Running it
 

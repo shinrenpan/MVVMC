@@ -603,6 +603,7 @@ ListSection(items: state.items, send: send)
 | 兩區塊都是 `@ViewBuilder func` | 1 | 1 | **1** ← 無關的 B 跟著重跑 |
 | 兩區塊都是獨立 `struct`，只傳需要的值 | 1 | 1 | **0** ← B 被跳過 |
 | 兩區塊都是獨立 `struct`，整包傳 model | **0** | 1 | **0** ← 連父層都不用重跑 |
+| **MVVMC 形狀**（單一 `var state: State`，只傳需要的值） | 1 | 1 | **0** ← 與第二列相同 |
 
 三件事因此確定：
 
@@ -611,6 +612,14 @@ ListSection(items: state.items, send: send)
 3. **讀取位置決定父層要不要重跑**：第三列的父層 body 是 0，因為它只把 model 傳下去、自己沒讀任何被追蹤的屬性；第二列的父層必須讀 `model.a` 才能傳值，所以它自己也被追蹤到
 
 第 3 點就是本節末〈延遲讀取〉的機制。它同時說明了 §2 的「精準注入」**不是靠效能站住的**——見 §2 的註解。
+
+> ⚠️ **但第三列在 MVVMC 裡做不到，這點必須講清楚。**
+>
+> 第四列是照 MVVMC 的真實形狀（`@Observable` VM 只有一個 `var state: State`）重測的，結果與第二列相同——**子 struct 照樣被跳過，核心主張成立**。
+>
+> 做不到的是「父層 body 也不重跑」：要達成那個，父層必須完全不讀取任何被追蹤的屬性、直接把 `@Observable` 物件本身傳下去。而 MVVMC 的 L1 一定得讀 `viewModel.state.xxx` 才能把值傳給子組件，唯一的規避方式是整包傳 ViewModel——那是 §2 明文禁止的。
+>
+> **所以在 MVVMC 裡，L1 的 body 必然會因為 state 的任何變動而重跑，這是架構換來解耦的代價。** 效能隔離只能靠「子組件是獨立 `struct` 且 props 沒變」這一層，這也是為什麼高頻更新的區塊一定要拆成獨立 `struct` —— 那是你唯一的閘門。
 
 > 實驗可重跑：MVVMC repo 的 `Experiments/ViewSplitProbe/`。SwiftUI 的行為會隨版本改變，上表若與你的環境不符，以重跑結果為準並回報。
 
@@ -685,6 +694,10 @@ var body: some View {
 ```
 
 > **這條與 §2「精準注入」的界線**：延遲讀取傳的是**一份資料**（Domain Model），子組件仍然可以獨立 Preview 與測試；§2 禁止的是傳**整個 ViewModel**，那會把 `doAction`、`onRoute`、所有其他 feature 的狀態一起交出去。判準是「傳資料」還是「傳控制器」，不是參數的顆粒大小。
+>
+> ⚠️ **但在 MVVMC 裡，這條的效能效果幾乎是零**：`viewModel.state.user` 這個讀取本身就發生在 L1 的 body，所以無論你傳 `user` 還是傳 `user.name`，父層一樣被追蹤、一樣重跑；子組件也一樣是「props 變了才重跑」。真正能靠延遲讀取省下父層 body 的前提是「把 `@Observable` 物件本身傳下去」，而那是 §2 禁止的（見上方實測表第三列與其後的說明）。
+>
+> 所以這一節在 MVVMC 中請當作**可讀性建議**（子組件自己決定用哪些欄位、Model 加欄位時不用改中間層），不要當作效能手段。
 
 - **現代 API**：數值變動可搭配 `.contentTransition(.numericText())` 提升過場質感（選用）
 
