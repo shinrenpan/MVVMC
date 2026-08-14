@@ -75,6 +75,17 @@ It also found seven issues that were **not** planted, two of which the author of
 - `shareDidTap` and `selectedUser` are dead — no call sites
 - `Router` missing `Equatable`, which blocks the navigation-intent test the testing skill prescribes
 
+## Second axis: can it *fix* what it found?
+
+Finding a violation and repairing it correctly are different abilities. A separate agent was given the same `BadFeature/` and asked to review **and then fix** it, writing the result elsewhere (the sample here is never modified).
+
+**All 31 repaired correctly.** Spot-checked across every layer: display helper moved to the top of the View file, subviews restructured into `ListSection` → `ListRow` with `send: @MainActor (Action) -> Void`, C layer back to `private let` + `init(viewModel:)` + `[weak self]` + `handleRouter` + `AppRouter`, DTOs stopped at `handleAPIResponse`, errors translated before reaching State.
+
+Two things made this run more valuable than a pass/fail:
+
+- **It hit the same spec hole as the generation probe, from the opposite direction.** Asked to fix the "VM presents a share sheet" violation, it found that `mvvmc-viewmodel` classified sharing as "the VM may do this directly" while `mvvmc-hostcontroller` forbids the VM from holding a `UIViewController` — and `UIActivityViewController` requires one. Two agents, two different tasks, same contradiction. That is much stronger evidence than either finding alone.
+- **It refused to make a product decision.** Finding an Action case with no call site, it declined to delete it: "removing it means removing a feature — that's a product decision, not a review decision." That judgement is now written into `mvvmc-review`.
+
 ## Limits of this result
 
 Read it as "the skills are enforceable", not "the skills are complete":
