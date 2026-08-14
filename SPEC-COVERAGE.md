@@ -20,6 +20,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | `Shared/` holds business-agnostic types only | `Sources/Shared/APIStatus.swift` (`APIStatus`, `APIError`) |
 | Shared UI component promoted out of `Pages/` | ❌ — no cross-feature component exists in the demo |
 | Feature split criteria | 🚫 — a judgement rule, not code; six small features never trigger it |
+| Wizard collapsed into one feature (`step` enum) | 🚫 — same reason; the demo has no multi-step flow |
 
 ## M — `mvvmc-model`
 
@@ -56,6 +57,9 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | Non-navigation side effect run directly in the VM (open URL / share) | ❌ — demo has no such action |
 | Pagination (first-load vs load-more tracked separately) | ❌ — the fake API returns a fixed 5 rows |
 | Form screen (validation, submitting lock, preserve input on failure) | ❌ — demo has no form |
+| Deep return: relay upward, only the endpoint pops | ❌ — demo's callback chain is one level deep |
+| Polling loop started by `.task`, living in the VM | ❌ — no demo screen polls |
+| Optimistic update (VM constructs a Domain Model) | ❌ |
 
 ## V — `mvvmc-view`
 
@@ -74,6 +78,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 | `@Bindable` inside `body` for a `TextField` binding | ❌ — demo has no text input |
 | Display helper (`private extension Model { var color: Color }`) | ❌ |
 | Slot pattern (`@ViewBuilder` container) | ❌ |
+| Alert / confirmation dialog driven by a state flag | ❌ — demo has no destructive action to confirm |
 | `ForEach` + child `@State` identity trap | 🚫 — showing the trap means shipping the anti-pattern the spec tells you to avoid |
 
 ## C — `mvvmc-hostcontroller`
