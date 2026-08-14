@@ -106,6 +106,11 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 **init 規範：**
 - ✅ `required init?(coder:)` 標記 `@available(*, unavailable)` + `fatalError`
 
+**導覽列（title / toolbar）歸誰：**
+- ✅ 優先用 SwiftUI 的 `.navigationTitle` / `.toolbar`，寫在 V 層
+  > why：導覽列按鈕的點擊要走 `doAction`，而 C 層**禁止啟動 Task 觸發 ViewModel**——按鈕放 `navigationItem.rightBarButtonItem` 就必然違規
+- ✅ 只有 SwiftUI 設不到的（`navigationItem` 的特殊配置、`largeTitleDisplayMode` 的細節行為）才留在 C 層，且僅限「設定外觀」不含互動
+
 ---
 
 ## 三種任務模式

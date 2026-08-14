@@ -216,7 +216,8 @@ extension FeatureViewModel.Item {
 #endif
 ```
 
-- ✅ `static let mock`（單筆）/ `static let mocks`（多筆）掛在 **Domain Model** 上，不掛在 State 或 DTO
+- ✅ `static let mock`（單筆）/ `static let mocks`（多筆）掛在 **Domain Model** 上，不掛在 DTO
+- ⚠️ **例外：該 feature 沒有 Domain Model 時**（純表單頁，State 只有輸入緩衝），mock 可以掛在 State 或其內部型別上。這條規則真正要擋的是「mock 掛在 DTO 上」——DTO 是拋棄式資料，替它造假資料等於在測一個馬上會被丟掉的東西。沒有 Domain Model 可掛時，硬造一個只為了放 mock 才是本末倒置
 - ✅ 整個 `FeatureNameMocks.swift` 用 `#if DEBUG` 包住，可選檔案
 - ✅ Preview 端透過 `state.items = FeatureViewModel.Item.mocks` 注入——**要寫全名**，因為 `mocks` 掛在 Domain Model 上、不是 `[Item]` 的 static member，`.mocks` 簡寫編不過（Preview 寫法屬 V 層，見 `mvvmc-view`）
 - ❌ 禁止 mock 出現在非 `#if DEBUG` 區塊

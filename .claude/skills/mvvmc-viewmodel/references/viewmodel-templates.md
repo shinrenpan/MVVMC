@@ -121,7 +121,7 @@ extension PostListViewModel {
 // MARK: - Router
 
 extension PostListViewModel {
-    enum Router: Sendable {
+    enum Router: Equatable, Sendable {
         case toDetail(Post)
     }
 }
@@ -199,7 +199,7 @@ extension PostFilterViewModel {
 }
 
 extension PostFilterViewModel {
-    enum Callback: Sendable {
+    enum Callback: Equatable, Sendable {
         case didSelectUser(User)
         case didCancel
     }

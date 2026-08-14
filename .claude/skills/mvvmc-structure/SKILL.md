@@ -30,6 +30,9 @@ Sources/
 │       ├── FeatureNameMocks.swift              ← #if DEBUG（選用）
 │       └── FeatureNameHostController.swift     ← C
 └── Shared/               跨 feature 的基礎設施型別
+
+Tests/
+└── FeatureNameViewModelTests.swift    一個 feature 一個測試檔（見 mvvmc-testing）
 ```
 
 目錄名（`Pages` / `Shared`）可依專案調整，**分界原則不可調整**：feature 的東西住在自己的目錄裡，跨 feature 的東西必須先通過下面兩道判準。

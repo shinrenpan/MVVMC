@@ -58,6 +58,7 @@ final class AppRouter: NSObject {
 - ⚠️ **`.sheet` 是「關閉方式」不是「視覺樣式」**：它代表「以 present 呈現、`back()` 必須走 dismiss」。所以 `deeplink()` 的 fullScreen present 也標成 `.sheet`——名字看起來矛盾，但改掉它就會讓 `back()` 誤走 pop。要動這個 enum 前，先確認 `back()` 的分支邏輯
 - ✅ 首次 `to()` 才設 `nav.delegate = self` 並啟用 `interactivePopGestureRecognizer`（iOS 26 另含 `interactiveContentPopGestureRecognizer`）
 - ✅ `back()` 先讀 VC 的 `appTransitionStyle`：`.sheet` → `dismiss`，其餘 → `pop`；HostController 永遠只呼叫 `back()`，不自己判斷
+- ℹ️ **`back(from:)` 的 `from:` 是「從誰的導航環境退」，不是「誰要被關掉」**。所以父 HostController 在子 VM 的 `onCallback` 裡寫 `AppRouter.shared.back(from: self)` 是正確的——退的是那個 nav stack 的 top VC（也就是子頁），不是 `self`。子頁自己呼叫 `back(from: self)` 同樣成立，兩種寫法等價
 - ✅ `deeplink()` 一律包一層 `UINavigationController` 並自動塞 `.close` leftBarButtonItem，`.fullScreen` present
 - ❌ 禁止把 `.modal` / `.fade` 的轉場邏輯寫進 HostController——那是 `AppTransitionAnimator` 的責任
 

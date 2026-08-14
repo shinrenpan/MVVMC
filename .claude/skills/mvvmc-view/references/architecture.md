@@ -29,25 +29,29 @@
 
 ### 四態呈現（loading / error / empty / content）
 
-一個資料區塊幾乎都有四種狀態。建議骨架（非強制）：
+一個資料區塊幾乎都有四種狀態。**判斷順序是「先看有沒有內容，再看狀態」**——反過來寫會出事：
 
 ```swift
-switch viewModel.state.api.fetchItems {
-case .loading where viewModel.state.items.isEmpty:
-    ProgressView()                                   // 只有首次載入才蓋掉整塊
-case let .error(message):
-    ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
-default:
-    if viewModel.state.items.isEmpty {
+if viewModel.state.items.isEmpty {
+    // 沒有內容可顯示：這時才由狀態決定整塊畫面
+    switch viewModel.state.api.fetchItems {
+    case .prepare, .loading:
+        ProgressView()
+    case let .error(message):
+        ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+    case .success:
         ContentUnavailableView("沒有資料", systemImage: "tray")
-    } else {
-        ListSection(items: viewModel.state.items, send: handleListAction)
     }
+} else {
+    // 已經有內容：內容永遠留著。載入中／失敗只能表現成「附加」的提示
+    //（底部載入指示、重試列、toast），不可以蓋掉使用者正在看的東西
+    ListSection(items: viewModel.state.items, send: handleListAction)
 }
 ```
 
-- `.loading where items.isEmpty` 是關鍵：沒有這個條件，下拉刷新會把既有內容換成轉圈
+- **順序顛倒會出什麼事**：把 `switch status` 放外層時，「下拉刷新失敗」與「第 2 頁載入失敗」都會落進 `.error` 分支，把使用者眼前的清單整個換成錯誤畫面。分頁與刷新場景下這是嚴重的體驗倒退，而且從程式碼上看不出來——要跑到那個情境才會發現
 - **「載入成功但結果為空」與「還沒載入」怎麼分**：看資料不看狀態——`items.isEmpty` 搭配狀態是否已離開 `.prepare`。請求狀態容器不需要為此多開一個 case
+- **已經有內容時失敗要怎麼呈現**（靜默、底部重試列、toast）是產品決策，規範不指定；但「不可以清空既有內容」是架構要求
 - 同一套骨架在兩個以上 Section 重複出現時，才考慮提拔成共用組件（見 §4）；只重複一次時它是 body 拆分，不是組件
 
 ### Display Helper（Model → UI 型別）

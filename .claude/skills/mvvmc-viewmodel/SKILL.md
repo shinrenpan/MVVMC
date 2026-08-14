@@ -64,6 +64,7 @@ final class FeatureViewModel {
   - 型別：`(@MainActor (Callback) async -> Void)?`，async（避免呼叫端需要包 Task）
   - ViewModel 呼叫：`await onCallback?(.didSelectUser(user))`（在 doAction 內 await）
 - ✅ 兩者只在有實際需求時才宣告
+- ✅ **`Router` / `Callback` enum 預設加 `Equatable`**——`mvvmc-testing` 用 `#expect(received == .toDetail(post))` 驗證導航意圖與跨 VC 回傳，沒有 `Equatable` 就寫不出這類測試。純值 enum 隱含 `Equatable`，帶 associated value 時要顯式加（裡面的 Domain Model 本來就該是 `Equatable`）
 - ✅ 必須標注 `@ObservationIgnored`
 - ✅ 非 UI 相關的 property 一律標注 `@ObservationIgnored`
 
@@ -190,6 +191,33 @@ case .isFirstAppear:
 - 💡 有防重入需求時，也是**每支各自判斷**，不是共用一個閘門
 
 > 狀態欄位長什麼樣（要不要包成容器、有哪些 case）是 M 層的事，且**形狀不在規範範圍**——見 `mvvmc-model`〈State 欄位型別〉。
+
+---
+
+## 分頁載入
+
+分頁的重點不在游標怎麼存，而在**「首次載入」與「載入更多」是兩件不同的事**——即使它們打的是同一支 endpoint：
+
+- ✅ **各自一組 `APIRequest` / `APIResponse` case、各自追蹤狀態**
+  > why：狀態欄位只有一格 `.error`。兩者共用的話，第 2 頁失敗會蓋掉第 1 頁的 `.success`，View 就再也無法表達「內容還在、只是下一頁沒載到」——那正是分頁最常見的情境
+- ✅ 首次載入是 **replace**，載入更多是 **append**
+- ✅ **「還有沒有下一頁」是 state**（來自 API 回應），不要在 View 端用「這次回傳筆數 < pageSize」去猜
+- ✅ **觸發時機由 VM 判斷**：View 只回報「列表底部出現了」這個事件，至於要不要真的載入（還有沒有下一頁、是不是正在載入、上一次是不是失敗了）全部是 VM 的 guard
+  > 讓 View 比對 `item.id == items.last?.id` 來決定要不要載入，等於 View 讀 state 做流程決策
+- ❌ **下一頁失敗後不要自動重打**：footer 還留在畫面上，不加條件就會變成無限重試迴圈。改由使用者按重試觸發
+
+游標的形式（page number / cursor / offset）、pageSize 放哪，屬專案自訂，不在規範範圍。
+
+---
+
+## 表單頁
+
+- ✅ **輸入緩衝屬 `State`，不是 Domain Model**——使用者還沒送出的東西不是業務實體。純表單頁**可以沒有 Domain Models 區塊**，不要為了湊格式硬造一個沒有消費者的型別
+- ✅ **驗證是推導值**：`isValid` 寫成 State 的 computed property（見 `mvvmc-model`），不要另存一個會不同步的 stored 欄位，更不要在 View 裡判斷
+- ✅ **送出中要同時表達三件事**：按鈕 loading、欄位不可編輯、**不能重複送出**——最後一項是 VM 的 guard，不是靠 UI 禁用來保證
+- ✅ **送出失敗必須保留使用者的輸入**：失敗只寫狀態欄位，不要清空輸入緩衝
+- ✅ **送給 API 的 request DTO 放 DTOs 區塊**，由 `handleAPIRequest` 從輸入緩衝組出來
+  > 不要在 State 的型別上寫 `toDTO()`——那會讓輸入緩衝反過來知道 API 合約，等於把 DTO 的髒污染回 State 層
 
 ---
 
