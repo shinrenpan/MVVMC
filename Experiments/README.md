@@ -12,13 +12,15 @@ Each answers a different question. They are not interchangeable, and passing one
 
 ### 1. Measurement — "is this claim about the world true?"
 
-`ViewSplitProbe/`, `ConcurrencyProbe/`
+`ViewSplitProbe/`, `ConcurrencyProbe/`, `CancellationProbe/`
 
 Take a factual assertion the spec relies on and put it in front of a compiler or a simulator. Both probes are re-runnable; both README files record the toolchain version, because these answers expire.
 
-**Caught:** three pieces of received wisdom that turned out to be false — `AnyView` does *not* stop a child's body from being skipped; "precise injection" cannot be justified on performance grounds (passing the whole object redraws *less*); `nonisolated async` behaviour flips depending on one build flag.
+**Caught:** six pieces of received wisdom that turned out to be false — **two of `mvvmc-view` §8's assertions at once** (`ForEach` does *not* misplace a child's `@State` on reorder, and `.id(item.id)` does *not* reset it — `ViewSplitProbe`); a rule asserting that a reset written after `await` "will not run" on cancellation, which holds only when the cancellation is actually *thrown* (`CancellationProbe`); and three older ones — `AnyView` does *not* stop a child's body from being skipped; "precise injection" cannot be justified on performance grounds (passing the whole object redraws *less*); `nonisolated async` behaviour flips depending on one build flag.
 
 **Use when:** the spec says "X is faster / X breaks Y / X behaves like Z". Especially when it sounds like something everyone knows.
+
+> **Measure before writing a rule on top of an assertion — including a rule you are writing to fix a field report.** Within a single session, a shipped-app report identified a bug-level scenario derived from §8's stated side effect, a warning was written into the spec for it, and the probe then showed the side effect does not occur. The report reasoned correctly; the fix reasoned correctly; **the premise underneath both had never been checked.** An unverified assertion does not merely sit there being wrong — it generates plausible findings and plausible fixes, and each layer built on it looks more solid than the last.
 
 ### 2. Enforcement — "will an AI actually catch a violation?"
 
@@ -29,6 +31,10 @@ Plant a known set of violations in plausible-looking code, hand it to an agent t
 **Caught:** nothing at first (31/31, zero false positives), which was itself the lesson — see the pitfalls below.
 
 **Use when:** you have rewritten a rule and want to know it still bites. Also the right check after any *reduction* in the spec.
+
+> **Which documents to include is not a question about their subject.** `mvvmc-skip` was skipped by all three readers on the reasoning "Android-specific, small interaction surface with the four layers". That was wrong, and wrong in a regular way: **its interaction surface is not small — the interactions simply live in the five skills it exempts, not in itself.** Every "on Android, write it this way" entry is an exemption from an iOS rule, and none of them had been carried back. Running the review skill on such a project produces five false findings, and applying them silently breaks the Android build's rendering. → **Rank a document for adversarial reading by how many exceptions/exemptions/"here it's different" clauses it contains, not by its topic.** A document made entirely of exemptions has the largest surface of all.
+
+> **Genre matters, and axis 5 has a blind spot.** Adversarial reading looks for two rules that collide — which requires prose that *argues*. A checklist (`mvvmc-review`'s Pass 3) has no arguments, only entries, so the technique returns nothing there. Checklists need the mirror method: **bidirectional coverage audit** — for each upstream rule, is there an entry? for each entry, does the rule still read that way? for each entry, is the file it needs even in the scan scope? The third direction found a check whose output was ✅ based on **zero files read** — and a false pass is worse than a false finding, because nobody argues with it. A 2026-09 audit found 14 "do not file this" exemptions upstream and **0** carried into the review skill; the transfer loss is structural, since a checklist's value is brevity and exemptions are all qualifiers.
 
 ### 3. Repair — "can the spec guide a fix, not just a diagnosis?"
 
@@ -59,6 +65,41 @@ Extract every hard prohibition across all skills, then reason about which combin
 **Caught:** Preview forbids hitting the network, but a View's `.task` always runs during Preview rendering — two rules, written months apart, in direct conflict. The demo had been violating its own spec.
 
 **Use when:** after adding several rules in one sitting. New rules multiply the interaction surface faster than they add coverage.
+
+### 6. Field reports — "what happens to a spec that ships?"
+
+No directory; run by asking the sessions that built real products with these skills.
+
+The other five axes all test the spec **as a document**. This one tests what happens to it in the 33 days between a rule being written and reaching the project that needs it. Run 2026-09 against three shipped App Store apps.
+
+**Caught five failure mechanisms, and not one of them is visible to the other five axes** — because all five happen *outside* the spec text:
+
+| Mechanism | What it looks like |
+|---|---|
+| **Delivery failure** | `mvvmc-navigation` existed for **33 days** with no `~/.claude/skills/` symlink. Two of three projects wrote their Router with no access to it. One of them *cited the skill by name* in its planning doc — a file it could not open |
+| **Back-propagation failure** | A Swift 6 violation in the demo's `AppRouter` was hit by one downstream project, not pushed back, and re-discovered by a second project **64 days** later |
+| **Circular authorization** | Agent A records its own deviation in the project's `CLAUDE.md`; agent B reads the skill, sees the conflict, and **cites that note as independent authority**. It never was — it is agent A's deviation |
+| **Precedent over spec** | During compliance work the codebase is a stronger normative signal than the skill. **Negative conditions ("unless X, don't do Y") almost always lose**, because a codebase shows examples of "did it" and never of "deliberately didn't" |
+| **Rationale lost in migration** | A design decision was documented, adopted, and then deleted in a docs reorg. The code survived; the reason did not. The modifier it protects now reads as freely swappable |
+
+**Use when:** the spec has shipped to at least one project you did not write. It is the only axis that can see these, and none of them are fixed by writing better rules.
+
+**Pitfalls specific to this axis** — all three cost real time:
+
+- **Version skew.** Reporters describe today's code against today's spec. Most "violations" were compliance with the spec *as it stood that week*. **Date every finding before believing it**: `git log --diff-filter=A` on the rule, first-commit date on the file. `git show $(git rev-list -1 --before=<date> HEAD):<skill path>` recovers the text they actually had.
+  **Apply the same filter to retractions, at the moment they are made.** One reporter withdrew seven findings as "I claimed the spec was silent without reading it"; dating them afterwards showed **five of the seven were rules that did not exist yet**. Those are not discoverability failures — they are independent convergence, the strongest evidence a rule can get. Filter at the *entry* to the retraction, not the exit: a misclassified retraction poisons the methodology sample before anyone thinks to re-check it.
+- **Memory is not evidence.** Reporters answer from what they *remember the spec saying*. Across three projects, ~10 claimed gaps turned out to be rules that existed, sometimes verbatim, sometimes with the reporter's own reasoning already written in a parenthetical. **Require a re-runnable command for every claim**; label the rest as inference. The gap between "what the rule says" and "what the practitioner remembers" is itself the measurement — it quantifies discoverability — but the two must be recorded separately.
+- **Coverage claims are unverifiable.** One reporter stated it had read every skill; it had opened none of the two under discussion, and disclosed this only later. Nothing in the transcript could have caught it. **Ask for the list of files actually opened**, never accept "read everything".
+
+**What made a report trustworthy** was not the reporter's experience. All four participants — the spec's own session included — retracted findings during the round. Two failure points, not one: **claiming the spec is silent without having opened the file**, and **claiming to have read a file that was never opened**. The first is the common one; the second was self-disclosed and was otherwise undetectable from the transcript. Once every claim had to carry a re-runnable command and every reporter had to list the files actually opened, both stopped. → *A field report's credibility tracks whether the file was opened before sending, not who sent it.*
+
+**How to stop.** "Keep going until nothing turns up" is unreachable, but "I can't think of another one" is weak. The strongest stop reached here was **enumerating a generator and closing it**: one reporter identified the pattern behind two findings (V-layer rules assume state changes are user-driven; polling makes them continuous and automatic, and the two rules live in files that don't cross-reference), then swept every place that generator could act — three sites, two already fixed, one open. Closing the third exhausted it. *That is a bounded claim; "I found nothing else" is not.*
+
+**A converged report line is not a clean spec.** The reporter with the deepest coverage flagged its own limit: after reading fourteen documents and helping derive a dozen fixes, "I can't find any more" is partly "I can no longer see them". Record the outcome as *this line is exhausted*, never as *the spec is clean* — the second is a stamp, and the whole round was built to avoid producing one.
+
+**What made it work:** the gate on findings was *counter-example*, not approval. Every proposed fix was sent back with "find a situation where following this produces wrong code" — and that caught two fixes that would have shipped bugs, plus one meta-error (fixing an over-broad rule by adding another rule written as a generalisation). **Approval would have caught none of them**; on one question two reporters gave directly opposite answers, so consensus would have been decided by whoever replied first.
+
+**Recording the result:** write "no counter-example offered (date, sources)" plus a re-open condition — never "approved by N reviewers". The latter is a stamp, and this repo has a worked example of what a stamp does: a review that honestly found "no violations" while missing two, whose conclusion then sat in a project `CLAUDE.md` prefixed `don't "fix"`.
 
 ---
 
