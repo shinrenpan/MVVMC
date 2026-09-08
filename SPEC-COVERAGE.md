@@ -10,13 +10,15 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 ## Why the spec reaches further than the demo
 
-As of 2026-08 this table carries 16 ❌ against 10 🚫. **That gap is deliberate, not drift.**
+As of 2026-09 this table carries **22 ❌ against 15 🚫**. **That gap is deliberate, not drift.**
 
 The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
 
 Those scenario rules are **not unverified — they're verified somewhere else**. `Experiments/GenerationProbe/` holds five features built from the spec alone, by agents forbidden to read `Sources/`, each typechecked under Swift 6 with strict concurrency. Pagination, forms, polling, wizards and deep returns were each implemented that way at least once, and the gaps those runs exposed are what produced the current wording of those rules.
 
 So read ❌ as **"not in the demo"**, not as "never checked". The demo is the compile-time test for *structure*; the generation probes are the test for *scenarios*.
+
+**A third source joined in 2026-09**: rules that came back from three shipped apps, plus measurements from `Experiments/`. Several of those are 🚫 by nature — a rule about module-level isolation, or about what a probe measured, has nowhere to live in a single-target demo with no polling screen. **And one of them is why the demo still earns its place**: trying to satisfy "the Router must not inject a Close button" in the demo is what revealed the rule was unimplementable on its own. See the Navigation section.
 
 ---
 

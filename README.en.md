@@ -71,14 +71,15 @@ AppRouter.shared.sheet(SomeHostController(...), from: self, detents: [.medium()]
 
 // Back (auto-detects pop vs dismiss)
 AppRouter.shared.back(from: self)
-AppRouter.shared.backTo(targetVC, from: self)
+AppRouter.shared.backTo(targetVC)   // no from: — it was a dead parameter
 AppRouter.shared.backToRoot(from: self)
 
 // Tab
 AppRouter.shared.tab(1, from: self)
 
-// Deeplink (fullScreen present, auto-injects Close button)
-AppRouter.shared.deeplink(SomeHostController(...))
+// Deeplink (takes a set of VCs + an intent; does NOT inject a Close button)
+AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]))  // select tab + push onto its stack
+AppRouter.shared.deeplink(.present(settingsVC))                   // genuinely modal
 ```
 
 ---
@@ -93,18 +94,27 @@ enum Deeplink {
 
   init?(url: URL) { ... }
 
-  @MainActor func makeHostController() -> UIViewController { ... }
+  // Returns a set of VCs + an intent, not one VC — presenting a lone detail page
+  // leaves an orphan on cold start (back button shows no list)
+  enum Destination {
+    case navigate(tab: Int, stack: [UIViewController])
+    case present(UIViewController)
+  }
+
+  @MainActor func makeDestination() -> Destination { ... }
 }
 
 // SceneDelegate — all three entry points call AppRouter.deeplink()
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
   guard let url = URLContexts.first?.url,
         let deeplink = Deeplink(url: url) else { return }
-  AppRouter.shared.deeplink(deeplink.makeHostController())
+  AppRouter.shared.deeplink(deeplink.makeDestination())
 }
 ```
 
 Push notification payload convention: `{ "deeplink": "mvvmc://posts/1" }` — reuses `Deeplink(url:)` directly, no extra parsing logic needed.
+
+> **The destination provides its own exit** (V-layer `.toolbar` → `doAction` → `onRoute?(.close)`); the Router does not inject one. An injected button is created outside both C and V, has no `viewModel` to call, and does not know what that page needs to do on close.
 
 ---
 

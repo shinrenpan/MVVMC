@@ -82,7 +82,13 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
 
 ## Maintaining the Spec
 
-- **Never restate a skill's rules in this file.** Duplicated rules drift: that is exactly how the `send` closure type ended up with two conflicting definitions living in two files for months. When a rule changes, change it in the owning skill only.
+- **Never restate a rule anywhere but in the skill that owns it.** Duplicated rules drift, and this repo has now produced the failure in **four** directions — the rule is not just about this file:
+  - `CLAUDE.md` ↔ skill — the `send` closure type had two conflicting definitions for months
+  - **skill ↔ skill** — `swift-concurrency` said "undecided" while `mvvmc-viewmodel` said "settled" about the same question; a project that had enabled the setting could legitimately pick either
+  - **`TODO.md` ↔ skill** — the settlement was written into one skill and not the other, and `TODO.md` recorded the contradiction on 2026-07-11 without anyone acting on it for two months
+  - **skill ↔ its consumer** — `mvvmc-review` restates each layer's rules as check items. When a rule gains an exemption, nothing checks whether the enforcement end learned about it. A 2026-09 audit found **14 "do not file this" exemptions upstream and 0 carried into the review skill.** This one is the worst, because review is the spec's only enforcement path: a stale enforcer means the rule changed but did not take effect.
+
+  Test for whether a check item will drift: **delete the upstream section it names — does the item still read as an instruction?** If yes it carries its own criteria and will drift; if it degrades into an empty pointer, it will not.
 - This file may hold only what belongs to no single layer: the layer table, creation order, file structure, layer boundaries, and data flow.
 - **A new skill needs a symlink in `~/.claude/skills/`**, or it only exists while working inside this repo — which is precisely when you least need it. The skills are meant to travel to whatever project you are actually writing MVVMC code in.
 
@@ -90,7 +96,8 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   ln -s "$PWD/.claude/skills/<name>/" ~/.claude/skills/<name>
   ```
 
-  This is the step most easily forgotten: `mvvmc-structure` was added, documented, cross-referenced and verified — and still went a whole session without a symlink, meaning it worked nowhere except here.
+  This is the step most easily forgotten, and the cost is not hypothetical: `mvvmc-structure` went a whole session without one, and **`mvvmc-navigation` went 33 days** — during which two shipped apps wrote their entire Router layer with no access to it. One of them cited the skill *by name* in its planning document, a file it could not open. **Verify delivery, do not assume it**: `ls ~/.claude/skills/` after adding a skill, and treat a skill named in a plan but absent from that listing as a hard stop.
 
 - **Before another round of spec work, read `Experiments/README.md`** — it records which kind of check finds which kind of problem, and the pitfalls that cost the most to learn (a perfect enforcement score is not evidence of a good spec; every round of fixes creates the next round's bugs).
-- `Sources/` and `Tests/` are the spec's compile-time test. After changing a rule, check whether the demo still demonstrates it — and if the demo cannot compile the new rule, the rule is wrong. `SPEC-COVERAGE.md` maps each rule to the demo file that proves it; update it in the same pass.
+- `Sources/` and `Tests/` are the spec's compile-time test — **a test, not a validation**. The demo is written to match the spec, so it agrees with the spec by construction and has zero evidential value about whether a rule is *right*. What it does prove is that a rule can be written down in compiling Swift, and that is worth a lot: in 2026-09 the rule "the Router must not inject a Close button" turned out to be unimplementable on its own, because the demo's detail page is reached by both push and deeplink and would have had to know which. The rule was missing its other half.
+- After changing a rule, **build and test the demo, and update `SPEC-COVERAGE.md` in the same pass.** Both are easy to skip when the change looks documentation-only — a 2026-09 round changed twenty-odd rules and did neither until asked. Any doc that describes the demo's API (`README.md`, `README.en.md`) counts as a consumer and drifts the same way.

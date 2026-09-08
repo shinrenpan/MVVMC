@@ -71,14 +71,15 @@ AppRouter.shared.sheet(SomeHostController(...), from: self, detents: [.medium()]
 
 // 後退（自動判斷 pop / dismiss）
 AppRouter.shared.back(from: self)
-AppRouter.shared.backTo(targetVC, from: self)
+AppRouter.shared.backTo(targetVC)   // 無 from:——那是死參數
 AppRouter.shared.backToRoot(from: self)
 
 // Tab
 AppRouter.shared.tab(1, from: self)
 
-// Deeplink（fullScreen，自動注入 Close button）
-AppRouter.shared.deeplink(SomeHostController(...))
+// Deeplink（收「一組 VC ＋ 呈現意圖」，不注入 Close button）
+AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]))  // 切分頁 + 推上脈絡
+AppRouter.shared.deeplink(.present(settingsVC))                   // 真正該是 modal 的
 ```
 
 ---
@@ -93,18 +94,28 @@ enum Deeplink {
 
   init?(url: URL) { ... }
 
-  @MainActor func makeHostController() -> UIViewController { ... }
+  // 回傳「一組 VC ＋ 呈現意圖」，不是單一 VC——只 present 一個詳情頁，
+  // 冷啟動會得到孤兒頁面（往回按看不到列表）
+  enum Destination {
+    case navigate(tab: Int, stack: [UIViewController])
+    case present(UIViewController)
+  }
+
+  @MainActor func makeDestination() -> Destination { ... }
 }
 
 // SceneDelegate — 三個入口統一走 AppRouter.deeplink()
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
   guard let url = URLContexts.first?.url,
         let deeplink = Deeplink(url: url) else { return }
-  AppRouter.shared.deeplink(deeplink.makeHostController())
+  AppRouter.shared.deeplink(deeplink.makeDestination())
 }
 ```
 
 推播 payload 約定：`{ "deeplink": "mvvmc://posts/1" }`，`Deeplink(url:)` 直接複用。
+
+> **關閉入口由目的地自己提供**（V 層的 `.toolbar` → `doAction` → `onRoute?(.close)`），Router 不注入。
+> 那顆注入的按鈕在 C 層與 V 層之外被建立，沒有 `viewModel` 可呼叫，也不知道那一頁關閉時該做什麼。
 
 ---
 
