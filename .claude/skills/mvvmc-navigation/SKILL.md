@@ -76,7 +76,7 @@ final class AppRouter: NSObject {
 | `backTo(_:)` | 退到指定 VC（**無 `from:`**——見下） | `popToViewController` |
 | `backToRoot(from:)` | 退到根 | `popToRootViewController` |
 | `sheet(_:from:detents:)` | 系統 sheet，可帶 detents | `present(.pageSheet)` |
-| `deeplink(_:)` | 從 rootVC fullScreen present，自動注入 Close 鈕 | `present(.fullScreen)` |
+| `deeplink(_:)` | 收 `Deeplink.Destination`：`.navigate(tab:stack:)` 切分頁並推上脈絡／`.present(_:)` 真 modal。**不注入 Close 鈕** | `selectedIndex` + `setViewControllers` ／ `present(.fullScreen)` |
 | `tab(_:from:)` | 切 Tab | `tabBarController.selectedIndex` |
 
 **規則：**
@@ -86,7 +86,9 @@ final class AppRouter: NSObject {
 - ✅ `back()` 先讀 VC 的 `appTransitionStyle`：`.sheet` → `dismiss`，其餘 → `pop`；HostController 永遠只呼叫 `back()`，不自己判斷
 - ℹ️ **只有承重的地方才有 `from:`**：`back(from:)` 的 source 真的在做事（讀 `appTransitionStyle` 決定 pop 還是 dismiss）；`backToRoot(from:)` 沒有 destination 可推導 stack，`from:` 是唯一來源；**`backTo` 的 source 只用來取 nav，而 destination 本來就在那個 stack 裡——那是死參數，已刪除**。三個方法形狀不一致是設計，不是疏漏
 - ℹ️ **`back(from:)` 的 `from:` 是「從誰的導航環境退」，不是「誰要被關掉」**。所以父 HostController 在子 VM 的 `onCallback` 裡寫 `AppRouter.shared.back(from: self)` 是正確的——退的是那個 nav stack 的 top VC（也就是子頁），不是 `self`。子頁自己呼叫 `back(from: self)` 同樣成立，兩種寫法等價
-- ✅ `deeplink()` 一律包一層 `UINavigationController` 並自動塞 `.close` leftBarButtonItem，`.fullScreen` present
+- ✅ `deeplink()` 的 `.present` 分支包一層 `UINavigationController`、`.fullScreen` present；**`.navigate` 分支保留該分頁既有的根**（那就是「往回按看得到的列表」），只把目的地推上去
+- ❌ **`deeplink()` 不得注入 Close 鈕**——那顆按鈕在 C 層與 V 層之外被建立、沒有 `viewModel` 可呼叫，結構上不可能遵守「導覽列按鈕要走 `doAction`」，而且它不知道那一頁關閉時該做什麼。關閉入口由目的地在 V 層自己提供
+  > **demo 的教訓**：`PostDetailHostController` 同時被 push（從列表）與 deeplink 使用。要它自己長一顆 Close 鈕，就得知道自己是怎麼被呈現的——那是耦合外洩。**把 deeplink 從「present 一個」改成「切分頁 + 推上脈絡」之後，系統返回鈕自然存在，這個問題整個消失。** 這一半不是選配，它是讓「不注入 Close 鈕」變得實作得出來的前提
 - ❌ 禁止把 `.modal` / `.fade` 的轉場邏輯寫進 HostController——那是 `AppTransitionAnimator` 的責任
 
 ### 轉場與手勢

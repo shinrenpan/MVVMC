@@ -184,6 +184,9 @@ struct State: Equatable, Sendable {
 ```
 
 > **這是效能隔離的第一道閘門，而且它在 M 層不在 V 層**——`mvvmc-view` §7 講的拆 View 是第二道。第一道沒做，第二道就形同虛設。
+>
+> **代價的量級**（`Experiments/ViewSplitProbe/`，2026-09-08）：清單內容完全不變時，子組件重跑數 `A=0 B=0 C=0`；只有一項的值變了，只有那一項重跑（`B2=1`）。
+> **而 Model 裡只要有一個每拍都變的欄位**（伺服器時間戳、`updatedAt`、倒數秒數），**每一項都會 `!=` 自己**——`1` 就變成整個列表長度，每一拍。這條規則沒做的成本就是那個乘法。
 
 **同一 feature 內的 Model 可以互相持有**（`Order` 持有 `[OrderItem]`）。但若兩份資料來自**各自獨立的 API**，優先只存 id 參照（`categoryID: String` 而非 `category: Category`）——否則其中一支請求失敗時，另一支的資料就組不出來，等於把兩支請求的成敗綁死。跨 **feature** 則一律不共用，見 `mvvmc-structure`。
 

@@ -102,7 +102,13 @@ final class AppRouter: NSObject {
     source.present(destination, animated: animated)
   }
 
-  func deeplink(_ destination: UIViewController, animated: Bool = true) {
+  /// deeplink 的唯一入口。呼叫端是 SceneDelegate（三個進入點都走這裡），手上只有 window。
+  ///
+  /// ❌ **不注入 Close 鈕。** Router 往別人的 `navigationItem` 塞按鈕，那顆按鈕在 C 層與
+  /// V 層之外被建立、沒有 `viewModel` 可以呼叫，結構上不可能遵守「導覽列按鈕的點擊要走
+  /// `doAction`」；而且它不知道那一頁關閉時該做什麼（送出中的表單、要發 onCallback 的頁）。
+  /// 關閉入口由目的地自己在 V 層提供（見 `SettingsView` 的 `.toolbar`）。
+  func deeplink(_ destination: Deeplink.Destination, animated: Bool = true) {
     let rootVC = UIApplication.shared.connectedScenes
       .compactMap { $0 as? UIWindowScene }
       .first?.keyWindow?.rootViewController
@@ -110,16 +116,32 @@ final class AppRouter: NSObject {
       assertionFailure("AppRouter.deeplink(): 找不到 rootViewController")
       return
     }
-    destination.appTransitionStyle = .sheet
-    destination.navigationItem.leftBarButtonItem = UIBarButtonItem(
-      systemItem: .close,
-      primaryAction: UIAction { [weak destination] _ in
-        destination?.dismiss(animated: true)
+
+    switch destination {
+    case let .navigate(tab, stack):
+      guard let tabBar = rootVC as? UITabBarController else {
+        assertionFailure("AppRouter.deeplink(.navigate): rootViewController 不是 UITabBarController")
+        return
       }
-    )
-    let nav = UINavigationController(rootViewController: destination)
-    nav.modalPresentationStyle = .fullScreen
-    rootVC.present(nav, animated: animated)
+      // 已經有 modal 蓋在上面時先收掉，否則切了分頁使用者也看不到
+      tabBar.presentedViewController?.dismiss(animated: false)
+      tabBar.selectedIndex = tab
+      guard let nav = (tabBar.selectedViewController as? UINavigationController) else {
+        assertionFailure("AppRouter.deeplink(.navigate): 該分頁的根不是 UINavigationController")
+        return
+      }
+      // 保留該分頁既有的根（那就是「往回按看得到的列表」），只推上目的地
+      let root = nav.viewControllers.prefix(1)
+      stack.forEach { $0.appTransitionStyle = .push }
+      nav.setViewControllers(Array(root) + stack, animated: animated)
+
+    case let .present(vc):
+      vc.appTransitionStyle = .sheet
+      let nav = UINavigationController(rootViewController: vc)
+      nav.modalPresentationStyle = .fullScreen
+      nav.appTransitionStyle = .sheet
+      rootVC.present(nav, animated: animated)
+    }
   }
 
   func tab(_ index: Int, from source: UIViewController) {

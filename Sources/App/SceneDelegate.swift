@@ -9,7 +9,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
     guard let url = URLContexts.first?.url,
           let deeplink = Deeplink(url: url) else { return }
-    AppRouter.shared.deeplink(deeplink.makeHostController())
+    AppRouter.shared.deeplink(deeplink.makeDestination())
   }
 
   func scene(
@@ -39,7 +39,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // 進入點 2：冷啟動 URL Scheme（必須在 makeKeyAndVisible() 之後，確保 rootVC 已存在）
     if let url = connectionOptions.urlContexts.first?.url,
        let deeplink = Deeplink(url: url) {
-      AppRouter.shared.deeplink(deeplink.makeHostController())
+      AppRouter.shared.deeplink(deeplink.makeDestination())
     }
   }
 }
@@ -57,7 +57,7 @@ extension SceneDelegate: UNUserNotificationCenterDelegate {
     guard let urlString = response.notification.request.content.userInfo["deeplink"] as? String,
           let url = URL(string: urlString),
           let deeplink = Deeplink(url: url) else { return }
-    Task { @MainActor in AppRouter.shared.deeplink(deeplink.makeHostController()) }
+    Task { @MainActor in AppRouter.shared.deeplink(deeplink.makeDestination()) }
   }
 
   nonisolated func userNotificationCenter(
