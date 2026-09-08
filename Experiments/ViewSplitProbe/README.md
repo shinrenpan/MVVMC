@@ -46,3 +46,33 @@ xcodebuild -project ViewSplitProbe.xcodeproj -scheme ViewSplitProbe \
 ```
 
 The test asserts only that the experiment is valid (section A did re-render). The B and parent counts are printed as observations — read them, don't assert them, because the whole point is to detect if SwiftUI's behaviour ever changes.
+
+---
+
+## Reorder / `@State` identity (added 2026-09-08)
+
+`mvvmc-view` §8 made two assertions, neither of which reproduced:
+
+```
+PROBE_RESULT reorder withID  @State survived=true  child bodies=3
+PROBE_RESULT reorder noID    @State survived=true  child bodies=3
+```
+
+| §8's assertion | Measured |
+|---|---|
+| `ForEach` identifies children structurally (by position), so reordering misplaces their `@State` | ❌ not reproduced — `@State` followed the **data** in both variants |
+| Adding `.id(item.id)` rebuilds the child on reorder, resetting its `@State` | ❌ not reproduced — state survived |
+
+**Setup**: `ForEach` over `Identifiable` elements, child holds `@State private var instanceID = UUID()`, array permuted programmatically, identity recorded per `item.id`. A reset would change the UUID for a given id; a misplacement would swap UUIDs between ids. Neither happened.
+
+**What this does not cover**, and why the section was annotated rather than deleted: `id: \.self`, index-based `ForEach`, nested `ForEach`, animated reorder. The original assertion may still hold in those shapes — it was simply never measured in any of them.
+
+**Consequence for the spec**: the rule "if the reset is acceptable, `.id()` alone is the complete fix" was resting on a side effect that does not occur. Lifting state into the ViewModel *to survive reordering* is a cost paid for nothing in the common shape. The rule now reads "lift it to survive **leaving the screen**", which is a different and real requirement.
+
+**Meta**: this measurement also retired a fix made earlier the same day. A field report had identified a bug-level scenario (a polling list collapsing an expanded row every N seconds) built on §8's stated side effect, and a warning was written into the spec for it. The scenario cannot occur. *Both the report and the fix were reasoning correctly from an assertion nobody had checked* — which is the whole argument for this directory existing.
+
+---
+
+## Pending: one open question left
+
+**§7's table still assumes stable order.** Every row measures "does the child's body get skipped when its props are unchanged", and none of them reorders the array. The reorder probe above shows all three children re-ran their bodies (`child bodies=3`) even though only their position changed — so row 2 (independent struct, values passed in) does **not** hold under reorder, and the table should say so. Measuring the exact boundary (which props-unchanged children are skipped when the array is permuted) is the remaining work here.

@@ -185,3 +185,63 @@ struct ProbeApp: App {
     WindowGroup { Text("probe") }
   }
 }
+
+// MARK: - 重排探針：.id(item.id) 之下，@State 會不會被重置
+
+/// 記錄每個 item.id 對應的子組件 @State 身分。
+/// 若重排後同一個 item.id 的 instanceID 變了 → @State 被重置。
+@MainActor
+final class StateIdentityLog {
+  static let shared = StateIdentityLog()
+  private(set) var identities: [Int: UUID] = [:]
+  func record(itemID: Int, instance: UUID) { identities[itemID] = instance }
+  func reset() { identities = [:] }
+  func identity(_ itemID: Int) -> UUID? { identities[itemID] }
+}
+
+struct ReorderItem: Identifiable, Equatable {
+  let id: Int
+  let label: String
+}
+
+/// 子組件持有自己的 @State。instanceID 在 @State 被重置時會換一個新的。
+private struct ReorderChild: View {
+  let item: ReorderItem
+  let key: String
+  @State private var instanceID = UUID()
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("\(key).child")
+    let _ = StateIdentityLog.shared.record(itemID: item.id, instance: instanceID)
+    return Text(item.label)
+  }
+}
+
+/// 版本 A：ForEach + .id(item.id)——`mvvmc-view` §8 推薦的形狀
+struct ReorderWithExplicitIDView: View {
+  let items: [ReorderItem]
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("withID.parent")
+    return VStack {
+      ForEach(items) { item in
+        ReorderChild(item: item, key: "withID")
+          .id(item.id)
+      }
+    }
+  }
+}
+
+/// 版本 B：ForEach 不額外加 .id()——對照組
+struct ReorderNoExplicitIDView: View {
+  let items: [ReorderItem]
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("noID.parent")
+    return VStack {
+      ForEach(items) { item in
+        ReorderChild(item: item, key: "noID")
+      }
+    }
+  }
+}
