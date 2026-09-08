@@ -12,3 +12,6 @@ DerivedData/
 
 # Experiments 編譯產物
 Experiments/ConcurrencyProbe/probe_*
+
+# 工具自動產生的編輯前備份（LSP plugin、settings 收窄權限時）
+*.bak-*

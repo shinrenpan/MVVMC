@@ -72,6 +72,18 @@ argument-hint: [feature-path]
 
 ## Pass 3 — 跨層一致性
 
+> **這個 Pass 用 LSP，不要用 grep。** 專案已裝 `swift-lsp`（sourcekit-lsp），下列判斷全部有精確答案，grep 會被註解、字串、同名符號誤導——跟 String Catalog 那條「不要用 grep 判斷死活」是同一個教訓。
+>
+> | 要判斷的事 | 用哪個操作 |
+> |---|---|
+> | Action case / State 欄位有沒有人用 | `findReferences` 在該 case 或欄位宣告上 |
+> | Router case 是否有對應 `handleRouter` 分支 | `findReferences` 對照兩端 |
+> | Callback 是否被父 HostController 處理 | `incomingCalls` 追呼叫鏈 |
+> | 有沒有跨 feature 引用 Domain Model | `findReferences` 看引用落在哪些目錄 |
+> | 型別實際簽名（含推導出的 actor 隔離） | `hover` |
+>
+> **前提**：LSP 以當前工作目錄為 workspace root。必須在該專案目錄下開 session，否則跨檔查詢會回空值（單檔的 `hover` 仍可用）。若 `findReferences` 回空但符號明顯有人用，先確認這件事，不要當成「無呼叫者」。
+
 只有把整個 feature 攤開才看得見的問題，逐項確認：
 
 - **Action 命名**：ViewAction 是否為事件風格（`xxxDidTap`）；子層 Action 是否被父層業務語意污染；是否存在純 Forwarding 的中間層

@@ -79,6 +79,10 @@ argument-hint: [file-path]
 
 ## Pass 2 — Concurrency & Swift 6
 
+> **先用 LSP `hover` 取得實際簽名，不要只讀原始碼。** actor 隔離常常是**推導**來的而非明寫——例如原始碼只有 `@Observable final class SettingsViewModel`，`hover` 回的卻是 `@MainActor final class SettingsViewModel`。隔離從哪來、覆蓋到哪，原始碼上看不出來，這正是 `swift-concurrency` 警告的那類坑（編譯期零警告、模擬器全過、實機才崩）。
+>
+> 逐一確認可疑符號的實際隔離狀態後再往下審；`goToDefinition` 可追到隔離的來源（protocol、父型別或 macro）。
+
 審查以下項目：
 
 **Swift 6 合規**
