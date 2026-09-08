@@ -2,7 +2,7 @@
 name: swift-concurrency
 description: |
   Swift Concurrency 使用規範。涉及 async/await、Task、Task.detached、@concurrent、nonisolated、actor、MainActor、Sendable 時觸發。
-  **傳 closure 給 ObjC framework API 時也必須觸發**——completion handler、delegate 回呼、NotificationCenter observer，以及 CoreMotion / CoreBluetooth / AVFoundation / CoreLocation 這類舊 API 的 `start…(to:withHandler:)`。那類 closure 會隱式繼承 MainActor 隔離，編譯期零警告、模擬器全過，只有實機回呼的那一刻崩。寫這種 callback 時通常不會意識到自己在處理並發問題，所以要靠這條主動攔下來。
+  **傳 closure 給 ObjC framework API 時也必須觸發**——任何**你控制不了呼叫佇列**的 callback——completion handler、delegate 回呼、observer block、`(to:withHandler:)` 形式的舊 API。CoreMotion / CoreBluetooth / AVFoundation / CoreLocation / NotificationCenter 是常見來源，**但不限於這些**。那類 closure 會隱式繼承 MainActor 隔離，編譯期零警告、模擬器全過，只有實機回呼的那一刻崩。寫這種 callback 時通常不會意識到自己在處理並發問題，所以要靠這條主動攔下來。
   確保正確判斷離開主 actor 的工具，維持 Structured Concurrency 優勢。
 ---
 
@@ -23,14 +23,17 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 6.2「Approachable Concurrency」翻轉了預設，很多舊觀念要更新：
 
 - **模組預設 `@MainActor`**：`Package.swift` 設 `.defaultIsolation(MainActor.self)`（Xcode：`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`、`SWIFT_APPROACHABLE_CONCURRENCY = YES`），整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。**Xcode 26 新專案預設就開這兩項。**
+  > ⚠️ **但 MVVMC 的 ViewModel 仍然明標**——這是編譯器行為與規範要求不一致的一處。裁定在 `mvvmc-viewmodel`〈強制宣告〉（本檔〈專案脈絡〉末尾有引用），**只讀這一行會得到相反的結論**。
 - **`nonisolated async func` 預設跑在呼叫端 actor**（`nonisolated(nonsending)`，SE-0461）——**不再自動跳到背景**。所以「標了 `nonisolated` 的 async 就會脫離主 actor」這個舊觀念已不成立。
   > ⚠️ **這條依賴設定**，不是 6.2 toolchain 就自動生效：要開 `SWIFT_APPROACHABLE_CONCURRENCY: YES`（SPM 為 `.enableUpcomingFeature("NonisolatedNonsendingByDefault")`）。實測（`Experiments/ConcurrencyProbe/`，Swift 6.3.1）：同一段 `nonisolated async func` 從 `@MainActor` 呼叫，**沒開**這個 flag 時離開主緒、**開了**才留在呼叫端。判斷任何一段 `nonisolated async` 的行為前，先確認這個開關——這正是下方〈Fast Path〉存在的理由。
+  >
+  > **重開條件（當場驗得出來，不綁版本號）**：`Experiments/ConcurrencyProbe/` 在**開／關該 flag 兩種設定下不再產生不同結果**時，本條作廢。綁版本號是錯的觸發器——這條失效的方式不是 toolchain 上升，是那個 flag 從 opt-in 畢業成預設。**probe 跑不出差異的那天，它自己就會說。**
 - **要並行 / 離開 actor 得明講**：用 `Task { @concurrent in ... }` 讓 Task 從主 actor 外起跑（見〈離開主 actor〉）。
 - **6.3 Region-based isolation 正式可用**：編譯器能證明更多情況的資料安全，`Sendable` 假陽性大減。
 
 ## 專案脈絡
 
-本專案所有 ViewModel 標注 `@MainActor`（或由模組層級 `.defaultIsolation(MainActor.self)` 統一預設）。`doAction` 內的 `Task { }` **繼承當前 actor（即 MainActor），不會脫離**。要真正離開主 actor：async 工作用 `Task { @concurrent in }`，非結構化才用 `Task.detached`；純同步運算用 `nonisolated func`。
+本專案所有 ViewModel **明標** `@MainActor`。（模組層級 `.defaultIsolation(MainActor.self)` **不是等價替代**——即使開了那個設定仍然明標，裁定與理由見 `mvvmc-viewmodel`〈強制宣告〉。）`doAction` 內的 `Task { }` **繼承當前 actor（即 MainActor），不會脫離**。要真正離開主 actor：async 工作用 `Task { @concurrent in }`，非結構化才用 `Task.detached`；純同步運算用 `nonisolated func`。
 
 ## 先確認專案設定（Fast Path）
 
@@ -41,14 +44,25 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 3. **Default isolation**：`.defaultIsolation(MainActor.self)` / `SWIFT_DEFAULT_ACTOR_ISOLATION`（決定「未標註的型別預設在不在主 actor」）
 4. **Approachable concurrency / upcoming features**：`SWIFT_APPROACHABLE_CONCURRENCY`、`.enableUpcomingFeature(...)`
 
-> MVVMC demo 的設定可當參考（`project.yml`）：Swift 6 language mode + `SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES`，零警告通過。**刻意沒開** `SWIFT_DEFAULT_ACTOR_ISOLATION`——開了之後 ViewModel 還要不要逐一標 `@MainActor` 是未定案的議題。所以本 skill 的建議預設「每個型別自己標註隔離」，不假設模組預設。
+> MVVMC demo 的設定可當參考（`project.yml`）：Swift 6 language mode + `SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES`，零警告通過。**刻意沒開** `SWIFT_DEFAULT_ACTOR_ISOLATION`，所以本 skill 的建議預設「每個型別自己標註隔離」，不假設模組預設。
+
+> **開了之後 ViewModel 還要不要逐一標 `@MainActor`——這條規則歸 `mvvmc-viewmodel`〈強制宣告〉，本 skill 不重述、也不表態。** 那裡有已定案的答案（仍然明標）、理由、以及審查已開啟該設定的專案時該怎麼做。
+>
+> 早前這裡曾寫成「未定案的議題」，與 `mvvmc-viewmodel` 的「定案」直接衝突，開了那個設定的專案於是可以合理地挑一份遵守。**兩份 skill 對同一問題各自表態就是這個下場**——見 `CLAUDE.md`〈Maintaining the Spec〉。
 
 ## Guardrails
 
 - ❌ 別把 `@MainActor` 當萬用解——要能說出「這段確實是 UI-bound」的理由
 - ✅ 優先結構化並發（`async let` / TaskGroup），少用非結構化 `Task {}` / `Task.detached`
-- ⚠️ `@unchecked Sendable`、`nonisolated(unsafe)`、`@preconcurrency` 是逃生口——用時**必附「安全不變式 + 移除計畫」的註解**
-- ⚠️ `MainActor.assumeIsolated` 少用（不在主緒會直接 crash），優先用明確的 `@MainActor`
+- ⚠️ `@unchecked Sendable`、`nonisolated(unsafe)`、`@preconcurrency` 是逃生口，**分兩種，註解要求不同**：
+  - **暫時性**（等某個 API 標好 `Sendable`、等遷移完成）→ 必附「**安全不變式 + 移除計畫**」
+  - **永久性**（語言層面沒有替代方案）→ 必附「**安全不變式 + 具體缺了哪個語言機制**」。
+    > ⚠️ 「沒有替代方案」**不得只是宣稱**——那只能由作者自己認證，任何人沒找夠久都寫得出這句話。註解必須**指名一個具體的機制缺口**（哪個語言特性沒有、哪個 proposal 沒過）。
+    > **而且「永久性」是本 skill 維護的封閉清單，新增一個要改這份文件**——那道外部編輯就是破解自我認證的機制。
+    >
+    > **目前清單（1 項）**：`AppRouter` 的 `appTransitionStyleKey`——associated object 的 key 需要一個**穩定的記憶體位址**，而 Swift 沒有「編譯期常數位址」這個概念；`let` 不保證位址穩定、`static let` 在 Swift 6 下仍是全域可變狀態。見 `mvvmc-navigation` 模板
+  > 不分這兩種的後果：規範自己的可貼模板寫得出不變式、**寫不出移除計畫**（沒有東西可以移除到），於是它對規範自己的規則只做到一半，而審查端會為此開單
+- ⚠️ `MainActor.assumeIsolated`——**強度與適用範圍統一見〈傳給 ObjC API 的 closure〉的連帶規則**（那裡是「不要用」，不是「少用」）。本條不另立標準
 
 ---
 
@@ -307,11 +321,20 @@ manager.startDeviceMotionUpdates(to: queue) { @Sendable motion, error in … }
 - **`@MainActor` closure 型別不要流進背景路徑。** 回呼型別宣告成
   `(@Sendable (T) -> Void)?`，跳回主 actor 是**消費端**的責任
   （`Task { @MainActor in … }`），不是生產端的。
-- **NotificationCenter observer 用 `Task { @MainActor in }`，不要用
-  `MainActor.assumeIsolated`。** 後者是 precondition——假設錯就崩，而通知的派送
-  情境不完全在你手上。為省一次 hop 把可恢復的情況換成崩潰，划不來。
-- 適用對象是**所有你控制不了呼叫佇列的 callback**，CoreMotion / CoreBluetooth /
-  AVFoundation 這類舊 ObjC API 都算。
+---
+
+### `MainActor.assumeIsolated`——這一條不是崩潰預測，是風險取捨
+
+**⚠️ 即使你的配置保證回呼在主緒（`queue: .main`、`queue: nil`），這一條仍然適用。**
+
+上一節整節的框架是「你看不見的陷阱」——編譯期零警告、模擬器全過、只有實機才崩。**這一條不是那種**，所以它刻意獨立出來：如果混在上一節的連帶規則裡，讀者會用「會不會崩」去篩它，然後在自己配置安全時把它過濾掉。（那正是實測發生過的事——一個專案遵守了整節的其他部分，唯獨在這條上一字不差地踩中，兩年沒發現，因為它的配置讓症狀不呈現。）
+
+- ❌ `MainActor.assumeIsolated { … }`
+- ✅ `Task { @MainActor in … }`
+
+**why**：`assumeIsolated` 是 **precondition**——假設錯就崩，而且崩在對方的佇列上。它換到的只是省一次 hop。**把一個可恢復的情況換成不可恢復的崩潰，不管你現在多確定，都划不來**——而「現在多確定」是會隨別人改一行 `queue:` 而失效的。
+
+**適用範圍**：NotificationCenter observer、`beginBackgroundTask` 的 expiration handler、以及任何**佇列由對方決定**的 callback（CoreMotion / CoreBluetooth / AVFoundation 這類舊 ObjC API 都算）。expiration handler 特別值得點名——**系統回收背景時間時在哪條佇列呼叫它，文件沒有保證。**
 
 ---
 
@@ -320,7 +343,7 @@ manager.startDeviceMotionUpdates(to: queue) { @Sendable motion, error in … }
 ```
 這份狀態會被多個地方同時讀寫嗎？
 ├── 不會
-│   ├── 唯讀、無狀態 → nonisolated
+│   ├── 唯讀、無狀態 → nonisolated **同步** func（async 的行為取決於 flag，見上方 ⚠️）
 │   └── 只有一個 actor 存取 → 跟著那個 actor 走（通常是 @MainActor）
 └── 會（跨 actor 讀寫）→ actor
 ```

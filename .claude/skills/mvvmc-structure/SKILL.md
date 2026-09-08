@@ -134,6 +134,29 @@ enum Callback: Equatable, Sendable {
 - ✅ 目錄建議 `Sources/Components/`（名稱可依專案調整，重點是**不在 `Pages/<Feature>/` 底下**）
 - ❌ 不要為了「將來可能共用」先提拔——等真的出現第二個使用者再說
 
+> ⚠️ **「各自定義」的論證只涵蓋 Domain Model（資料形狀），不涵蓋業務純邏輯。**
+> 那個 why（「抽成共用會強迫兩邊都扛下欄位聯集」）是 struct 才有的問題。一個**純函式沒有欄位**——複製它換到的不是解耦，是**兩份會漂的正確性**。
+> 例：兩個 feature 都要算「訂單風險等級」（金額 × 逾期天數的分段）。純函式、無 UI、無狀態。`Shared/` 的判準否決它（「風險等級」會出現在業務對話裡），各自定義則得到兩份分段邏輯——**漂移的症狀是同一筆訂單在兩個畫面顯示不同等級，不會編譯失敗、不會有人發現。**
+> **業務純邏輯需要第三個位置**（不是 feature 目錄、也不是「與業務無關」的 `Shared/`）。這跟「業務型別但必須全域單一、生命週期長於任何畫面」的服務層是同一個家族——**都是「業務的、但不屬於任何單一 feature」**，而規範目前只有兩格。
+
+> ### 多 target 專案（widget / share extension / intents）
+>
+> **`target membership` ≠ `directory ownership`，兩者正交。本節只管後者。**
+>
+> **一個 extension target 不是一個 feature**，它是既有 feature 的**第二個呈現端**。所以：
+>
+> | 東西 | 住哪 |
+> |---|---|
+> | extension 消費的 Domain Model／純計算 | **留在它服務的那個 feature 目錄**，extension target 從那裡把檔案編進來 |
+> | app 與 extension 顯示同一塊的 View 組件 | 走 `mvvmc-view` §4 第三階（跨兩個以上 View 檔案 → 獨立檔案），**既有規則直接適用** |
+> | extension 自己的進入點與 View | 自己的目錄——**那才是它作為 feature 的部分** |
+>
+> 「Domain Model 不跨 feature」因此**不受影響**——它從來沒有跨 feature，只是被第二個 target 編譯。
+>
+> ⚠️ **不要走「各自定義」那條路**：`toDomain()` 屬於 DTO 自身，而 extension 與 app 必須共用同一個 `@Model`（SwiftData schema 一致是硬需求），所以 `toDomain()` 只有一個、回傳型別只能有一個。硬要各自定義就得長出 `toDomainForWidget()`——那個 DTO 於是同時認識兩個消費端，**正好是這條規則想防的 God module，而且是照著規則做出來的**。
+>
+> ⚠️ **代價要知道**：這讓「一個 feature 目錄裡的檔案被另一個 target 編譯」變成常態，而那件事**在 `project.yml` 看得到、在檔案裡看不到**。所以它必須跟 `mvvmc-viewmodel`〈強制宣告〉那條隔離檢查一起讀——**同一個根：規範的可見性單位是檔案，而 target membership 不住在檔案裡。**
+
 判斷細節與反例見 `mvvmc-view`〈跨 Section 共用組件的處理〉。
 
 ---

@@ -65,7 +65,11 @@ extension FeatureViewModel {
 
 > **某個 enum 該歸 State 還是 Domain Models？** 判準是「**它會不會出現在 API 合約裡**」。`ReturnReason`（會變成 `reason_code` 送出去）是 Domain Model；`Step`（只驅動畫面切換，伺服器不知道它存在）是 UI 狀態。
 
-> 這類容器型別放在 **State 區塊**（它是 UI 狀態，不是業務語意），與 `State` 本身同一個 `extension` 或緊鄰的 `extension` 皆可。
+> 這類容器型別的**形狀**不在規範範圍（見下一段）；**位置**分兩種：
+> - **只有這個 feature 用** → 放 State 區塊，與 `State` 同一個或緊鄰的 `extension`
+> - **兩個以上 feature 用**（`APIStatus` / `APIError` 幾乎必然如此）→ **提拔到 `Shared/`**，見 `mvvmc-structure`〈`Shared/` 判準〉，那裡明列它們是可以放的
+>
+> 先前這裡只寫了前者，而 `mvvmc-structure` 明列 `APIStatus` 可放 `Shared/`——**同一個具名型別兩份文件給了不同位置**，第二個 feature 出現時必然踩到。
 >
 > **純 UI 狀態的形狀不在規範範圍**——要不要包成 `api` 容器、狀態 enum 有哪些 case、叫什麼名字，屬個人／團隊習慣，本 skill 不介入，審查時也不得以此開單。唯一要求：若該型別讓 `State` 失去 `Equatable`，走〈Equatable 規則〉的例外處理並註明原因。
 
@@ -115,7 +119,20 @@ extension PostDetailViewModel {
 
 若把欄位改成 `Optional` 會讓 View 層到處 `if let`，且語意上頁面不存在「沒有資料」的狀態，才用此例外。
 
+> ⚠️ **`let` 只在該資料真的不會被重新載入時才用。** 啟用條件講的是「一定有值」，**不是「值不會變」**——這是兩件事。詳情頁只要加上下拉刷新（〈Run once〉把 `pullToRefresh` 當標配的第二個入口），`handleAPIResponse` 就得寫回 `state.post`，`let` 直接編不過，而此時整頁已經照例外寫完了。**預設用 `var post: Post`。**
+>
+> ⚠️ **不要改用 `init(state:)` 繞過這個例外**——那會讓呼叫端決定子頁的 UI 初始狀態（`isFirstAppear`、請求狀態容器、展開中的 id 集合），比傳 Domain Model 更深一層耦合。測試要注入 state 直接寫 `vm.state.xxx`（見 `mvvmc-testing`），不需要這個 init。
+
 此例外的代價：`let post` 無預設值 → **同時放棄第 46 行的無參 `.init()`**，`State()` 會編不過。因此 Preview／Mock／測試不能再用「先無參建 State 再塞值」的套路，必須改成帶參注入 `State(post: .mock)`。
+
+**代價會擴散到另外兩份 skill，套用前要一起改**：
+
+| 受影響 | 原本 | 套 Detail 例外後 |
+|---|---|---|
+| `mvvmc-viewmodel`〈強制基礎結構〉 | `var state: State = .init()` | `var state: State` + `init(post:)` 注入 |
+| `mvvmc-testing`〈基本格式〉 | `let vm = FeatureViewModel()` | `let vm = FeatureViewModel(post: .mock)` |
+
+漏改的症狀是編譯錯誤指向 VM 或測試那一行，**但衝突源在 M 層**——沒讀到這張表的人會以為是那兩份 skill 寫錯了。
 
 ---
 

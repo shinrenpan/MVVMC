@@ -41,13 +41,39 @@ final class AppRouter: NSObject {
 - ✅ nil `navigationController` / `tabBarController` 一律 `assertionFailure`——這是開發期裝配錯誤，Debug 直接崩潰暴露問題
 - ❌ 禁止在 AppRouter 內持有 window / nav / VC 的參考
 
-### 導航 API 一覽
+### 你的 Router 必須覆蓋的格子（**檢查表，不是 API 表面積**）
+
+> ⚠️ **這一節列的是「要能做到什麼」，不是「必須叫什麼名字」。** 下方 demo 的七個方法是**其中一種填法**，不是規範要求——它是 `Sources/App/AppRouter.swift` 的 API 表面積被鏡射進來的（見 commit `df7ebbb`），而那個 app 剛好有 tab bar、以 push 為主、sheet 為輔。**三個真實專案的 Router 表面積沒有一個跟它吻合**，那不是那三個專案的錯。
+>
+> 對齊方式：在專案的 CLAUDE.md 寫一張「哪個方法對應哪一格」的對照表即可，**不需要改任何程式碼**。審查時查的是覆蓋率，不是方法名。
+
+導航是**四個獨立的決定**，`deeplink()` 的病就是把四個焊進一個名字裡（無 source ＋ fullScreen ＋ 包 nav ＋ 注入 Close）：
+
+| 維度 | 有哪些值 | 誰決定 |
+|---|---|---|
+| **① 轉場方式** | push／present-fullScreen／present-pageSheet／切換根容器分頁 | 呼叫端 |
+| **② 來源** | `.vc(x)` 從 x 出發／`.root` 只有 window／**`.topMost(from: x)` 沿 presentation chain 走到最上層** | 呼叫端 |
+| **③ 目的地自帶 nav stack 嗎** | 要（內部有 master→detail）／不要（單一頁） | **目的地**，不是轉場方式 |
+| **④ 誰提供離開的入口** | 系統手勢（pageSheet 下滑）／nav bar 返回鈕（push）／目的地自己的 toolbar | **目的地** |
+
+**②的 `.topMost` 不是選配。** 畫面上一旦有常駐 sheet 佔住 presentation slot，從 host controller 直接 present 會「already presenting」——這是規範自己在〈預設立場〉承認的 present-based 例外變體，而它**必須有一格可以落**，否則走那條路的專案會從「規範明文承認的例外」退化成「連座標系都對不上」。
+
+**③④ 歸目的地不歸 Router**，這是〈Close 鈕〉那條的根據：
+
+- ❌ **Router 不得往目的地的 `navigationItem` 塞按鈕。** 理由不只是「Router 畫 UI 就不是 Router」——那顆注入的按鈕在 C 層與 V 層之外被建立，**沒有 `viewModel` 可以呼叫**，於是它結構上不可能遵守 `mvvmc-hostcontroller`「導覽列按鈕的點擊要走 `doAction`」那條硬規則。更實際的是它**不知道那一頁關閉時該做什麼**——送出中的表單（VM 有防重送 guard）、要發 `onCallback` 的頁、有草稿的頁，它一律直接關掉，VM 全程不知情
+- ✅ **目的地在 V 層自己提供關閉入口**：`.toolbar` → `send(.closeDidTap)` → `doAction` → `onRoute?(.dismiss)` → C 層 `back(from:)`。**這是規範對其他每一顆按鈕已經要求的路徑，不需要新規則**
+
+**⚠️ 冷啟動的 deeplink 需要建一組 VC，不是一個。** 通知點進去的正確行為多數不是 present 而是**導航**（切到對應分頁、把該頁推上那個 stack），這樣系統返回鈕自然存在、使用者「往回按看得到列表」的心智模型才成立。但冷啟動時那個 stack 是空的——**只 present 一個詳情頁會得到一個孤兒頁面，而那個問題的根因是「工廠方法回傳單一 VC」，不是 fullScreen。** 需要 `setViewControllers([列表, 詳情])` 的路徑，`Deeplink.makeHostController()` 的回傳型別要能表達「一組 VC ＋ 一個呈現意圖」。fullScreen present 保留給真正該是 modal 的 deeplink（獨立 onboarding、強制更新頁）。
+
+---
+
+### demo 的填法（`Sources/App/AppRouter.swift`，**參考不是規範**）
 
 | 方法 | 用途 | 底層 |
 |------|------|------|
 | `to(_:from:style:animated:)` | 前進，`style` 預設 `.push` | `pushViewController` |
 | `back(from:animated:)` | 後退，**自動判斷** sheet→dismiss / 否則→pop | `pop` / `dismiss` |
-| `backTo(_:from:)` | 退到指定 VC | `popToViewController` |
+| `backTo(_:)` | 退到指定 VC（**無 `from:`**——見下） | `popToViewController` |
 | `backToRoot(from:)` | 退到根 | `popToRootViewController` |
 | `sheet(_:from:detents:)` | 系統 sheet，可帶 detents | `present(.pageSheet)` |
 | `deeplink(_:)` | 從 rootVC fullScreen present，自動注入 Close 鈕 | `present(.fullScreen)` |
@@ -58,6 +84,7 @@ final class AppRouter: NSObject {
 - ⚠️ **`.sheet` 是「關閉方式」不是「視覺樣式」**：它代表「以 present 呈現、`back()` 必須走 dismiss」。所以 `deeplink()` 的 fullScreen present 也標成 `.sheet`——名字看起來矛盾，但改掉它就會讓 `back()` 誤走 pop。要動這個 enum 前，先確認 `back()` 的分支邏輯
 - ✅ 首次 `to()` 才設 `nav.delegate = self` 並啟用 `interactivePopGestureRecognizer`（iOS 26 另含 `interactiveContentPopGestureRecognizer`）
 - ✅ `back()` 先讀 VC 的 `appTransitionStyle`：`.sheet` → `dismiss`，其餘 → `pop`；HostController 永遠只呼叫 `back()`，不自己判斷
+- ℹ️ **只有承重的地方才有 `from:`**：`back(from:)` 的 source 真的在做事（讀 `appTransitionStyle` 決定 pop 還是 dismiss）；`backToRoot(from:)` 沒有 destination 可推導 stack，`from:` 是唯一來源；**`backTo` 的 source 只用來取 nav，而 destination 本來就在那個 stack 裡——那是死參數，已刪除**。三個方法形狀不一致是設計，不是疏漏
 - ℹ️ **`back(from:)` 的 `from:` 是「從誰的導航環境退」，不是「誰要被關掉」**。所以父 HostController 在子 VM 的 `onCallback` 裡寫 `AppRouter.shared.back(from: self)` 是正確的——退的是那個 nav stack 的 top VC（也就是子頁），不是 `self`。子頁自己呼叫 `back(from: self)` 同樣成立，兩種寫法等價
 - ✅ `deeplink()` 一律包一層 `UINavigationController` 並自動塞 `.close` leftBarButtonItem，`.fullScreen` present
 - ❌ 禁止把 `.modal` / `.fade` 的轉場邏輯寫進 HostController——那是 `AppTransitionAnimator` 的責任

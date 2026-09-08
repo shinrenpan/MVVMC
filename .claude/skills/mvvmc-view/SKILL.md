@@ -27,7 +27,7 @@ description: |
 | 4 | 值的雙向同步用 `@Binding`；事件的語意通知用 `enum Action` | §2 |
 | 5 | `enum Action` 嵌套在該層 View struct 內並標 `Sendable`；closure 一律 `let send: @MainActor (Action) -> Void` | §3 |
 | 6 | 純展示 / 純佈局透傳層不需要 `enum Action`，禁止為形式定義空 enum 或單 case 包裝 | §3 |
-| 7 | 子層 Action 從自身視角命名，中間層做真正的 Mapping；純 Forwarding 是設計缺陷訊號 | §3 |
+| 7 | 子層 Action 從自身視角命名，中間層做真正的 Mapping；純 Forwarding 是設計缺陷訊號。**判準是「這一層有沒有 forwarding 以外的程式碼」**（佈局組合、狀態整合、多個子組件的排列），不是「有沒有語意可加」——後者只能由作者宣稱，任何 forwarding 都通得過。**有** → 建立它，其中的 1:1 forwarding 正常，審查不得開單；**沒有** → 不要建立這一層，讓父層直接持有 L3（§5） | §3 §5 |
 | 8 | L2 省略 View 前綴 + `Section` 後綴；同前綴組件放同一個 `private extension` | §4 |
 | 9 | 跨 Section 共用的組件提拔為獨立 L1 檔案，不塞進任一 Section 的 `private extension` | §4 |
 | 10 | 拆成獨立 `struct View` 是效能決策（SwiftUI diffing 可跳過）；`@ViewBuilder func` 只換來可讀性 | §7 |

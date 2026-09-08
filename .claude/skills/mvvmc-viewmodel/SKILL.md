@@ -31,6 +31,18 @@ final class FeatureViewModel {
 }
 ```
 
+> **例外：Detail 型畫面**。`mvvmc-model`〈例外：Detail View 必帶初始資料〉允許 `State` 用無預設值的 `let`（`let post: Post`），
+> 那會讓 `State()` 編不過，**上面這行 `var state: State = .init()` 也就跟著編不過**。
+> 套用該例外時，`state` 改由 init 注入：
+>
+> ```swift
+> var state: State
+> init(post: Post) { state = .init(post: post) }
+> ```
+>
+> 對應地，`mvvmc-testing` 的 `let vm = FeatureViewModel()` 也要改成帶參建構。
+> 兩份 skill 的範例都預設了無參形式，套 Detail 例外時三處要一起改。
+
 ---
 
 ## 核心規則
@@ -42,9 +54,21 @@ final class FeatureViewModel {
 
 > **即使模組已經開了 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`（Xcode 26 新專案的預設），`@MainActor` 仍然明標**——這是定案的取捨，不是還沒決定：
 >
-> - 本 skill 設計成可以搬到任何專案，而那些專案的並發設定不在你的控制範圍。規範的正確性不該取決於 build setting
+> - **`SWIFT_DEFAULT_ACTOR_ISOLATION` 是 per-target 設定，而跨 target 共用原始檔在有 extension 的專案是常態**（widget / share extension / intents 都要共用 Domain 與持久層）。一份會被兩個 target 編譯的檔案，其預設隔離不能由檔案外的設定決定——同一行程式碼會在兩個 target 有兩種語意，而檔案裡看不出來
 > - 更實際的理由：`nonisolated async func` 的行為**已經**取決於一個 flag（實測見 `swift-concurrency`〈Swift 6.2+ 心智模型〉），同一段程式碼在開與不開之下行為相反。既然並發語意已經有一處交給設定決定，就不該再有第二處
 > - 成本是一個 attribute，換到的是「讀程式碼就知道它在哪個 actor」
+>
+> **動手前先確認專案的 `SWIFT_DEFAULT_ACTOR_ISOLATION`**（`swift-concurrency`〈Fast Path〉本來就強制要求這個查核），然後照事實分支——三種任務模式各一條，不是「通則加例外」：
+>
+> | | 未開啟（預設） | 已開啟 |
+> |---|---|---|
+> | **A 生成** | `@MainActor` 明標，硬規則 | 跟隨該專案既有風格，**不要單方面引入新風格** |
+> | **B 審查** | 沒標就是違規 | **不得以「少標 `@MainActor`」開單**；審查重心移到 `nonisolated`（`@Model` 漏標會在執行期隔離檢查失敗） |
+> | **C 重構** | 順手補標是合規修正 | **不得順手補標**——那是與本次重構無關的風格變更，只會讓 diff 變大、review 變難 |
+>
+> **在開與不開之下都成立的硬性檢查**：**不住在 `Pages/<Feature>/` 底下的型別一律明標隔離（`@MainActor` 或 `nonisolated`），不得依賴模組預設。**
+>
+> 判準用「路徑」而不是「這個檔案有沒有跨 target 共用」，是因為後者**不在原始碼裡**——它在 `project.yml` / target membership，而 agent 讀不到。一個共用型別被一個 target 編還是三個 target 編，檔案長得一模一樣，於是「該不該標」的觸發時機會晚於它想防的錯誤（app target 編得過，widget target 下次有人建置才炸）。`mvvmc-structure` 已經在管那個目錄邊界，改用路徑就讓這條檢查看得見。
 
 **doAction 規範：**
 - ✅ 唯一進入點，內部只做 `switch` dispatch
@@ -110,7 +134,7 @@ VM 直接做第二類是刻意的——為它們繞一圈 `onRoute` 只是把單
 | **Run once**（viewDidLoad 等價） | `isFirstAppear` 與 `pullToRefresh` 是兩個語意不同的 ViewAction，導向同一個 APIRequest；guard 寫在 VM |
 | **錯誤的流動** | `Error` 與 DTO 同構，都止步於 `handleAPIResponse`；State 只存已翻譯的結果。樂觀更新合法 |
 | **多支 API 併發** | 每支各自一組 Request/Response case、狀態各自追蹤；併發用 `async let` |
-| **深層回傳** | 逐層中繼，中繼層不 pop、只有終點做一次 `backTo`。鏈長到第三層就回頭考慮合併 feature |
+| **深層回傳** | **先分終結式／非終結式**：終結式逐層中繼、中繼層不 pop、由**發起頁**做一次 `backTo(self)`；非終結式沒有退回動作，改成中繼層累積旗標、關閉時發一次。鏈長到第三層就回頭考慮合併 feature |
 | **週期性更新（輪詢）** | 迴圈在 VM、**`.task` 只能掛 L1**（掛在子組件上會靜默失效，因為 `send` 是同步 closure）；不要用 Bool 旗標防重入（會 fail-closed）。另外**先確認 M 層已把高頻欄位拆出低頻 Model**（見 `mvvmc-model`），否則 View 拆得再細也沒用 |
 | **分頁載入** | 「首次載入」與「載入更多」是兩件事，即使打同一支 endpoint 也要各自追蹤狀態 |
 | **表單頁** | 輸入緩衝屬 State 不是 Domain Model；驗證是 computed property；防重送 guard 在 VM |

@@ -59,6 +59,12 @@ func `fetchItems failure sets error status`() async {
 > ```
 >
 > 逐欄位斷言仍適用於「只想驗證單一欄位、不在意其餘」的情境；要「鎖定完整狀態」時用整體比對。
+>
+> ⚠️ **「涵蓋所有欄位」的前提是 `State` 的 `Equatable` 是編譯器合成的。** `mvvmc-model`〈Equatable 規則〉允許三種例外**手寫 `==` 跳過某個成員**（最常見是閉包）。一旦跳過，整體比對就**靜默不再檢查那個欄位**——而這裡的措辭還在保證它被涵蓋。
+> 所以：**State 手寫過 `==` 時，被跳過的欄位必須另外逐欄位斷言**，否則那個欄位在整個測試套件裡沒有任何覆蓋（例如 `onRetry` 在錯誤路徑被設成 `nil`，重試鈕從此無效，整體比對照樣通過）。
+>
+> ⚠️ **第二個來源，而且影響的頁面更多**：`mvvmc-model` 明說「**computed property 不參與 `Equatable` 合成（只比 stored 欄位）**」。而〈表單頁〉**強制要求** `isValid`（或 `blockingReason`）是 State 的 computed property——**所以一個表單頁的整體比對，天生就不涵蓋驗證結果。**
+> 手寫 `==` 是例外，computed property 是規範**強制**的形狀，兩者是同一個病的兩個來源。**表單驗證一律必須有自己的逐項斷言，不能靠整體比對。**
 
 ### 3. Callback / Router 驗證
 

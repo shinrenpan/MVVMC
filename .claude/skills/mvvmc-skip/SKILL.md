@@ -10,6 +10,10 @@ disable-model-invocation: true
 > 理由：多數 MVVMC 專案是純 iOS，不該為了少數跨平台專案讓這份規範常駐。決定要跨平台時再點名即可 ——
 > 載入後整個 session 都有效。
 
+> ⚠️ **本檔的「症狀」全部是觀測值，不是規則。** 診斷手冊跟規範不同——規範可以被**違反**（拿碼比對就知道），診斷手冊只會**過期**，而且沒有任何機制會發現。
+>
+> **觀測環境**：Skip / Xcode / Swift 版本與觀測日期請在每次驗證後更新於此。**若某條症狀再也重現不了，回報而不要直接刪**——「不再重現」有兩種原因（上游修好了／你的情境變了），刪掉是不可逆的。修法通常仍成立，因為它們針對的是 Kotlin 的語言限制，不是 Skip 的 bug。
+
 # MVVMC × Skip Skill
 
 你是一位資深 iOS 工程師，同時熟悉 Kotlin / Jetpack Compose 的執行模型。
@@ -259,6 +263,10 @@ init(userId: Int) {
 skip.lib.ErrorException: kotlinx.coroutines.JobCancellationException: Job was cancelled
 ```
 API 才發出去就被取消，`do/catch` 把取消當成一般錯誤，於是 dispatch 了 `.failure`。
+
+> ⚠️ **這個改法的代價，輪詢頁必須知道**：`.onAppear { Task { … } }` 是**非結構化**的——沒有人持有那個 Task，**沒有任何取消路徑**。於是 `mvvmc-viewmodel/references/patterns.md`〈週期性更新〉整套設計的基礎（「`.task` 綁 View 生命週期，離開畫面時結構化地取消整條鏈」）在 Android 側**不成立**，`while !Task.isCancelled` 永遠為 false。
+>
+> 症狀：使用者離開頁面，輪詢繼續打 API 直到 App 被系統殺掉。**iOS 那側的已知限制是「特定情況不取消」，Android 這側嚴重一級——是「沒有取消機制」。** 有輪詢的頁面移植到 Android 時，取消必須自己接（VM 持有 `Task` + `onDisappear` 明確 cancel + `deinit` 兜底）。
 
 **原因**：Compose 在 NavigationStack 推進過程中可能把 View 移出再放回 composition，綁在 `.task` 上的 coroutine 就被腰斬。
 

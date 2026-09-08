@@ -79,10 +79,27 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 
 **兩種 init 形狀怎麼選**（同一個專案裡並存是正常的）：
 
-| 這一頁需要回傳結果給父層嗎 | 用哪種 | 為什麼沒得選 |
+| 情況 | 用哪種 | 為什麼 |
 |---|---|---|
-| 不需要 | **變體**：父層傳 primitive，子 C 層自己組 VM | 父層完全不需要認識子 ViewModel 的型別 |
-| 需要（要接 `onCallback`） | **標準**：父層先建子 VM、掛好 `onCallback`，再 `init(viewModel:)` | 要掛 callback 就必須先拿到那個 VM 實例，沒有別的辦法 |
+| 不需要回傳結果 | **變體**：父層傳 primitive，子 C 層自己組 VM | 父層完全不需要認識子 ViewModel 的型別 |
+| 需要回傳，**且父子同一個 feature** | **標準**：父層先建子 VM、掛好 `onCallback`，再 `init(viewModel:)` | 同 feature 內型別本來就共用，先建 VM 最直接 |
+| 需要回傳，**且跨 feature** | **收 primitive + callback**：子 C 層 init 同時收 primitive 與 callback closure，在內部組 VM 並掛好 | 見下方 ⚠️ |
+
+> ⚠️ **「要掛 callback 就必須先拿到 VM 實例」是錯的**，這句話曾經寫在這張表上，而它會逼出違反 `mvvmc-structure` 的程式碼：跨 feature 時父層為了建子 VM，就得認識子 feature 的 Domain Model 型別（`PostDetailViewModel.Post`），而那正是 `mvvmc-structure`〈跨 feature 怎麼傳資料〉明文擋掉的 `❌ PostDetailHostController(post: post)`。
+>
+> 第三列才是跨 feature 的正解——**掛 callback 的動作可以發生在子 C 層內部**：
+>
+> ```swift
+> init(id: Int, title: String, body: String,
+>      onCallback: @escaping @MainActor (PostDetailViewModel.Callback) async -> Void) {
+>     let vm = PostDetailViewModel(id: id, title: title, body: body)
+>     vm.onCallback = onCallback
+>     self.viewModel = vm
+>     super.init(rootView: PostDetailView(viewModel: vm))
+> }
+> ```
+>
+> 父層只給 primitive 與一個 closure，從頭到尾不認識 `Post` 也不認識 `PostDetailViewModel`（`Callback` 的 payload 依規範本來就是 primitive）。**「需要回傳」與「父層必須認識子 VM」不是因果關係。**
 
 ---
 
@@ -97,6 +114,8 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 ---
 
 ## 核心規則
+
+> ⚠️ **本 skill 規範 iOS 分支。** 跨平台專案 `#if !SKIP` 的 `#else` 分支另見 `mvvmc-skip`（#9 C 層形狀、強引用規則、#10 生命週期），**那些偏離是明文要求，不得依本 skill 開單**。審查時看到 `#else` 分支就停手——`mvvmc-skip` 是 `disable-model-invocation`，做審查的 agent 不會自動載入它。
 
 **強制宣告：**
 - ✅ `@MainActor`（class 層級）
@@ -125,7 +144,8 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 - ✅ 導航子 VC 前，先設定子 ViewModel 的 `onCallback`
 - ✅ `onCallback` 是 `async` closure，直接 `await`，不需包 `Task`
 - ✅ `[weak self]` + `guard let self` 避免循環引用與 optional chaining
-- ✅ 回傳後透過 `AppRouter.shared.back(from: self)` 返回，不用 `dismiss`
+- ✅ **單層回傳時**，回傳後透過 `AppRouter.shared.back(from: self)` 返回，不用 `dismiss`
+- ⚠️ **回傳鏈跨兩層以上時不適用**——中繼層**不得**放 `back`，否則會連放多次 pop 動畫。深層回傳分終結式／非終結式兩枝，規則見 `mvvmc-viewmodel/references/patterns.md`〈深層回傳〉
 
 **init 規範：**
 - ✅ `required init?(coder:)` 標記 `@available(*, unavailable)` + `fatalError`

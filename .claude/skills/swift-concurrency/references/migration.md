@@ -11,10 +11,12 @@
 
 | DispatchQueue | Swift Concurrency |
 |---|---|
-| `DispatchQueue.global().async { }` | `Task { }` |
-| `DispatchQueue.main.async { }` | `await MainActor.run { }` 或在 `@MainActor` context 內直接執行 |
+| `DispatchQueue.global().async { }` | **`@concurrent` async func**（❌ 不是 `Task { }`——從 `@MainActor` 起的 `Task` 仍在主 actor） |
+| `DispatchQueue.main.async { }` | 已在 `@MainActor` context（MVVMC 的 VM 都是）→ **直接寫**；從非 isolated context → `await MainActor.run { }` |
 | `DispatchQueue.main.asyncAfter(deadline: .now() + N)` | `try? await Task.sleep(for: .seconds(N))` |
-| `DispatchQueue.global().async { heavyWork(); DispatchQueue.main.async { } }` | `Task { let r = await heavyWork(); await MainActor.run { } }` |
+| `global().async { heavyWork(); main.async { } }` | `let r = await heavyWork()`（`heavyWork` 標 `@concurrent`）→ 回到 `@MainActor` 直接寫 |
+
+> ⚠️ **這張表刻意不是一對一的。** `global().async` 的正確翻譯**取決於呼叫端在不在主 actor**，那是表格裝不下的條件——所以右欄寫的是「要達成原意該用什麼」，不是「語法上最像的東西」。照抄語法最像的那個（`Task { }`）會得到一段**仍然跑在主緒上**的程式碼，而使用者當初用 `global()` 的整個理由就是要離開主緒。
 
 > **關於 `MainActor.run`**：它只用於「從**非 isolated** context 跳回主 actor」。若程式碼已在 `@MainActor` context（例如 MVVMC 的 ViewModel 全是 `@MainActor`），或 `Task` 起自 `@MainActor`（Task 會繼承主 actor），就**不需要**再包 `MainActor.run`——直接寫即可。上表末列的 `MainActor.run` 只在該 `Task` 起自非 isolated 環境時才需要。
 

@@ -53,6 +53,10 @@ if viewModel.state.items.isEmpty {
 - **「載入成功但結果為空」與「還沒載入」怎麼分**：看資料不看狀態——`items.isEmpty` 搭配狀態是否已離開 `.prepare`。請求狀態容器不需要為此多開一個 case
 - **已經有內容時失敗要怎麼呈現**（靜默、底部重試列、toast）是產品決策，規範不指定；但「不可以清空既有內容」是架構要求
 - 同一套骨架在兩個以上 Section 重複出現時，才考慮提拔成共用組件（見 §4）；只重複一次時它是 body 拆分，不是組件
+- ⚠️ **這個 `if/else` 就是 `mvvmc-viewmodel/references/patterns.md`〈週期性更新〉警告的那個形狀**（「`.task` 掛在 `if / else` 分支的內容上會被取消重建」）。
+  - **精確的觸發條件**：`.task` 掛在這個 `if/else` **之上或其任一分支內**。`.task` 已經在更外層的容器上（帶著 `.navigationTitle` / `.toolbar` 那一串的那個 view）→ **不受影響，不要為此多包一層**。憑空多一層容器會動到 §7 在講的 view 身分與 diffing
+  - **翻轉是雙向的**：`items.isEmpty` 在「刷新後資料被清空」（全部刪除、篩選無結果、換帳號）時會翻回 `true`。不是只有首次載入會翻一次，**每次跨越空／非空邊界都會**
+  - ⚠️ **包哪一種容器目前未定**，兩種都有已知風險，**進 demo 實測前不要當成結論**：`Group` 是透明的、可能把 modifier 分發給子項（若 `.task` 也分發，就等於又掛回分支上）；`VStack` 有自身身分但**會改變兩個分支的 layout**——`ProgressView` / `ContentUnavailableView` 需要置中，`ListSection` 需要撐滿，包進 `VStack` 後兩者都變成由上往下堆。在實測補上之前，優先做的是**把 `.task` 移到更外層**，那條路兩個風險都沒有
 
 ### Alert 與確認對話框
 
@@ -435,6 +439,7 @@ struct FeatureView: View {
 - ViewModel 生命週期由 HostController 管理（UIKit 導航棧）
 - 與 Router、Coordinator 整合需要外部建立 VM
 - 此規範與 `mvvmc-hostcontroller` skill 對齊（該 skill 明確禁止 View 自建 ViewModel）
+- ⚠️ **本節規範 iOS 分支。** `#if !SKIP` 的 `#else` 分支裡出現 `@State private var viewModel = ...` 是 `mvvmc-skip` #9 的**明文要求**（Android 的 C 層是 SwiftUI `View` + `@State`，Compose 的 `trackState()` 需要 `MutableState` 背板），**不得依本節開單**。改成 `let` 會讓 Android 畫面停止重繪，而且編譯完全正常
 
 ### 模板
 
@@ -761,10 +766,22 @@ ForEach(items, id: \.id) { item in
 }
 ```
 
-**副作用**：列表重排時 view 會重建，`@State` 會重置（使用者看到展開狀態消失）。
+> ## ⚠️ 本節上方兩個斷言都沒有在實測中重現（2026-09-08）
+>
+> `Experiments/ViewSplitProbe/`（Xcode 26.4.1 / iOS 26 模擬器）拿 `ForEach` 搭 `Identifiable` 元素、子組件持有 `@State`、程式化改變陣列順序，量出來的是：
+>
+> ```
+> reorder withID  @State survived=true   ← 加了 .id(item.id)
+> reorder noID    @State survived=true   ← 沒加
+> ```
+>
+> **兩件事都沒發生**：`@State` 沒有跟著位置走（上方 ⚠️ 說的錯位），`.id(item.id)` 也沒有造成重置（下方原本寫的副作用）。兩種寫法下 `@State` 都**正確跟著資料身份**。
+>
+> **這代表什麼還不確定，所以本節保留而不是刪除**——探針只涵蓋一種形狀（`Identifiable` 元素 + 單層 `ForEach` + 同步重排）。錯位在 `id: \.self`、index-based `ForEach`、巢狀 `ForEach`、或帶動畫的重排下**可能仍然成立**，而那些沒被量到。
+>
+> **在補上量測之前**：`.id(item.id)` 仍然值得寫（它讓身份綁定變成顯式的，成本為零），但**不要因為擔心「重排會重置 `@State`」而把狀態提升到 VM**——那個副作用在最常見的形狀下不存在，提升是白付的成本。真的需要跨畫面保留（不是跨重排）時才提升。
 
-- 若重置是**可接受的行為**（例如展開狀態是暫態 UI，離開頁面後不需保留），`.id(item.id)` 本身就是完整的解法，不需要進一步處理。
-- 若需要狀態**跨重排保留**，才應將狀態提升到 ViewModel state 層。
+- 若需要狀態**跨畫面保留**（離開頁面再回來仍在），才應將狀態提升到 ViewModel state 層。
 
 **狀態提升的具體做法**：把 `@State` 移出子組件，改存在 ViewModel 的 `State` 中，以 item id 作為 key：
 

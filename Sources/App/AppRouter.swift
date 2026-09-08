@@ -69,9 +69,12 @@ final class AppRouter: NSObject {
     }
   }
 
-  func backTo(_ destination: UIViewController, from source: UIViewController, animated: Bool = true) {
-    guard let nav = source.navigationController else {
-      assertionFailure("AppRouter.backTo(): source VC 沒有 navigationController")
+  // 不收 from:——那是死參數。destination 本來就必須在目標 stack 裡，從它身上取 nav
+  // 還能讓「destination 不在任何 stack」這個裝配錯誤落進 assertionFailure，
+  // 而不是讓 UIKit 靜默什麼都不做。
+  func backTo(_ destination: UIViewController, animated: Bool = true) {
+    guard let nav = destination.navigationController else {
+      assertionFailure("AppRouter.backTo(): destination 不在任何 navigation stack 裡")
       return
     }
     nav.popToViewController(destination, animated: animated)

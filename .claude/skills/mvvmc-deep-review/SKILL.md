@@ -91,9 +91,11 @@ argument-hint: [file-path]
 - **Actor isolation**：
   - `@MainActor` 是否覆蓋所有 UI 相關存取
   - `nonisolated` 使用是否恰當（純計算、無 mutable state 存取）
-  - `nonisolated(unsafe)` 出現即為高風險，說明替代方案
+  - `nonisolated(unsafe)` 出現時，**檢查是否附有 `swift-concurrency` 要求的註解**（暫時性逃生口＝安全不變式＋移除計畫；永久性逃生口＝安全不變式＋為什麼沒有替代方案）。有 → 列入「架構取捨」不開單；無 → 高風險
+    > ⚠️ **不要無條件要求「說明替代方案」**——`AppRouter` 的 associated object key 在 Swift 6 沒有安全替代寫法（見 `mvvmc-navigation` 模板），而**要求提供不存在之物的規則只有兩種下場：被忽略，或被編造答案敷衍**
 - **`sending` parameter**：函式參數若跨 isolation 邊界傳遞，是否需要標注
-- **Actor reentrancy**：`await` 前後同一個 actor 的 mutable state 是否可能被其他 Task 改動，造成邏輯錯誤；檢查是否有 guard 防止重入
+- **Actor reentrancy**：`await` 掛起期間，同一 actor 的 mutable state 可能被其他 Task 改動。**檢查 `await` 之後是否沿用了 `await` 之前讀到的 state 假設**（條件判斷、索引、快照）
+  > ⚠️ **只指出缺陷，不指定療法。** 重新讀取／進入前 snapshot／防重入 guard 各有適用情境，而**某些情境明文禁止其中一種**（`mvvmc-viewmodel/references/patterns.md`〈週期性更新〉禁止輪詢用 Bool 旗標）。寫成「檢查有沒有 guard」會對一個完全合規的輪詢迴圈開單，然後把使用者推去違反那條禁令
 - **`@preconcurrency import`**：是否確實需要，能否改用其他方式
 - **廢棄 API**：`withUnsafeCurrentTask` 等已廢棄的 concurrency API
 
