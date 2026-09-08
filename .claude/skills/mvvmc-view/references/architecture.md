@@ -766,20 +766,30 @@ ForEach(items, id: \.id) { item in
 }
 ```
 
-> ## ⚠️ 本節上方兩個斷言都沒有在實測中重現（2026-09-08）
+> ## ⚠️ 本節的問題、修法、副作用，三項在實測中都沒有重現（2026-09-08）
 >
-> `Experiments/ViewSplitProbe/`（Xcode 26.4.1 / iOS 26 模擬器）拿 `ForEach` 搭 `Identifiable` 元素、子組件持有 `@State`、程式化改變陣列順序，量出來的是：
+> `Experiments/ViewSplitProbe/`（Xcode 26.4.1 / iOS 26 模擬器，兩次執行結果相同）：
 >
 > ```
-> reorder withID  @State survived=true   ← 加了 .id(item.id)
-> reorder noID    @State survived=true   ← 沒加
+> reorder withID  @State survived=true  child bodies=3    ← 加了 .id(item.id)
+> reorder noID    @State survived=true  child bodies=3    ← 沒加
 > ```
 >
-> **兩件事都沒發生**：`@State` 沒有跟著位置走（上方 ⚠️ 說的錯位），`.id(item.id)` 也沒有造成重置（下方原本寫的副作用）。兩種寫法下 `@State` 都**正確跟著資料身份**。
+> | 本節說的 | 實測 |
+> |---|---|
+> | `ForEach` 用結構性身份（位置）識別，重排會讓 `@State` 錯位 | ❌ 沒重現——`@State` 跟著**資料**走 |
+> | 加 `.id(item.id)` 修正它 | ⚠️ **兩組數字完全相同**——在這個形狀下它什麼都沒做 |
+> | 加了之後會重建子組件、重置 `@State` | ❌ 沒重現——狀態存活 |
 >
-> **這代表什麼還不確定，所以本節保留而不是刪除**——探針只涵蓋一種形狀（`Identifiable` 元素 + 單層 `ForEach` + 同步重排）。錯位在 `id: \.self`、index-based `ForEach`、巢狀 `ForEach`、或帶動畫的重排下**可能仍然成立**，而那些沒被量到。
+> **所以這是一個為了沒有重現的問題所開的、沒有測到效果的處方，外加一個沒有發生的副作用。**
 >
-> **在補上量測之前**：`.id(item.id)` 仍然值得寫（它讓身份綁定變成顯式的，成本為零），但**不要因為擔心「重排會重置 `@State`」而把狀態提升到 VM**——那個副作用在最常見的形狀下不存在，提升是白付的成本。真的需要跨畫面保留（不是跨重排）時才提升。
+> **本節保留而不刪除**，因為探針只涵蓋一種形狀：`Identifiable` 元素 + 單層 `ForEach` + 同步重排。錯位在 `id: \.self`、index-based `ForEach`、巢狀 `ForEach`、帶動畫的重排下**可能仍然成立**——那些都沒被量到。
+>
+> **在補上量測之前該怎麼做：**
+> - `.id(item.id)` 可以寫（讓身份綁定顯式化），但**知道它在常見形狀下沒有可測的效果**。它不是免費的——它是一次 identity 干預，而 identity 正是 §7 在討論的東西
+> - **不要因為擔心「重排會重置 `@State`」而把狀態提升到 VM。** 那個副作用在最常見的形狀下不存在，提升是白付的成本
+>
+> **順帶量到一件 §7 需要的事**：純值子組件（不持有 `@State`）在**只有順序改變**時會被完整跳過（`skip reordered A=0 B2=0 C=0`），而持有 `@State` 的子組件全部重跑（`bodies=3`）。**差別不在重排本身，在子組件持不持有 `@State`**——所以 §7 那張表的結論在重排下仍然成立，前提是子組件是純值的。
 
 - 若需要狀態**跨畫面保留**（離開頁面再回來仍在），才應將狀態提升到 ViewModel state 層。
 

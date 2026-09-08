@@ -245,3 +245,29 @@ struct ReorderNoExplicitIDView: View {
     }
   }
 }
+
+// MARK: - §7 的表格在重排下還成不成立
+// 子組件只收值（props 精準注入），沒有 @State——這是 §7 表格第二列的形狀。
+// 問題：陣列被置換時，props 沒變的子組件會不會被跳過？
+
+private struct ValueOnlyChild: View, Equatable {
+  let label: String
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("value.child.\(label)")
+    return Text(label)
+  }
+}
+
+struct ValueListView: View {
+  let items: [ReorderItem]
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("value.parent")
+    return VStack {
+      ForEach(items) { item in
+        ValueOnlyChild(label: item.label)
+      }
+    }
+  }
+}

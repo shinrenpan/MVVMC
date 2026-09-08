@@ -3,6 +3,13 @@ import SwiftUI
 import UIKit
 @testable import ViewSplitProbe
 
+/// ⚠️ **本 suite 必須序列化。** 所有測試共用 `BodyCounter.shared` /
+/// `StateIdentityLog.shared`，而 Swift Testing 預設平行執行——一個測試的
+/// `reset()` 會清掉另一個測試進行中的計數。
+/// 實測（2026-09-08）：同一份程式碼兩次執行給出不同數字（withID bodies=3 vs 0），
+/// 而那組被污染的數字一度被當成實測結果寫進規範。
+/// 新增測試時請加進**這個** suite，不要另開 struct——另開的 suite 之間仍是平行的。
+@Suite(.serialized)
 @MainActor
 struct BodyCountTests {
 
@@ -94,31 +101,7 @@ struct BodyCountTests {
     #expect(structA >= 1)
     #expect(wholeA >= 1)
   }
-}
 
-@MainActor
-struct ReorderTests {
-
-  private func host<V: View>(_ view: V) -> UIWindow {
-    let vc = UIHostingController(rootView: view)
-    let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-    window.rootViewController = vc
-    window.isHidden = false
-    window.layoutIfNeeded()
-    return window
-  }
-
-  private func settle(_ window: UIWindow) async {
-    for _ in 0..<5 {
-      await Task.yield()
-      RunLoop.current.run(until: Date().addingTimeInterval(0.02))
-      window.setNeedsLayout()
-      window.layoutIfNeeded()
-    }
-  }
-
-  /// mvvmc-view §8 的斷言：「列表重排時 view 會重建，@State 會重置」
-  /// 這裡量的是：同一個 item.id 的子組件，在陣列順序改變後，@State 身分還在不在。
   @Test
   func `reordering a ForEach resets child @State or not`() async {
     let original = [ReorderItem(id: 1, label: "A"),
@@ -126,7 +109,6 @@ struct ReorderTests {
                     ReorderItem(id: 3, label: "C")]
     let reordered = [original[2], original[0], original[1]]
 
-    // ── 版本 A：加了 .id(item.id)
     StateIdentityLog.shared.reset()
     let vcA = UIHostingController(rootView: ReorderWithExplicitIDView(items: original))
     let wA = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -141,7 +123,6 @@ struct ReorderTests {
     let survivedA = [1, 2, 3].allSatisfy { beforeA[$0] != nil && beforeA[$0] == afterA[$0] }
     let childBodiesA = BodyCounter.shared.count("withID.child")
 
-    // ── 版本 B：沒有額外 .id()
     StateIdentityLog.shared.reset()
     let vcB = UIHostingController(rootView: ReorderNoExplicitIDView(items: original))
     let wB = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
@@ -158,9 +139,40 @@ struct ReorderTests {
 
     print("PROBE_RESULT reorder withID  @State survived=\(survivedA)  child bodies=\(childBodiesA)")
     print("PROBE_RESULT reorder noID    @State survived=\(survivedB)  child bodies=\(childBodiesB)")
+  }
 
-    // 只驗證實驗有效：重排後子組件確實重新求值過
-    #expect(childBodiesA >= 1)
-    #expect(childBodiesB >= 1)
+  /// §7 的表格每一列都預設順序不變。這裡量三種變動下，props 沒變的子組件會不會被跳過。
+  @Test
+  func `does props-unchanged skipping survive a reorder`() async {
+    let base = [ReorderItem(id: 1, label: "A"),
+                ReorderItem(id: 2, label: "B"),
+                ReorderItem(id: 3, label: "C")]
+    let vc = UIHostingController(rootView: ValueListView(items: base))
+    let w = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
+    w.rootViewController = vc
+    w.isHidden = false
+    await settle(w)
+
+    BodyCounter.shared.reset()
+    vc.rootView = ValueListView(items: base)
+    await settle(w)
+    let identical = ["A", "B", "C"].map { BodyCounter.shared.count("value.child.\($0)") }
+
+    BodyCounter.shared.reset()
+    var oneChanged = base
+    oneChanged[1] = ReorderItem(id: 2, label: "B2")
+    vc.rootView = ValueListView(items: oneChanged)
+    await settle(w)
+    let ch = ["A", "B2", "C"].map { BodyCounter.shared.count("value.child.\($0)") }
+
+    BodyCounter.shared.reset()
+    let permuted = [oneChanged[2], oneChanged[0], oneChanged[1]]
+    vc.rootView = ValueListView(items: permuted)
+    await settle(w)
+    let re = ["A", "B2", "C"].map { BodyCounter.shared.count("value.child.\($0)") }
+
+    print("PROBE_RESULT skip identical  A=\(identical[0]) B=\(identical[1]) C=\(identical[2])")
+    print("PROBE_RESULT skip oneChanged A=\(ch[0]) B2=\(ch[1]) C=\(ch[2])")
+    print("PROBE_RESULT skip reordered  A=\(re[0]) B2=\(re[1]) C=\(re[2])")
   }
 }

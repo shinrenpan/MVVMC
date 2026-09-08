@@ -51,25 +51,41 @@ The test asserts only that the experiment is valid (section A did re-render). Th
 
 ## Reorder / `@State` identity (added 2026-09-08)
 
-`mvvmc-view` §8 made two assertions, neither of which reproduced:
+`mvvmc-view` §8 asserted a problem, a fix, and a side effect. **None of the three reproduced.**
 
 ```
 PROBE_RESULT reorder withID  @State survived=true  child bodies=3
 PROBE_RESULT reorder noID    @State survived=true  child bodies=3
+PROBE_RESULT skip identical  A=0 B=0 C=0
+PROBE_RESULT skip oneChanged A=0 B2=1 C=0
+PROBE_RESULT skip reordered  A=0 B2=0 C=0
 ```
 
-| §8's assertion | Measured |
+| §8's claim | Measured |
 |---|---|
-| `ForEach` identifies children structurally (by position), so reordering misplaces their `@State` | ❌ not reproduced — `@State` followed the **data** in both variants |
-| Adding `.id(item.id)` rebuilds the child on reorder, resetting its `@State` | ❌ not reproduced — state survived |
+| `ForEach` identifies children structurally, so reordering misplaces their `@State` | ❌ state followed the **data** |
+| `.id(item.id)` fixes that | ⚠️ **withID and noID are identical** — in this shape it does nothing measurable |
+| Adding it rebuilds the child and resets `@State` | ❌ state survived |
 
-**Setup**: `ForEach` over `Identifiable` elements, child holds `@State private var instanceID = UUID()`, array permuted programmatically, identity recorded per `item.id`. A reset would change the UUID for a given id; a misplacement would swap UUIDs between ids. Neither happened.
+**Setup**: `ForEach` over `Identifiable` elements; child holds `@State private var instanceID = UUID()`; array permuted programmatically; identity recorded per `item.id`. A reset changes the UUID for an id; a misplacement swaps UUIDs between ids. Neither occurred.
 
-**What this does not cover**, and why the section was annotated rather than deleted: `id: \.self`, index-based `ForEach`, nested `ForEach`, animated reorder. The original assertion may still hold in those shapes — it was simply never measured in any of them.
+**Not covered**, which is why §8 was annotated rather than deleted: `id: \.self`, index-based `ForEach`, nested `ForEach`, animated reorder.
 
-**Consequence for the spec**: the rule "if the reset is acceptable, `.id()` alone is the complete fix" was resting on a side effect that does not occur. Lifting state into the ViewModel *to survive reordering* is a cost paid for nothing in the common shape. The rule now reads "lift it to survive **leaving the screen**", which is a different and real requirement.
+### The mechanism behind `bodies=3`
 
-**Meta**: this measurement also retired a fix made earlier the same day. A field report had identified a bug-level scenario (a polling list collapsing an expanded row every N seconds) built on §8's stated side effect, and a warning was written into the spec for it. The scenario cannot occur. *Both the report and the fix were reasoning correctly from an assertion nobody had checked* — which is the whole argument for this directory existing.
+The first read of this was wrong — "§7's row 2 fails under reorder". The skip rows say otherwise: a **pure value child** is fully skipped when only the order changes (`skip reordered A=0 B2=0 C=0`), and only the one whose value actually changed re-runs (`oneChanged … B2=1`).
+
+**The difference is not reordering. It is whether the child holds `@State`.** A child with `@State` re-ran all three times; a plain value child re-ran zero times under the same permutation. §7's table therefore still holds under reorder — for value children, which is what §7 is about.
+
+*Not concluding until the cause was known was the right call, and it came from the field reporter who had raised the original finding.*
+
+### ⚠️ The probe was measuring itself wrong first
+
+The first run of this produced `withID bodies=3`; a second run of the same code produced `withID bodies=0`. **Swift Testing runs suites in parallel by default**, and the three suites here share `BodyCounter.shared` / `StateIdentityLog.shared` — one test's `reset()` was clearing another's in-flight counts.
+
+**A spec change had already been written from the contaminated numbers** before the discrepancy showed up. Everything is now a single `@Suite(.serialized)`; two consecutive runs give identical output. **Add new tests to that suite — a second top-level suite would run in parallel with it again and the corruption is silent.**
+
+*This is the probe committing the exact failure this directory exists to catch: an unverified number, taken as measurement, written into a rule.*
 
 ---
 
