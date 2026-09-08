@@ -1,7 +1,9 @@
 ---
 name: swift-concurrency
 description: |
-  Swift Concurrency 使用規範。涉及 async/await、Task、Task.detached、@concurrent、nonisolated、actor、MainActor、Sendable 時觸發。確保正確判斷離開主 actor 的工具，維持 Structured Concurrency 優勢。
+  Swift Concurrency 使用規範。涉及 async/await、Task、Task.detached、@concurrent、nonisolated、actor、MainActor、Sendable 時觸發。
+  **傳 closure 給 ObjC framework API 時也必須觸發**——completion handler、delegate 回呼、NotificationCenter observer，以及 CoreMotion / CoreBluetooth / AVFoundation / CoreLocation 這類舊 API 的 `start…(to:withHandler:)`。那類 closure 會隱式繼承 MainActor 隔離，編譯期零警告、模擬器全過，只有實機回呼的那一刻崩。寫這種 callback 時通常不會意識到自己在處理並發問題，所以要靠這條主動攔下來。
+  確保正確判斷離開主 actor 的工具，維持 Structured Concurrency 優勢。
 ---
 
 # Swift Concurrency Skill
@@ -262,6 +264,54 @@ await withTaskGroup(of: UIImage?.self) { group in
 - **6.3 `weak let`**：有 `weak var` 成員而被迫 `@unchecked` 的 class，改成 `weak let`（不可變）即可正常 `Sendable`。
 - **6.3 `~Sendable`**：某型別刻意不該 `Sendable`，用 `~Sendable` 明講（且不擋子類別 Sendable）。
 - **6.3 Region-based isolation** 正式可用：以前要硬加 `@Sendable` / `@unchecked` 的地方，很多已不需要。
+
+---
+
+## ⚠️ 傳給 ObjC API 的 closure 會隱式繼承隔離
+
+**症狀**：實機執行到某個 framework callback 時 `EXC_BREAKPOINT`，堆疊長這樣——
+
+```
+_dispatch_assert_queue_fail
+dispatch_assert_queue
+_swift_task_checkIsolatedSwift          ← Swift 執行期的隔離檢查
+swift_task_isCurrentExecutorWithFlags
+closure #1 in YourType.yourMethod       ← 你的 closure，崩在入口
+-[NSBlockOperation main]                ← 跑在 framework 自己的佇列上
+```
+
+**原因**：從 ObjC 匯入的 API，handler 參數若**既不是 `@Sendable` 也沒有隔離標注**，
+傳進去的 closure 會**繼承呼叫端的隔離**。在 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
+之下（Xcode 26 新專案預設），從一個 `@MainActor` 方法裡寫的 closure 就被推斷成
+`@MainActor`。編譯器於是在 closure 入口插入動態隔離檢查——而 framework 是在它自己
+的佇列上呼叫它的，檢查當場失敗。
+
+**為什麼特別難抓**：
+
+- 編譯期**零警告**
+- 模擬器與單元測試**全過**（那些路徑不會走到 framework 的背景佇列）
+- 只有實機、只有 framework 真的回呼的那一刻才崩
+
+**修法**：明確標 `@Sendable`，切斷隔離繼承。
+
+```swift
+// ❌ 被推斷成 @MainActor，framework 在自己的佇列呼叫時崩潰
+manager.startDeviceMotionUpdates(to: queue) { motion, error in … }
+
+// ✅ 明確 @Sendable → nonisolated，不插入檢查
+manager.startDeviceMotionUpdates(to: queue) { @Sendable motion, error in … }
+```
+
+**連帶規則**：
+
+- **`@MainActor` closure 型別不要流進背景路徑。** 回呼型別宣告成
+  `(@Sendable (T) -> Void)?`，跳回主 actor 是**消費端**的責任
+  （`Task { @MainActor in … }`），不是生產端的。
+- **NotificationCenter observer 用 `Task { @MainActor in }`，不要用
+  `MainActor.assumeIsolated`。** 後者是 precondition——假設錯就崩，而通知的派送
+  情境不完全在你手上。為省一次 hop 把可恢復的情況換成崩潰，划不來。
+- 適用對象是**所有你控制不了呼叫佇列的 callback**，CoreMotion / CoreBluetooth /
+  AVFoundation 這類舊 ObjC API 都算。
 
 ---
 
