@@ -89,6 +89,8 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   - **skill ↔ its consumer** — `mvvmc-review` restates each layer's rules as check items. When a rule gains an exemption, nothing checks whether the enforcement end learned about it. A 2026-09 audit found **14 "do not file this" exemptions upstream and 0 carried into the review skill.** This one is the worst, because review is the spec's only enforcement path: a stale enforcer means the rule changed but did not take effect.
 
   Test for whether a check item will drift: **delete the upstream section it names — does the item still read as an instruction?** If yes it carries its own criteria and will drift; if it degrades into an empty pointer, it will not.
+
+  **These four are not a spec-specific disease.** The same round that catalogued them also changed an API and left `README.md` describing the removed one, and changed twenty rules without rebuilding the demo — neither of which is a *restated rule*. The actual shape is **"something changed and its consumers did not"**, and the spec is merely its most visible host. So the question to ask after any change is not "did I restate this somewhere" but **"what reads this?"** — skills, the review skill, `TODO.md`, `SPEC-COVERAGE.md`, both READMEs, the demo, and the probes each consume something here.
 - This file may hold only what belongs to no single layer: the layer table, creation order, file structure, layer boundaries, and data flow.
 - **A new skill needs a symlink in `~/.claude/skills/`**, or it only exists while working inside this repo — which is precisely when you least need it. The skills are meant to travel to whatever project you are actually writing MVVMC code in.
 
