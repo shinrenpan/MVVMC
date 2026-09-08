@@ -84,6 +84,8 @@ The other five axes all test the spec **as a document**. This one tests what hap
 | **Precedent over spec** | During compliance work the codebase is a stronger normative signal than the skill. **Negative conditions ("unless X, don't do Y") almost always lose**, because a codebase shows examples of "did it" and never of "deliberately didn't" |
 | **Rationale lost in migration** | A design decision was documented, adopted, and then deleted in a docs reorg. The code survived; the reason did not. The modifier it protects now reads as freely swappable |
 
+> **Two axes, not one.** Where a rule *came from* and what has *verified* it are independent, and a rule can score low on the first while scoring high on the second — the demo is exactly that case (worthless as a source, strongest available check for unimplementable rules). Judging verification by the standards of provenance is how "the demo agrees with the spec by construction, so it tells us nothing" gets written down, and it was written down here before this round corrected it.
+
 **Use when:** the spec has shipped to at least one project you did not write. It is the only axis that can see these, and none of them are fixed by writing better rules.
 
 **Pitfalls specific to this axis** — all three cost real time:
