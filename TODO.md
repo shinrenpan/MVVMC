@@ -25,6 +25,28 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 - [ ] **`@State` misplacement in the shapes the reorder probe did not cover**: `id: \.self`, index-based `ForEach`, nested `ForEach`, animated reorder. §8's three claims did not reproduce for `Identifiable` + single-level `ForEach` + synchronous reorder, and the section is annotated as such rather than deleted — because those four shapes were never measured.
 - [ ] **Does `Data` embedded in a Domain Model short-circuit on `==`?** Decides whether `mvvmc-model` Equatable exception 3's "hundreds of MB" threshold is right. If COW makes it a pointer comparison the threshold is correct and finally gets a *why* (it has none today); if not, the threshold is wrong.
 
+## Blocked on tooling — iPhone Duo (foldable)
+
+**不要在 Xcode 27.1 模擬器到位之前把下面任何一條寫成規範。** 這些是研究素材，不是規則。裝置 2026-10 底發售、API 在 iOS 27.1、模擬器要 Xcode 27.1（官方頁面標 "Coming later this month"），**今天一條都驗不了**。把未經量測的前提寫成規則，正是 `Experiments/README.md` 開宗明義在防的事。
+
+來源是 Apple 官方 Tech Talk 字幕軌（111461/111462/111463/111466）與 developer.apple.com，2026-09-11 取得。
+
+**MVVMC 現況（已盤點，2026-09-11）**：`SceneDelegate` 用 `UIWindow(windowScene:)` 而非 `UIScreen.main`、demo 零個寫死 `.frame(width:/height:)`、無 orientation 鎖定——結構上乾淨。**但全部 11 個 skill 對 size class / trait collection / adaptive layout 零著墨**，這是主要暴露面。`TARGETED_DEVICE_FAMILY: "1"`（iPhone only）。
+
+官方事實，備查：
+
+- **舊 SDK 建的 app 照跑**，Apple 的用詞是「熟悉的尺寸與長寬比」，不是相容模式／黑邊。**linked SDK 本身就是開關，沒有 opt-in plist key。**
+- **`UIRequiresFullScreen` 仍被尊重**，但擋不住開合造成的 resize。
+- **`UISplitViewController` / `NavigationSplitView` / `UITabBarController` 全部 fully adaptive**：闔上時 column 收合成單一 stack，展開時 tiled 或 overlay。
+- **五支 Tech Talk 沒有任何一處建議「展開時換容器」**——一致訊息是用標準 adaptive 容器讓它原地適配。這對「C 是唯一導航層」是好消息。
+- **設計層硬要求**：不要把功能綁在某個開合姿態上；使用者會頻繁開合。
+- **查幾何、不要監聽事件**。layout 的輸入是三項：size class、view 寬高比、有沒有 active division region（攤平時 division region 寬度為 0）。
+- **`ArrangementView` 是排版容器不是導航容器**：禁止在其中放 `NavigationSplitView`，也不要放進 `List` / `ScrollView`。跟 MVVMC 的分層不衝突。iOS 27.1 起 app 可用系統提供的 arrangement。
+- **會打到 AppRouter 的細節**：sheet 的 toolbar 軸向**內外螢幕相反**——外螢幕已有 toolbar 的 sheet 顯示為垂直，內螢幕預設置中且維持水平。Router 目前統一用 `.pageSheet`，V 層若對 toolbar 佈局有假設會歪。
+- split view 中**只有 detail column** 參與垂直 bar；其他 column 維持水平。
+
+**解除條件**：Xcode 27.1 釋出且 `xcrun simctl list runtimes` 出現 iPhone Duo。屆時先做的是**量測**（把 demo 放進 Duo 模擬器，開合各截一次），不是先寫規則。
+
 ## Environment notes
 
 - Local toolchain: Swift 6.4 (Xcode 27.0 RC, 27A266a), Target arm64-apple-macosx26.0

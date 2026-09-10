@@ -670,17 +670,47 @@ ListSection(items: state.items, send: send)
 >
 > 實測（`Experiments/ViewSplitProbe/`，2026-09-10 重測）。清單**只改順序**時：
 >
-> | 建置用的 SDK | 持有 `@State` 的子組件 | 純值子組件 |
+> | 建置用的 Xcode | 持有 `@State` 的子組件 | 純值子組件 |
 > |---|---|---|
 > | Xcode 26.4.1 | **全部重跑**（`bodies=3`） | 全部跳過 |
 > | Xcode 27 | **全部跳過**（`bodies=0`） | 全部跳過 |
 >
-> 兩列量在**同一台機器、同一個 iOS 26.4 模擬器**上，只換 toolchain。所以這是 **linked SDK 的行為變更，不是 OS 的**——用 Xcode 27 重新建置的 app，**即使跑在 iOS 26 上也拿到新行為**；反之用 Xcode 26 建的 app 跑在 iOS 27 上仍是舊行為。
+> 兩列量在**同一台機器、同一個 iOS 26.4 模擬器**上，只換 toolchain。所以觸發器是**你用哪個 Xcode 建置**，不是使用者跑哪個 iOS——用 Xcode 27 重新建置的 app，**即使跑在 iOS 26 上也拿到新行為**；反之用 Xcode 26 建的 app 跑在 iOS 27 上仍是舊行為。
+>
+> **機制（官方記載，但官方沒有把它連到 body 重跑）**：Xcode 27 把 `@State` 從 property wrapper 改成 Swift macro，展開成一個一般的 stored property——TN3211 的原話是「the compiler treats the property like any other stored property of the view」，且 iOS 27 Release Notes 明言 **"This new behavior back-deploys to iOS 17 aligned OSes."** 這正好解釋量到的收斂：持有 `@State` 的子組件從 `bodies=3` 掉到 `0`，也就是**變得跟純值子組件一模一樣**（純值那組兩個 toolchain 都是 `0`）。
+>
+> Apple 對這條的措辭是「Build your project in **Xcode 27 or later**」，也就是**編譯器**那一側；`@State` 沒有出現在任一個 SDK 的公開 macro 清單裡（兩個 SDK 都只有 `Preview` / `Previewable`）。`DEVELOPER_DIR` 一換同時換掉 toolchain 與 SDK，所以本實驗分不開這兩者——**但實務上你也分不開**，Xcode 版本就是那個開關。
+>
+> 參考：[TN3211](https://developer.apple.com/documentation/Technotes/tn3211-resolving-swiftUI-source-incompatibilities-for-state-and-contentbuilder)、[iOS 27 Release Notes](https://developer.apple.com/documentation/ios-ipados-release-notes/ios-ipados-27-release-notes)。**官方從未描述「重排時 body 重跑次數」這件事**——那段連結是本 probe 的推論，不是 Apple 說的。
 >
 > - **用 Xcode 27（含）以後建置** → 三條判準照用，沒有這個例外。
 > - **仍用 Xcode 26 建置** → 例外成立。第 3 項（夠複雜、有自己的 Action 或子組件）描述的**正是最可能持有 `@State` 的那種組件**（展開、選取、輸入焦點、本地 toggle），照著判準走會被推向那個在重排下失去 skip 的形狀。此時若既要暫態又要重排 skip，把暫態提升到父層（以 item id 為 key），讓子組件回到純值。
 >
 > **升 Xcode 前不要先照舊行為改寫程式碼**——那個提升暫態的重構在 Xcode 27 下是白付的成本。
+
+### `@State` 改成 macro 之後的編譯期破壞（Xcode 27）
+
+同一個改動也會讓**既有程式碼編不過**。Apple 在 [TN3211](https://developer.apple.com/documentation/Technotes/tn3211-resolving-swiftUI-source-incompatibilities-for-state-and-contentbuilder) 列了三種，**本 repo 逐條實編驗證過（2026-09-11，Xcode 26.4.1 對 27，deployment target iOS 17 與 27 各一次）**：
+
+**✅ 實測重現——`@State` 不能再疊其他 property wrapper**
+
+```swift
+// ❌ Xcode 27 編不過
+@State @Environment(\.isEnabled) private var flag: Bool
+// error: invalid redeclaration of synthesized property '_flag'
+// （本 repo 實測到的訊息是 ambiguous reference to member '_flag'）
+```
+
+macro 展開出的 backing property `_flag` 與 property wrapper 合成的撞名。修法：拿掉多餘的 wrapper。
+
+**這條綁 toolchain、不綁 deployment target**——deployment target 設 iOS 17 或 27 都一樣會壞，Xcode 26 則兩者都乾淨。所以**不能靠「我們還支援 iOS 17」躲掉**。
+
+**⚠️ 官方有記載但本 repo 沒能重現的兩條**，照 TN3211 的原始碼寫成最小案例後，兩個 toolchain 的結果相同（一條都編得過、一條兩邊報一樣的錯）：
+
+- `init` 內先指派 `@State`、後指派其他 stored property
+- 有 private `@State` 時不再自動合成 memberwise init
+
+**沒重現不等於不存在**——最小單檔 typecheck 的否定證據份量比肯定證據輕，真實破壞可能需要整個 module 的條件。遇到這兩種錯誤訊息時直接照 TN3211 的修法處理，不要因為這裡寫「沒重現」而懷疑診斷。
 
 **不需要拆（可讀性優先）：**
 1. 資料幾乎**靜態不變**（頁面標題、固定按鈕）

@@ -162,6 +162,33 @@ CFBundleURLTypes:
       - mvvmc
 ```
 
+### `Info.plist` 兩個必要 key——**iOS 27 SDK 起，缺了不是警告是死當**
+
+SceneDelegate 是程式碼那一半，另一半在 `Info.plist`，而**這一半沒有編譯器會提醒你**。用 iOS 27 SDK 建置時：
+
+| Key | 缺了會怎樣 |
+|---|---|
+| `UIApplicationSceneManifest`（含 `UISceneConfigurations` 與 `UISceneDelegateClassName`） | **app 無法啟動**。iOS 27 SDK 起強制採用 scene-based life cycle |
+| `UILaunchScreen`（或 `UILaunchStoryboardName` / `UILaunchStoryboards` / `UILaunchScreens` 其一） | **App Store 退件** |
+
+```yaml
+# project.yml，demo 的實際內容
+info:
+  path: Sources/App/Info.plist
+  properties:
+    UILaunchScreen: {}          # 空 dictionary 就夠，但不能沒有
+    UIApplicationSceneManifest:
+      UIApplicationSupportsMultipleScenes: false
+      UISceneConfigurations:
+        UIWindowSceneSessionRoleApplication:
+          - UISceneConfigurationName: Default Configuration
+            UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+```
+
+> 兩條都**綁 linked SDK**：用舊 Xcode 建的既有 app 不受影響，**改用 Xcode 27 重新建置的那一刻才生效**。所以這是升 Xcode 時要查一次的東西，不是寫新專案時才查。
+>
+> ⚠️ **`UISceneDelegateClassName` 在跨平台（Skip）專案要寫死模組名、不能用變數**——見 `mvvmc-skip`〈`Info.plist` 的地雷〉。
+
 ---
 
 ## 三種任務模式

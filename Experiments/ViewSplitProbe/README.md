@@ -83,7 +83,13 @@ The first read of this was wrong — "§7's row 2 fails under reorder". The skip
 
 `@State survived=true` in every cell — that never changed.
 
-**The variable is the linked SDK, not the OS.** Both rows above were measured on the **same machine against the same iOS 26.4 simulator**, swapping only `DEVELOPER_DIR`; two runs per cell, deterministic. So an app rebuilt with Xcode 27 gets the new behaviour **even on iOS 26**, and an app still built with Xcode 26 keeps the old one on iOS 27.
+**The variable is which Xcode built it, not the OS.** Both rows above were measured on the **same machine against the same iOS 26.4 simulator**, swapping only `DEVELOPER_DIR`; two runs per cell, deterministic. So an app rebuilt with Xcode 27 gets the new behaviour **even on iOS 26**, and an app still built with Xcode 26 keeps the old one on iOS 27.
+
+**Likely mechanism, from Apple's own docs — though Apple never connects it to body counts.** Xcode 27 reimplements `@State` as a Swift macro expanding to a plain stored property: TN3211 says "the compiler treats the property like any other stored property of the view", and the iOS 27 release notes state *"This new behavior back-deploys to iOS 17 aligned OSes."* That predicts exactly the convergence measured here — the `@State` child stops behaving specially and lands on the value child's number, which was `0` under both toolchains all along.
+
+Apple frames the trigger as "Build your project in **Xcode 27 or later**", i.e. the compiler side; `State` appears in neither SDK's public macro list (both expose only `Preview` and `Previewable`). A `DEVELOPER_DIR` swap moves compiler and SDK together, so **this probe cannot separate them** — and in practice neither can you, since the Xcode version is the switch.
+
+**The connection to body re-execution is this probe's inference, not a documented claim.** Apple documents the `@State` reimplementation and its back-deployment; it documents nothing about reorder body counts. Treat the mechanism as a well-supported hypothesis and the numbers as the measurement.
 
 > **How close this came to being recorded as an OS change.** The first re-measurement was on the iOS 27 simulator and showed `3 → 0`, which reads exactly like "iOS 27 changed SwiftUI's diffing". The iOS 26.4 simulator control **also** gave `0`, which killed that story; only swapping the toolchain located the real variable. **An OS-version control does not control for the SDK.** They move together on an upgrade and are trivially separable afterwards — one `DEVELOPER_DIR` — but only if you think to.
 
