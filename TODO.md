@@ -45,7 +45,30 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 - **會打到 AppRouter 的細節**：sheet 的 toolbar 軸向**內外螢幕相反**——外螢幕已有 toolbar 的 sheet 顯示為垂直，內螢幕預設置中且維持水平。Router 目前統一用 `.pageSheet`，V 層若對 toolbar 佈局有假設會歪。
 - split view 中**只有 detail column** 參與垂直 bar；其他 column 維持水平。
 
-**解除條件**：Xcode 27.1 釋出且 `xcrun simctl list runtimes` 出現 iPhone Duo。屆時先做的是**量測**（把 demo 放進 Duo 模擬器，開合各截一次），不是先寫規則。
+### API 現況（2026-09-11 查證，本機 `iPhoneOS27.0.sdk` 為準）
+
+**iOS 27.1 的摺疊 API 一條都還沒發布。** 這是**列舉證明不是搜尋失敗**：SwiftUI 完整符號索引（7,150 個）與 UIKit `Headers/` 全文比對，`arrangement`（除無關的 `windowArrangement`）、`hinge`、`reservedRegion`、`toolbarVerticalEdge`、`axisBehavior`、`fold`、`posture`、`duo`、`division` 全數 0 命中。`UIArrangementViewController`、`UISplitArrangement`、`UIViewReservedRegion`、`UIHingeInteraction`、`UITraitCollection.verticalBarEdge` 同樣不存在。
+
+所以 `ArrangementView` / `.arrangementViewStyle` / `reservedRegions(kind:)` / `.onHingeChange` 這些名字**只來自 Tech Talk 的 code block**——沒有簽章、沒有 `@available`、沒有參考頁、沒有 sample code。**現在包 wrapper 等於照影片猜參數型別。**
+
+**但有三組摺疊相關 API 是 iOS 27.0 就有的，今天就能寫**（下列簽章已在本機 typecheck 通過）：
+
+| 用途 | API | 與 MVVMC 的關係 |
+|---|---|---|
+| **sheet 擺放** | `UISheetPresentationController.preferredPlacement`（`.automatic`/`.leading`/`.center`/`.trailing`）／SwiftUI `View.presentationPlacement(_:)` | **直接打到 `AppRouter` 的 `present` 路徑**，目前統一 `.pageSheet` |
+| 內螢幕 sidebar | `UITabBarController.sidebar.preferredPlacement`／`View.defaultTabBarPlacement(_:)`（需搭 `.tabViewStyle(.sidebarAdaptable)`；**iPadOS 無效**） | demo 無 TabBar |
+| 垂直 bar 的**內容優先序** | `UIBarButtonItem.visibilityPriority`／`ToolbarContent.visibilityPriority(_:)`、`ToolbarOverflowMenu`、`ToolbarItemPlacement.topBarPinnedTrailing`、`UINavigationItem.navigationBarMinimization` | 優先序現在就能標；等 27.1 的只是「排成垂直」的呈現 |
+
+> ⚠️ **但 MVVMC 基準是 iOS 17，這三組全部要包 `if #available(iOS 27.0, *)`**——實測無 guard 時逐條報 `is only available in iOS 27.0`。**跟 `withTaskCancellationShield` 完全同一個形狀**：toolchain 有了、deployment target 擋著。在基準拉到 iOS 27 之前，這三組能不能實際採用是另一個決策，不是技術問題。
+>
+> 附帶更正一個既有誤解：111462 那套「請 adopt」的 bar API 多半**不是新的**——`leftItemsSupplementBackButton` 是 **iOS 5**，`leadingItemGroups` / `pinnedTrailingGroup` / `additionalOverflowItems` 是 **iOS 16**，`UIBarButtonItem.badge` 與 `UICornerConfiguration` 是 **iOS 26**。真正 27.0 才新增的只有 `visibilityPriority`、`ToolbarOverflowMenu`、`topBarPinnedTrailing`。
+
+**查證方法的兩個坑**（下次重查時會再踩）：
+
+- **UIKit 不能只 grep `.swiftinterface`**——那份只有 6,803 行純 Swift overlay，UIKit 絕大多數 API 由 ObjC header 宣告。`preferredPlacement` 在 `.swiftinterface` 是 0 命中、在 `Headers/*.h` 是 2 命中，本輪一度因此誤判成「不存在」。要 grep `$SDK/System/Library/Frameworks/UIKit.framework/Headers/`。
+- **DocC 與 SDK 衝突時以 SDK 為準**。`UISceneAccessory` 的 Mac Catalyst 可用性：DocC 說 27.0 可用、SDK header 寫 `API_UNAVAILABLE(macCatalyst,...)`。編譯器讀的是 header。
+
+**解除條件**：Xcode 27.1 釋出且 `xcrun simctl list runtimes` 出現 iPhone Duo。屆時先做的是**量測**（把 demo 放進 Duo 模擬器，開合各截一次），不是先寫規則。第二個可查的訊號是 `.swiftinterface` / `Headers/` 裡 grep 得到 `ArrangementView` 的真實簽章——**在那之前那批 API 的形狀字面上還不存在**，而「規則描述了一個不存在的形狀」正是這個 repo 記過的教訓。
 
 ## Environment notes
 
