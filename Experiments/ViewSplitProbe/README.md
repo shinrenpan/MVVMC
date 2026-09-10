@@ -127,4 +127,14 @@ xcodebuild -project ViewSplitProbe.xcodeproj -scheme ViewSplitProbe \
 DEVELOPER_DIR=/Applications/Xcode-26.4.1.app/Contents/Developer xcodebuild ... (same)
 ```
 
-Address the simulator **by UDID**, not by name — the names drift between Xcode releases (`iPhone 17 Pro`, which this README used to name, does not exist in the Xcode 27 device set).
+Address the simulator **by UDID**, not by name. Not because name addressing is broken — it works fine — but because of what it does when a name is ambiguous:
+
+```
+$ xcodebuild ... -showdestinations
+{ ... id:A45369CD-..., OS:26.4.1, name:iPhone 17e }
+{ ... id:4957FA6E-..., OS:27.0,   name:iPhone 17e }
+```
+
+`-destination 'name=iPhone 17e'` succeeds against either one and **the output never says which OS ran**. For a probe whose entire purpose is detecting OS- and SDK-dependent behaviour, that is a silent wrong-attribution risk of exactly the kind this directory exists to catch. A UDID names one runtime and cannot slide.
+
+(Separately: device names do come and go between releases — `iPhone 17 Pro`, which this README used to name, is not in the Xcode 27 device set at all. That breaks loudly, so it is the lesser problem. For ordinary build/test work, where the OS version is not the measurement, addressing by name is fine as long as you check `xcrun simctl list devices available` first.)
