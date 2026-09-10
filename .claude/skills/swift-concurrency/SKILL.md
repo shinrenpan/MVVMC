@@ -10,9 +10,16 @@ description: |
 
 你是一位資深 iOS 工程師，專精於 Swift Concurrency 與執行緒安全。
 
-> 基準 **Swift 6.3**（目前 GA；本地 toolchain 6.3.1）。並發模型自 **6.2「Approachable Concurrency」** 起有重大轉向，本 skill 以此為基準——先讀下方〈Swift 6.2+ 心智模型〉再看判斷樹。標記為 **6.4** 的 API 屬 WWDC 2026 預告、**尚未正式 release**，勿在現行 toolchain 使用。
+> 基準 **Swift 6.4**（Xcode 27.0 RC 內附，27A266a）。並發模型自 **6.2「Approachable Concurrency」** 起有重大轉向，本 skill 以此為基準——先讀下方〈Swift 6.2+ 心智模型〉再看判斷樹。
 >
-> 版本聲明最後複查：**2026-08**（本機 Swift 6.3.1 / Xcode 26.4.1）。此段落有保鮮期——複查方式是跑 `swift --version`，若已進到 6.4 就把 `withTaskCancellationShield` 等 API 從「尚未 GA」改為可用。
+> ⚠️ **「toolchain 有了」不等於「你能用」——擋你的是 deployment target。** 6.4 的新 API 多半帶 `@available(anyAppleOS 27.0, *)`，在 iOS 17+ 專案裡直接呼叫編不過（實例見〈Task 取消〉的 `withTaskCancellationShield`）。
+>
+> 版本聲明最後複查：**2026-09**（本機 Swift 6.4 / Xcode 27.0 RC / macOS 26.6.2 / iOS SDK 27.0）。此段落有保鮮期，而**複查要分開查兩個變數**：
+>
+> 1. `swift --version` → 決定**語法與編譯器行為**（`@concurrent` 怎麼拼、哪些警告存在）
+> 2. 專案 deployment target vs 該 API 的 `@available` → 決定**能不能呼叫**
+>
+> 早前這裡只寫了第 1 條（「若已進到 6.4 就把 `withTaskCancellationShield` 改為可用」）。2026-09 真的進到 6.4 時照著做，會把一個 iOS 17 專案編不過的 API 標成可用——**觸發器只有一個變數，規則卻有兩個**。
 
 DispatchQueue 遷移對照請見：`references/migration.md`
 
@@ -22,10 +29,10 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 
 6.2「Approachable Concurrency」翻轉了預設，很多舊觀念要更新：
 
-- **模組預設 `@MainActor`**：`Package.swift` 設 `.defaultIsolation(MainActor.self)`（Xcode：`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`、`SWIFT_APPROACHABLE_CONCURRENCY = YES`），整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。**Xcode 26 新專案預設就開這兩項。**
+- **模組預設 `@MainActor`**：`Package.swift` 設 `.defaultIsolation(MainActor.self)`（Xcode：`SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`、`SWIFT_APPROACHABLE_CONCURRENCY = YES`），整個模組預設主 actor 隔離，不必到處手動標 `@MainActor`。**Xcode 26／27 新專案預設就開這兩項。**
   > ⚠️ **但 MVVMC 的 ViewModel 仍然明標**——這是編譯器行為與規範要求不一致的一處。裁定在 `mvvmc-viewmodel`〈強制宣告〉（本檔〈專案脈絡〉末尾有引用），**只讀這一行會得到相反的結論**。
 - **`nonisolated async func` 預設跑在呼叫端 actor**（`nonisolated(nonsending)`，SE-0461）——**不再自動跳到背景**。所以「標了 `nonisolated` 的 async 就會脫離主 actor」這個舊觀念已不成立。
-  > ⚠️ **這條依賴設定**，不是 6.2 toolchain 就自動生效：要開 `SWIFT_APPROACHABLE_CONCURRENCY: YES`（SPM 為 `.enableUpcomingFeature("NonisolatedNonsendingByDefault")`）。實測（`Experiments/ConcurrencyProbe/`，Swift 6.3.1）：同一段 `nonisolated async func` 從 `@MainActor` 呼叫，**沒開**這個 flag 時離開主緒、**開了**才留在呼叫端。判斷任何一段 `nonisolated async` 的行為前，先確認這個開關——這正是下方〈Fast Path〉存在的理由。
+  > ⚠️ **這條依賴設定**，不是 6.2 toolchain 就自動生效：要開 `SWIFT_APPROACHABLE_CONCURRENCY: YES`（SPM 為 `.enableUpcomingFeature("NonisolatedNonsendingByDefault")`）。實測（`Experiments/ConcurrencyProbe/`，Swift 6.4 複驗）：同一段 `nonisolated async func` 從 `@MainActor` 呼叫，**沒開**這個 flag 時離開主緒、**開了**才留在呼叫端。判斷任何一段 `nonisolated async` 的行為前，先確認這個開關——這正是下方〈Fast Path〉存在的理由。
   >
   > **重開條件（當場驗得出來，不綁版本號）**：`Experiments/ConcurrencyProbe/` 在**開／關該 flag 兩種設定下不再產生不同結果**時，本條作廢。綁版本號是錯的觸發器——這條失效的方式不是 toolchain 上升，是那個 flag 從 opt-in 畢業成預設。**probe 跑不出差異的那天，它自己就會說。**
 - **要並行 / 離開 actor 得明講**：用 `Task { @concurrent in ... }` 讓 Task 從主 actor 外起跑（見〈離開主 actor〉）。
@@ -123,7 +130,7 @@ final class Loader {
 //    （@concurrent 本身已隱含 nonisolated）
 ```
 
-> 實測 Swift 6.3.1（2026-08）：`@concurrent func` ✅、`Task { @concurrent in }` ✅、`nonisolated @concurrent func` ❌ `expected declaration`。
+> 實測 Swift 6.4（2026-09）：`@concurrent func` ✅、`Task { @concurrent in }` ✅、`nonisolated @concurrent func` ❌ `expected declaration`。
 
 日常在 `doAction` 內仍以 closure 形式最直觀；需要讓一個 async 方法「總是離開呼叫端 actor」時才用宣告形式
 - 純同步、不 async 的運算 → 用下方 `nonisolated func`，不需要 `@concurrent`
@@ -233,14 +240,17 @@ case .searchTextChanged(let text):
 - **priority 只是提示**：結構化 Task 繼承父 priority，`Task.detached` 不繼承；系統會為防優先反轉自動提權——別把 priority 當保證。
 
 - **6.3+**：`Task { try await ... }` 若**未處理**丟出的錯誤，編譯器會**警告**——要嘛在 Task 內處理，要嘛存下 Task 之後檢查。
-- **6.4（尚未 GA，屆時可用）**：關鍵清理不想被取消打斷，用 `withTaskCancellationShield { }`。目前 toolchain（6.3.1）**還沒有此 API**，先用「在清理前檢查完取消、清理本身不再檢查」的手動寫法替代：
+- **`withTaskCancellationShield { }`——已出貨，但 iOS 17+ 專案還用不到。** 關鍵清理不想被取消打斷時它是正解，Swift 6.4 / iOS SDK 27 已隨附，但簽名上標著 `@available(anyAppleOS 27.0, *)`：
 
-```swift
-// Swift 6.4 起：
-await withTaskCancellationShield {
-    await database.close()   // shield 內 Task.isCancelled 恆為 false
-}
-```
+  ```swift
+  // iPhoneOS27.0.sdk 實際簽名
+  @available(anyAppleOS 27.0, *)
+  public func withTaskCancellationShield<Value, Failure>(...) async throws(Failure) -> Value
+  ```
+
+  MVVMC 基準 iOS 17+，直接呼叫得到 `error: 'withTaskCancellationShield(operation:)' is only available in iOS 27.0 or newer`。包 `if #available(iOS 27.0, *)` 編得過，但清理路徑一旦分岔就得**同時維護 shield 版與手動版兩條**，比只留手動版更糟。
+
+  **所以在 deployment target 進到 iOS 27 之前，維持手動寫法**：在清理前檢查完取消，清理本身不再檢查。這條的理由是 availability，**不是「還沒 release」**——toolchain 早就有了。
 
 ---
 
@@ -296,7 +306,7 @@ closure #1 in YourType.yourMethod       ← 你的 closure，崩在入口
 
 **原因**：從 ObjC 匯入的 API，handler 參數若**既不是 `@Sendable` 也沒有隔離標注**，
 傳進去的 closure 會**繼承呼叫端的隔離**。在 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`
-之下（Xcode 26 新專案預設），從一個 `@MainActor` 方法裡寫的 closure 就被推斷成
+之下（Xcode 26／27 新專案預設），從一個 `@MainActor` 方法裡寫的 closure 就被推斷成
 `@MainActor`。編譯器於是在 closure 入口插入動態隔離檢查——而 framework 是在它自己
 的佇列上呼叫它的，檢查當場失敗。
 

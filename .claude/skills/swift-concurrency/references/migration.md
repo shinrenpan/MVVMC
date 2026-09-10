@@ -1,6 +1,6 @@
 # DispatchQueue 遷移規範
 
-> 基準 Swift 6.3（本地 toolchain 6.3.1）；並發模型脈絡見 `SKILL.md`〈Swift 6.2+ 心智模型〉。
+> 基準 Swift 6.4（Xcode 27.0 RC 內附）；版本聲明與其複查方式一律以 `SKILL.md` 開頭那段為準，本檔不另行聲明。並發模型脈絡見 `SKILL.md`〈Swift 6.2+ 心智模型〉。
 
 ## 強制原則
 

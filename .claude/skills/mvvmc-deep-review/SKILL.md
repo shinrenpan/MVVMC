@@ -139,7 +139,7 @@ argument-hint: [file-path]
 - **Value type copy 代價**：大型 `struct`（含多個 `Array` / `Dictionary` 欄位）頻繁複製是否值得改為 `class` 或 COW
 - **`@Observable` 觀察粒度**：MVVMC 架構下 ViewModel 的 `struct State` 是標準設計，不列入審查。但 `State` 以外的 property（timer、closure、計數器、cache 等）若不需要觸發 View 更新，應標注 `@ObservationIgnored`
 - **SwiftUI `body` 計算**：`body` 內是否有 `map` / `filter` / `sorted` 等 O(n) 操作，應移至 ViewModel computed property
-- **`some View` vs `AnyView`**：代價在**結構性身份**，不在 body 重跑次數。實測（`Experiments/ViewSplitProbe/`，Swift 6.3.1 / iOS 模擬器）顯示 `AnyView` 包裹的子 view，props 未變時 body **照樣被跳過**——「`AnyView` 破壞 diffing」這個常見說法在這個層面不成立。真正的問題是型別抹除讓 view 身份不穩定：動畫中斷、`@State` 重置、編譯期型別資訊喪失。因此判準是「這裡需不需要穩定身份／動畫」，不是「會不會多跑 body」
+- **`some View` vs `AnyView`**：代價在**結構性身份**，不在 body 重跑次數。實測（`Experiments/ViewSplitProbe/`；2026-09-10 在 Xcode 26.4.1 與 27 兩個 SDK 下各重測，結果相同）顯示 `AnyView` 包裹的子 view，props 未變時 body **照樣被跳過**——「`AnyView` 破壞 diffing」這個常見說法在這個層面不成立。真正的問題是型別抹除讓 view 身份不穩定：動畫中斷、`@State` 重置、編譯期型別資訊喪失。因此判準是「這裡需不需要穩定身份／動畫」，不是「會不會多跑 body」
 - **`Array` vs `Set`**：對 Array 做 `contains` / `firstIndex` 且集合不小，考慮改用 `Set`
 - **`lazy` 屬性**：計算代價高且不一定存取的屬性，是否適合 `lazy`
 

@@ -52,7 +52,7 @@ final class FeatureViewModel {
 - ❌ 禁止繼承任何 ViewModel protocol
 - ❌ 禁止 `ObservableObject` / `@Published`
 
-> **即使模組已經開了 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`（Xcode 26 新專案的預設），`@MainActor` 仍然明標**——這是定案的取捨，不是還沒決定：
+> **即使模組已經開了 `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor`（Xcode 26／27 新專案的預設），`@MainActor` 仍然明標**——這是定案的取捨，不是還沒決定：
 >
 > - **`SWIFT_DEFAULT_ACTOR_ISOLATION` 是 per-target 設定，而跨 target 共用原始檔在有 extension 的專案是常態**（widget / share extension / intents 都要共用 Domain 與持久層）。一份會被兩個 target 編譯的檔案，其預設隔離不能由檔案外的設定決定——同一行程式碼會在兩個 target 有兩種語意，而檔案裡看不出來
 > - 更實際的理由：`nonisolated async func` 的行為**已經**取決於一個 flag（實測見 `swift-concurrency`〈Swift 6.2+ 心智模型〉），同一段程式碼在開與不開之下行為相反。既然並發語意已經有一處交給設定決定，就不該再有第二處

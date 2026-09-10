@@ -27,5 +27,8 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 
 ## Environment notes
 
-- Local toolchain: Swift 6.3.1, Target arm64-apple-macosx26.0
-- Swift 6.4 (WWDC 2026) not yet GA — APIs like `withTaskCancellationShield` marked accordingly in the concurrency skill
+- Local toolchain: Swift 6.4 (Xcode 27.0 RC, 27A266a), Target arm64-apple-macosx26.0
+- Host is **macOS 26.6.2**, not macOS 27 — Xcode was upgraded for the iOS SDK, the OS was not (Homebrew / third-party). Consequence: `Experiments/ConcurrencyProbe/` builds as a native macOS binary and therefore **cannot reach any `@available(anyAppleOS 27.0, *)` API**. The iOS 27.0 simulator runtime *is* installed, so the iOS side of such an API is testable; the macOS side is not.
+- Swift 6.4 is GA in the toolchain, but its new APIs (e.g. `withTaskCancellationShield`) are gated `@available(anyAppleOS 27.0, *)` and so remain unusable at the iOS 17+ deployment target. The concurrency skill states this as an availability constraint, not as "not yet released".
+- **Probes re-run on Xcode 27 (2026-09-10):** `ConcurrencyProbe` unchanged; `ViewSplitProbe` unchanged **except** the reorder rows, where a `@State`-holding child went `bodies=3` → `0`. Isolated to the **linked SDK** (same machine, same iOS 26.4 simulator, `DEVELOPER_DIR` swap), so it is not an iOS 27 story — a Xcode-27 rebuild gets the new behaviour on iOS 26 as well. Written into `mvvmc-view`〈拆與不拆的決策準則〉as an SDK matrix and into `ViewSplitProbe/README.md`. The `AnyView` finding (`mvvmc-deep-review`) re-measured identical on both SDKs.
+- **Still recorded against Swift 6.3.1 / Xcode 26.4.1**, not re-run: `mvvmc-testing/references/patterns.md` (three examples said to compile in the demo test target — that target now builds clean under 27, so this is probably already covered; verify rather than assume) and `mvvmc-view/references/architecture.md`'s `@Bindable` `$`-placement note. Both are compile-behaviour claims, cheaper to check than the SwiftUI measurements.

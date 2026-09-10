@@ -172,4 +172,6 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | `@concurrent` / `Task.detached` / `actor` / `nonisolated` computation | 🚫 — no demo screen has work heavy enough to leave the main actor; inventing one would be decoration. Validated by `Experiments/` and external references instead |
 | Module-default `MainActor` isolation (`SWIFT_DEFAULT_ACTOR_ISOLATION`) | ❌ — deliberately not enabled; see `TODO.md`, it would change the VM-layer rule |
 
+> Last verified **2026-09** on Swift 6.4 / Xcode 27.0 RC, iOS 27.0 simulator: build clean, `14 tests in 3 suites passed`. The first row is the one that decays on a toolchain bump, so it carries a date — a "zero warnings" claim is only ever true of a specific compiler.
+>
 > Until 2026-08 the demo built with `SWIFT_STRICT_CONCURRENCY: targeted` and no explicit `SWIFT_VERSION` — meaning this repo claimed Swift 6.2+ while never actually having its Swift 6 compatibility checked by a compiler. It now builds clean in full Swift 6 mode, and that took zero source changes.

@@ -16,7 +16,7 @@ swiftc -swift-version 6 probe.swift -o probe_a && ./probe_a
 swiftc -swift-version 6 -enable-upcoming-feature NonisolatedNonsendingByDefault probe.swift -o probe_b && ./probe_b
 ```
 
-## Result (Swift 6.3.1 — 2026-08)
+## Result (Swift 6.4 / Xcode 27.0 RC — 2026-09; unchanged since 6.3.1)
 
 Called from a `@MainActor` context; `onMain=true` means the work stayed on the main actor.
 
@@ -35,7 +35,15 @@ Conclusions:
 
 Point 3 is why the skill's Fast Path insists on reading the project's concurrency settings before giving any advice: the same source line has two opposite behaviours, and nothing in the code tells you which one you get.
 
-## Type-level checks (Swift 6.3.1 — 2026-08)
+Re-run on Swift 6.4 (2026-09) reproduces all four rows exactly. This matters because the skill's rule for point 3 carries a self-retiring condition — *"this rule dies the day the probe stops showing a difference"* — and 6.4 is the first toolchain bump since it was written. The difference is still there, so `NonisolatedNonsendingByDefault` has **not** graduated to a default and the rule stands.
+
+## Scope limit: this probe cannot reach macOS-27-gated API
+
+The probe builds as a **native macOS binary** (`swiftc probe.swift -o probe_a`), so its ceiling is the host OS, not the SDK. On a macOS 26 host with Xcode 27 installed, anything marked `@available(anyAppleOS 27.0, *)` — `withTaskCancellationShield` is the current example — will not compile into this probe at all.
+
+That is a live gap, not a hypothetical one: Xcode 27 ships an iOS 27.0 simulator runtime, so the iOS side of such an API *is* testable, while the macOS side is not until the host upgrades. **Anything gated on macOS 27 needs a simulator-hosted probe, not this one.**
+
+## Type-level checks (Swift 6.4 — 2026-09)
 
 These are compile-or-not questions rather than runtime observations, so they live here as reproducible one-liners instead of source files (some are expected to *fail* to compile).
 
