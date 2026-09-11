@@ -271,3 +271,101 @@ struct ValueListView: View {
     }
   }
 }
+
+// MARK: - 版本 6／7：MVVMC 形狀 + send closure
+//
+// 版本 5 量的是「子組件只收值」。但 `mvvmc-view` 規定每個 L2/L3 都要帶
+// `let send: @MainActor (Action) -> Void`——那個 closure 從未進過這支 probe。
+// Apple 的 swiftui-specialist〈Not a fix: Hoisting the closure to a stored
+// property on the View〉說 View struct 會被自由重建、`let` 的初始式因此重跑並
+// 產生新 closure，比較在某些最佳化層級下一律視為不等。若屬實，版本 5 的
+// `B body = 0` 在真實 MVVMC 形狀下就不成立。
+//
+// 6 = method reference（PostListView 的實際寫法：`send: handleListAction`）
+// 7 = inline closure literal（同樣合法的寫法，用來分辨兩者是否表現不同）
+
+@Observable
+@MainActor
+final class MVVMCSendModel {
+  struct State: Equatable, Sendable {
+    var a: Int = 0
+    var b: Int = 0
+  }
+  var state = State()
+}
+
+struct MVVMCSendRefSplitView: View {
+  let viewModel: MVVMCSendModel
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("sendref.parent")
+    VStack {
+      SectionA(value: viewModel.state.a, send: handleA)
+      SectionB(value: viewModel.state.b, send: handleB)
+    }
+  }
+
+  @MainActor private func handleA(_ action: SectionA.Action) {
+    switch action { case .didTap: viewModel.state.a += 1 }
+  }
+
+  @MainActor private func handleB(_ action: SectionB.Action) {
+    switch action { case .didTap: viewModel.state.b += 1 }
+  }
+}
+
+private extension MVVMCSendRefSplitView {
+  struct SectionA: View {
+    enum Action: Sendable { case didTap }
+    let value: Int
+    let send: @MainActor (Action) -> Void
+    var body: some View {
+      let _ = BodyCounter.shared.bump("sendref.A")
+      Text("A \(value)").onTapGesture { send(.didTap) }
+    }
+  }
+
+  struct SectionB: View {
+    enum Action: Sendable { case didTap }
+    let value: Int
+    let send: @MainActor (Action) -> Void
+    var body: some View {
+      let _ = BodyCounter.shared.bump("sendref.B")
+      Text("B \(value)").onTapGesture { send(.didTap) }
+    }
+  }
+}
+
+struct MVVMCInlineSendSplitView: View {
+  let viewModel: MVVMCSendModel
+
+  var body: some View {
+    let _ = BodyCounter.shared.bump("inline.parent")
+    VStack {
+      SectionA(value: viewModel.state.a, send: { _ in viewModel.state.a += 1 })
+      SectionB(value: viewModel.state.b, send: { _ in viewModel.state.b += 1 })
+    }
+  }
+}
+
+private extension MVVMCInlineSendSplitView {
+  struct SectionA: View {
+    enum Action: Sendable { case didTap }
+    let value: Int
+    let send: @MainActor (Action) -> Void
+    var body: some View {
+      let _ = BodyCounter.shared.bump("inline.A")
+      Text("A \(value)").onTapGesture { send(.didTap) }
+    }
+  }
+
+  struct SectionB: View {
+    enum Action: Sendable { case didTap }
+    let value: Int
+    let send: @MainActor (Action) -> Void
+    var body: some View {
+      let _ = BodyCounter.shared.bump("inline.B")
+      Text("B \(value)").onTapGesture { send(.didTap) }
+    }
+  }
+}

@@ -25,6 +25,38 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 - [ ] **`@State` misplacement in the shapes the reorder probe did not cover**: `id: \.self`, index-based `ForEach`, nested `ForEach`, animated reorder. §8's three claims did not reproduce for `Identifiable` + single-level `ForEach` + synchronous reorder, and the section is annotated as such rather than deleted — because those four shapes were never measured.
 - [ ] **Does `Data` embedded in a Domain Model short-circuit on `==`?** Decides whether `mvvmc-model` Equatable exception 3's "hundreds of MB" threshold is right. If COW makes it a pointer comparison the threshold is correct and finally gets a *why* (it has none today); if not, the threshold is wrong.
 
+## Open — carried over from the Xcode 27 agent-skills comparison (2026-09-11)
+
+`xcrun agent skills export <dir>` (Xcode 27 only — the `agent` binary does not exist in 26.4.1) emits **ten** skills, not the seven the third-party write-ups list. Three of them were read against this spec in full. What that comparison produced is below; the one thing it actually **broke** — §7's table having been measured without the mandated `send` closure — is already fixed and recorded in `Experiments/ViewSplitProbe/README.md`.
+
+**Two things the export does that matter more than its contents:**
+
+- It is a **snapshot, not a link** (plain read-only files with a fresh mtime). Upgrading Xcode does not update an exported copy, and `agent skills` has only an `export` subcommand — no version, no diff. Any adoption needs a "re-export after an Xcode upgrade" step or it becomes exactly the consumer-drift shape this repo keeps paying for.
+- `swiftui-specialist` declares itself as superseding prior training on ForEach identity, `@Observable` invalidation, localization, and soft-deprecated APIs — **the same triggers as `mvvmc-view`**. Installing it into `~/.claude/skills/` without first deciding rule ownership creates a fifth drift direction rather than closing one. (Also: the widely-cited `~/.agents/skills` path is not read by Claude Code here; `~/.claude/skills/` is.)
+
+**Conflicts worth a decision (none is bug-level):**
+
+- [ ] **`@ViewBuilder private func` for section splitting.** `mvvmc-view` bans computed properties but *recommends* `@ViewBuilder` helpers; Apple's `structure.md` bans both, for the invalidation reason §7 already measured and states. **The rule and its own evidence disagree inside one file** — this is the cheapest of the lot and needs no new measurement.
+- [ ] **`@MainActor` on the ViewModel.** `mvvmc-viewmodel`'s headline rule says "always explicit, 定案"; Apple says always *unless* the project enables Main Actor default isolation. The skill's mode A/C table already handles this — only the headline is absolute. Reword the headline, do not reopen the decision.
+- [ ] **Localization typing.** Apple puts `LocalizedStringResource` (not `String`) on view models; MVVMC stores translated `String` in State. Note this does **not** collide with the global "don't pass `LocalizedStringKey` as a parameter" rule — different type, different failure.
+- [ ] **`var state: State` as a single `@Observable` property.** Apple names this exact shape AVOID (per-property observation granularity). MVVMC already concedes the cost in `architecture.md` §7's ⚠️ block. Recommend keeping the shape and citing Apple there as external corroboration — but the concession should say it is a known trade-off *that Apple documents*, not an unexamined one.
+
+**Pure gaps — Apple has concrete rules where MVVMC has none:**
+
+- [ ] ForEach identity: `id: \.self`, `.indices`, `.enumerated().offset`, content-derived ids, expensive-to-hash ids (`foreach.md`). Overlaps the open `@State` misplacement measurement above.
+- [ ] List fast path: unary rows only — no top-level `switch`, bare `if`, or `AnyView` row. **`AnyView` appears nowhere in the spec.** `-LogForEachSlowPath YES` makes it checkable.
+- [ ] `init` must be constant-time (`structure.md`). Most likely to be violated in C, where HostControllers are built.
+- [ ] `Equatable` as a *performance* gate — the `@Observable` setter skips invalidation only for Equatable types. `mvvmc-model` justifies Equatable only via tests and `onChange`.
+- [ ] C layer: `window.windowScene.screen`, never `window.screen`; V layer must use `@Environment(\.displayScale)` / `GeometryReader`, never `UIScreen`; `prefersInterfaceOrientationLocked` (iOS 26+) — the spec has no orientation rule at all.
+- [ ] AppDelegate vs SceneDelegate responsibility split, and Apple's "migrate the four lifecycle methods as a set, not individually".
+- [ ] Testing: `@Suite(.serialized)` — **the word appears nowhere in `.claude/skills/`**, although `Experiments/ViewSplitProbe/README.md` records this repo being burned by exactly that, with a contaminated measurement reaching the spec. Also missing: `withKnownIssue`, `.disabled(if:)`, `Attachment.record(value)`.
+
+**One real conflict in the demo, not the spec:**
+
+- [ ] `AppRouter.deeplink()` reads `UIApplication.shared.connectedScenes…first?.keyWindow` (`Sources/App/AppRouter.swift`). Apple's rule 11 forbids walking global scene state and prescribes the fix this case needs — *add a parameter*: `deeplink(_:from scene:)`. All three entry points hold a scene. Stateless Router is unaffected, and the `.first` multi-window mis-target disappears with it. Note the spec pins `UIApplicationSupportsMultipleScenes: false`, so this is latent, not live.
+
+**Assessed and dismissed:** `adopt-c-bounds-safety` (no C), `app-intents-specialist` / `app-intents-whats-new-27` (no App Intents), `building-document-based-swiftui-applications` (no document app). `audit-xcode-security-settings` yields only Phase 1 + entitlements for a pure-Swift target, drives everything through Xcode's MCP tools, and writes pbxproj/xcconfig — **which XcodeGen overwrites on the next `xcodegen generate`**. `device-interaction` is genuinely complementary to `ios-build-run` (UI hierarchy with `hitPoint`, synthesized touch/keyboard, `commandLineArguments` without editing the scheme) and overlaps it only on build/install/screenshot — but it is a subagent skill driving `DeviceInteraction*` MCP tools, and `~/Library/Developer/Xcode/CodingAssistant/mcp-servers.json` is currently **empty**. Confirm the tools resolve before writing any of it into `ios-build-run`.
+
 ## Blocked on tooling — iPhone Duo (foldable)
 
 **不要在 Xcode 27.1 模擬器到位之前把下面任何一條寫成規範。** 這些是研究素材，不是規則。裝置 2026-10 底發售、API 在 iOS 27.1、模擬器要 Xcode 27.1（官方頁面標 "Coming later this month"），**今天一條都驗不了**。把未經量測的前提寫成規則，正是 `Experiments/README.md` 開宗明義在防的事。

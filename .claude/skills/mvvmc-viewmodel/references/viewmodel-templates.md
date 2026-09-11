@@ -1,5 +1,9 @@
 # ViewModel Templates Reference
 
+> ℹ️ **本檔是節錄的示意，不是 demo 的副本。** 這裡的程式碼刻意比 `Sources/` 短——省略 `+Models` / `+APIs` 的拆檔、只留下與本節規則相關的 case。**不要**把它「同步」成與 demo 逐字一致，那會讓範本變成第二份要維護的實作。
+>
+> 唯一逐字複製 demo 的是 `mvvmc-navigation/references/navigation-templates.md`（那份由 `Sources/App/` 產生，並附帶落後檢查）。兩者契約不同，別套錯。
+
 ## 基本版（無業務邏輯，純展示）
 
 ```swift

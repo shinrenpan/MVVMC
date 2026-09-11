@@ -144,3 +144,21 @@ $ xcodebuild ... -showdestinations
 `-destination 'name=iPhone 17e'` succeeds against either one and **the output never says which OS ran**. For a probe whose entire purpose is detecting OS- and SDK-dependent behaviour, that is a silent wrong-attribution risk of exactly the kind this directory exists to catch. A UDID names one runtime and cannot slide.
 
 (Separately: device names do come and go between releases — `iPhone 17 Pro`, which this README used to name, is not in the Xcode 27 device set at all. That breaks loudly, so it is the lesser problem. For ordinary build/test work, where the OS version is not the measurement, addressing by name is fine as long as you check `xcrun simctl list devices available` first.)
+
+## 2026-09-11: the `send` closure was never in the table
+
+§7 的第四列一直標著「MVVMC 形狀」，但 probe 的子組件只收值——**規範強制的 `let send: @MainActor (Action) -> Void` 從來沒進過這支 probe**。表格量的形狀和規範要求的形狀不是同一個。
+
+抓到這件事的不是對抗式閱讀，也不是三個上架專案，是 **Xcode 27 附的 `swiftui-specialist` skill**：它的〈Not a fix: Hoisting the closure to a stored property on the View〉說 View struct 被自由重建時 `let` closure 會重新產生，比較「in some optimization levels」一律視為不等。
+
+補了版本 6（method reference）與版本 7（inline closure literal），Xcode 27.0 / iOS 26.4 sim / Swift 6.4：
+
+```
+PROBE_RESULT send none    parent=1 A=1 B=0
+PROBE_RESULT send ref     parent=1 A=1 B=0
+PROBE_RESULT send inline  parent=1 A=1 B=0
+```
+
+Debug 與 Release（`-O` + `wholemodule`，需加 `ENABLE_TESTABILITY=YES` 才跑得起 `@testable import`）結果相同。**`send` 不破壞 props-unchanged 的跳過**，§7 成立。
+
+值得記的是**這類缺口的形狀**：不是規則寫錯，也不是規則描述了不存在的形狀（那是 demo 抓得到的），而是**量測沒有涵蓋規則要求的形狀**。demo 編不出這種錯——它照規範寫，一路編過。probe 也編得過，因為它量的東西自己是自洽的。只有拿外部的、不共享本專案前提的規範來對照，才會問「你量的跟你要求的是同一個東西嗎」。

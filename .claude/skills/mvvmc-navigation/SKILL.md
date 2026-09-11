@@ -60,10 +60,10 @@ final class AppRouter: NSObject {
 
 **③④ 歸目的地不歸 Router**，這是〈Close 鈕〉那條的根據：
 
-- ❌ **Router 不得往目的地的 `navigationItem` 塞按鈕。** 理由不只是「Router 畫 UI 就不是 Router」——那顆注入的按鈕在 C 層與 V 層之外被建立，**沒有 `viewModel` 可以呼叫**，於是它結構上不可能遵守 `mvvmc-hostcontroller`「導覽列按鈕的點擊要走 `doAction`」那條硬規則。更實際的是它**不知道那一頁關閉時該做什麼**——送出中的表單（VM 有防重送 guard）、要發 `onCallback` 的頁、有草稿的頁，它一律直接關掉，VM 全程不知情
+- ❌ **Router 不得往目的地的 `navigationItem` 塞按鈕。** 這條**禁的是動作的人，不是那顆按鈕**——目的地當然可以有 Close 鈕，只是不能由 Router 來裝。Router 的職責是「這個意圖對應到哪一頁」（`go_router` 的那種角色），它不碰那一頁長什麼樣；一旦它開始畫 UI，就沒有任何界線可以說明下一個按鈕為什麼不行。而且注入的按鈕在 C 層與 V 層之外被建立，**沒有 `viewModel` 可以呼叫**，於是它結構上不可能遵守 `mvvmc-hostcontroller`「導覽列按鈕的點擊要走 `doAction`」那條硬規則。更實際的是它**不知道那一頁關閉時該做什麼**——送出中的表單（VM 有防重送 guard）、要發 `onCallback` 的頁、有草稿的頁，它一律直接關掉，VM 全程不知情
 - ✅ **目的地在 V 層自己提供關閉入口**：`.toolbar` → `send(.closeDidTap)` → `doAction` → `onRoute?(.dismiss)` → C 層 `back(from:)`。**這是規範對其他每一顆按鈕已經要求的路徑，不需要新規則**
 
-**⚠️ 冷啟動的 deeplink 需要建一組 VC，不是一個。** 通知點進去的正確行為多數不是 present 而是**導航**（切到對應分頁、把該頁推上那個 stack），這樣系統返回鈕自然存在、使用者「往回按看得到列表」的心智模型才成立。但冷啟動時那個 stack 是空的——**只 present 一個詳情頁會得到一個孤兒頁面，而那個問題的根因是「工廠方法回傳單一 VC」，不是 fullScreen。** 需要 `setViewControllers([列表, 詳情])` 的路徑，`Deeplink.makeHostController()` 的回傳型別要能表達「一組 VC ＋ 一個呈現意圖」。fullScreen present 保留給真正該是 modal 的 deeplink（獨立 onboarding、強制更新頁）。
+**⚠️ 冷啟動的 deeplink 需要建一組 VC，不是一個。** 通知點進去的正確行為多數不是 present 而是**導航**（切到對應分頁、把該頁推上那個 stack），這樣系統返回鈕自然存在、使用者「往回按看得到列表」的心智模型才成立。但冷啟動時那個 stack 是空的——**只 present 一個詳情頁會得到一個孤兒頁面，而那個問題的根因是「工廠方法回傳單一 VC」，不是 fullScreen。** 需要 `setViewControllers([列表, 詳情])` 的路徑，所以 `Deeplink.makeDestination()` 回傳的是 `Destination`（`.navigate(tab:stack:)` / `.present(_:)`），而不是單一 VC。fullScreen present 保留給真正該是 modal 的 deeplink（獨立 onboarding、強制更新頁）。
 
 ---
 
@@ -87,8 +87,8 @@ final class AppRouter: NSObject {
 - ℹ️ **只有承重的地方才有 `from:`**：`back(from:)` 的 source 真的在做事（讀 `appTransitionStyle` 決定 pop 還是 dismiss）；`backToRoot(from:)` 沒有 destination 可推導 stack，`from:` 是唯一來源；**`backTo` 的 source 只用來取 nav，而 destination 本來就在那個 stack 裡——那是死參數，已刪除**。三個方法形狀不一致是設計，不是疏漏
 - ℹ️ **`back(from:)` 的 `from:` 是「從誰的導航環境退」，不是「誰要被關掉」**。所以父 HostController 在子 VM 的 `onCallback` 裡寫 `AppRouter.shared.back(from: self)` 是正確的——退的是那個 nav stack 的 top VC（也就是子頁），不是 `self`。子頁自己呼叫 `back(from: self)` 同樣成立，兩種寫法等價
 - ✅ `deeplink()` 的 `.present` 分支包一層 `UINavigationController`、`.fullScreen` present；**`.navigate` 分支保留該分頁既有的根**（那就是「往回按看得到的列表」），只把目的地推上去
-- ❌ **`deeplink()` 不得注入 Close 鈕**——那顆按鈕在 C 層與 V 層之外被建立、沒有 `viewModel` 可呼叫，結構上不可能遵守「導覽列按鈕要走 `doAction`」，而且它不知道那一頁關閉時該做什麼。關閉入口由目的地在 V 層自己提供
-  > **demo 的教訓**：`PostDetailHostController` 同時被 push（從列表）與 deeplink 使用。要它自己長一顆 Close 鈕，就得知道自己是怎麼被呈現的——那是耦合外洩。**把 deeplink 從「present 一個」改成「切分頁 + 推上脈絡」之後，系統返回鈕自然存在，這個問題整個消失。** 這一半不是選配，它是讓「不注入 Close 鈕」變得實作得出來的前提
+- ❌ **`deeplink()` 同樣不得往 `navigationItem` 塞按鈕**——見上方〈③④ 歸目的地不歸 Router〉，理由與判準都在那裡，此處不重述
+  > **但有一個前提只在 `deeplink()` 成立，所以寫在這裡**：`PostDetailHostController` 同時被 push（從列表）與 deeplink 使用。要它自己長一顆 Close 鈕，就得知道自己是怎麼被呈現的——那是耦合外洩。**把 deeplink 從「present 一個」改成「切分頁 + 推上脈絡」之後，系統返回鈕自然存在，這個問題整個消失。** 這一半不是選配，它是讓那條禁令在 `deeplink()` 這條路徑上**實作得出來**的前提
 - ❌ 禁止把 `.modal` / `.fade` 的轉場邏輯寫進 HostController——那是 `AppTransitionAnimator` 的責任
 
 ### 轉場與手勢
@@ -120,14 +120,19 @@ enum Deeplink {
     }
   }
 
-  @MainActor func makeHostController() -> UIViewController { ... }
+  enum Destination {                         // 一組 VC ＋ 一個呈現意圖
+    case navigate(tab: Int, stack: [UIViewController])
+    case present(UIViewController)
+  }
+
+  @MainActor func makeDestination() -> Destination { ... }
 }
 ```
 
 **規則：**
-- ✅ 三塊各自 `extension`：`enum` 本體 / `init?(url:)` 解析 / `makeHostController()` 工廠
+- ✅ 三塊各自 `extension`：`enum` 本體 / `init?(url:)` 解析 / `makeDestination()` 工廠
 - ✅ `init?(url:)` 先驗 `scheme`，再 `switch url.host`，失敗回 `nil`（絕不崩潰）
-- ✅ `makeHostController()` 標 `@MainActor`，回傳組好的 HostController
+- ✅ **`makeDestination()` 回傳 `Destination`，不是單一 `UIViewController`**——工廠回傳單一 VC 正是〈冷啟動要建一組 VC〉那個孤兒頁問題的根因。標 `@MainActor`
 - ✅ URL Scheme 與 Push payload **共用同一個 `Deeplink(url:)`**，不寫第二套解析
 - ❌ 禁止在 SceneDelegate 或其他地方自己解析 URL——一律走 `Deeplink(url:)`
 
@@ -150,7 +155,7 @@ enum Deeplink {
 | Push 點擊 | `userNotificationCenter(_:didReceive:)` | 全狀態通用 |
 
 - ✅ Push 的 `didReceive` 是 `nonisolated`，內部用 `Task { @MainActor in ... }` 跳回主執行緒
-- ✅ 三個進入點最終都呼叫 `AppRouter.shared.deeplink(deeplink.makeHostController())`
+- ✅ 三個進入點最終都呼叫 `AppRouter.shared.deeplink(deeplink.makeDestination())`
 - ✅ Push payload 慣例：`{ "deeplink": "mvvmc://posts/1" }`，取 `userInfo["deeplink"]` 餵給 `Deeplink(url:)`
 
 ### URL Scheme（project.yml）

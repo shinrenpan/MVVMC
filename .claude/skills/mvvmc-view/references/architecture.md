@@ -656,6 +656,26 @@ ListSection(items: state.items, send: send)
 
 > 實驗可重跑：MVVMC repo 的 `Experiments/ViewSplitProbe/`。SwiftUI 的行為會隨版本改變，上表若與你的環境不符，以重跑結果為準並回報。
 
+### `send` 在不在表裡？在了，2026-09-11 補量
+
+上表原本有一個沒被說出來的缺口：**第四列標著「MVVMC 形狀」，但它的子組件只收值，沒有 `send`**——而本節上游就規定每個 L2/L3 都要帶 `let send: @MainActor (Action) -> Void`。也就是說，「拆成獨立 struct 就能被跳過」這個唯一的效能閘門，從未在規範自己要求的形狀下被量過。
+
+這個缺口是 Apple 的 `swiftui-specialist` 指出來的。它的〈Not a fix: Hoisting the closure to a stored property on the View〉寫著：View struct 會被自由重建，`let` 的初始式因此重跑並產生新 closure，「**closure comparison heuristics still treat them as unequal under some optimization levels**」。若屬實，第四列的 `B = 0` 在真實 MVVMC 形狀下就不成立。
+
+補量結果（Xcode 27.0 / iOS 26.4 模擬器 / Swift 6.4，同一次執行內對照）：
+
+| 子組件的 `send` | 父層 body | A body | B body |
+|---|---|---|---|
+| 無（＝原第四列） | 1 | 1 | **0** |
+| method reference（`send: handleListAction`，demo 的實際寫法） | 1 | 1 | **0** |
+| inline closure literal（`send: { _ in … }`） | 1 | 1 | **0** |
+
+Debug 與 Release（`-O` + `wholemodule`）兩種最佳化層級結果相同。**`send` 不影響跳過，§7 的主張在帶 `send` 的真實形狀下成立。**
+
+> Apple 那條規則的適用範圍要講清楚，否則下次會被重新誤讀成衝突：它針對的是**自訂 environment key／`FocusedValueKey` 裡的 closure**，「hoisting 到 View 的 stored property」那一段是在說「這不是逃生出口」，不是在量 props 比較。MVVMC 的 `send` 是**明確傳入的 prop**，不走 environment——`architecture.md` 早就禁止 Action 走 environment，而 Apple `environment.md:18` 獨立地給出同一個結論。兩邊其實一致。
+>
+> 但**「一致」是量出來的，不是推出來的**。在補量之前，這裡只有一句沒有證據的宣稱。
+
 ---
 
 ### 拆與不拆的決策準則

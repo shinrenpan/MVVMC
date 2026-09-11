@@ -2,7 +2,21 @@
 
 MVVMC 導航地基的完整可貼實作。三個檔案住在 `Sources/App/`。
 
-> ⚠️ **本檔與 demo 的 `Sources/App/` 是同一份程式碼的兩個副本**（差異僅在此處註解較密）。改動任一邊都要同步另一邊，否則「可貼的模板」會與「跑得起來的實作」漸行漸遠。
+> ⚠️ **下列程式碼逐字取自 demo 的 `Sources/App/`，不是另一份手抄本。** 唯一的來源是那三個檔；本檔只是把它們攤開來方便貼進新專案。
+>
+> 舊版這裡寫的是「改動任一邊都要同步另一邊」——**那條自律失敗過**：v3.2.0 把 `deeplink()` 從「present 一個 VC」改成 `Deeplink.Destination`（切分頁＋推上脈絡）之後，demo、`README.md` 都更新了，這份範本沒有，落後了整整一代，而且還在示範規範已明文禁止的「Router 注入 Close 鈕」。**範本是唯一會被整段貼進新專案的檔案**，所以它是所有消費端裡最不該落後的一個。
+>
+> 改 `Sources/App/` 之後，用這行確認範本沒落後（無輸出即一致）：
+>
+> ```bash
+> python3 - <<'EOF'
+> import re
+> t=open('.claude/skills/mvvmc-navigation/references/navigation-templates.md').read()
+> for name, code in re.findall(r'## (\S+\.swift)\n.*?```swift\n(.*?)\n```', t, re.S):
+>     if code != open(f'Sources/App/{name}').read().rstrip('\n'):
+>         print('STALE:', name)
+> EOF
+> ```
 
 ---
 
@@ -55,14 +69,9 @@ final class AppRouter: NSObject {
     }
     if nav.delegate !== self {
       nav.delegate = self
-      // 自訂 nav.delegate 會壓掉系統的互動式側滑返回，故需手動重新啟用 + 設 delegate 去 gate
-      // （只在 .push 頁面放行，見 gestureRecognizerShouldBegin）。
-      // 邊緣側滑（iOS 26 以前唯一的返回手勢）
       nav.interactivePopGestureRecognizer?.isEnabled = true
       nav.interactivePopGestureRecognizer?.delegate = self
       if #available(iOS 26, *) {
-        // iOS 26 起改成「整頁」都能側滑返回，這是另一個獨立 recognizer——不是上面那個的重複，
-        // 兩個都得啟用，否則 iOS 26 上整頁側滑會失效。刪任一個都會弄壞返回手勢。
         nav.interactiveContentPopGestureRecognizer?.isEnabled = true
         nav.interactiveContentPopGestureRecognizer?.delegate = self
       }
@@ -72,10 +81,6 @@ final class AppRouter: NSObject {
   }
 
   func back(from source: UIViewController, animated: Bool = true) {
-    // fallback 到 navigationController 的原因：sheet 若包一層 UINavigationController 呈現，
-    // `.sheet` 樣式是蓋在 wrapper nav 上、不在葉子 VC 上。葉子 VC 呼叫 back 時自身讀到預設 `.push`，
-    // 只看葉子會誤走 pop（但它是 root、pop 不掉）。往上抓 wrapper nav 的樣式才能正確走 dismiss。
-    // （此複雜度屬 push-based 版：back 以 appTransitionStyle 驅動 pop/dismiss 與 .modal/.fade 自訂轉場，故需之。）
     let style = source.appTransitionStyle != .push
       ? source.appTransitionStyle
       : source.navigationController?.appTransitionStyle ?? .push
@@ -91,9 +96,9 @@ final class AppRouter: NSObject {
     }
   }
 
-  // `from:` 曾經存在但是死參數——它只被用來取 nav，而 destination 本來就必須在同一個
-  // stack 裡（否則 popToViewController 無效）。從 destination 取 nav 還順帶修好一個
-  // 失敗模式：destination 不在 stack 時，舊寫法會通過 guard 然後讓 UIKit 靜默什麼都不做。
+  // 不收 from:——那是死參數。destination 本來就必須在目標 stack 裡，從它身上取 nav
+  // 還能讓「destination 不在任何 stack」這個裝配錯誤落進 assertionFailure，
+  // 而不是讓 UIKit 靜默什麼都不做。
   func backTo(_ destination: UIViewController, animated: Bool = true) {
     guard let nav = destination.navigationController else {
       assertionFailure("AppRouter.backTo(): destination 不在任何 navigation stack 裡")
@@ -124,7 +129,13 @@ final class AppRouter: NSObject {
     source.present(destination, animated: animated)
   }
 
-  func deeplink(_ destination: UIViewController, animated: Bool = true) {
+  /// deeplink 的唯一入口。呼叫端是 SceneDelegate（三個進入點都走這裡），手上只有 window。
+  ///
+  /// ❌ **不注入 Close 鈕。** Router 往別人的 `navigationItem` 塞按鈕，那顆按鈕在 C 層與
+  /// V 層之外被建立、沒有 `viewModel` 可以呼叫，結構上不可能遵守「導覽列按鈕的點擊要走
+  /// `doAction`」；而且它不知道那一頁關閉時該做什麼（送出中的表單、要發 onCallback 的頁）。
+  /// 關閉入口由目的地自己在 V 層提供（見 `SettingsView` 的 `.toolbar`）。
+  func deeplink(_ destination: Deeplink.Destination, animated: Bool = true) {
     let rootVC = UIApplication.shared.connectedScenes
       .compactMap { $0 as? UIWindowScene }
       .first?.keyWindow?.rootViewController
@@ -132,18 +143,32 @@ final class AppRouter: NSObject {
       assertionFailure("AppRouter.deeplink(): 找不到 rootViewController")
       return
     }
-    // 標 .sheet 不是因為它長得像 sheet（這裡是 fullScreen），而是因為 .sheet 的語意是
-    // 「以 present 呈現 → back() 要走 dismiss」。改成別的樣式會讓 back() 誤走 pop。
-    destination.appTransitionStyle = .sheet
-    destination.navigationItem.leftBarButtonItem = UIBarButtonItem(
-      systemItem: .close,
-      primaryAction: UIAction { [weak destination] _ in
-        destination?.dismiss(animated: true)
+
+    switch destination {
+    case let .navigate(tab, stack):
+      guard let tabBar = rootVC as? UITabBarController else {
+        assertionFailure("AppRouter.deeplink(.navigate): rootViewController 不是 UITabBarController")
+        return
       }
-    )
-    let nav = UINavigationController(rootViewController: destination)
-    nav.modalPresentationStyle = .fullScreen
-    rootVC.present(nav, animated: animated)
+      // 已經有 modal 蓋在上面時先收掉，否則切了分頁使用者也看不到
+      tabBar.presentedViewController?.dismiss(animated: false)
+      tabBar.selectedIndex = tab
+      guard let nav = (tabBar.selectedViewController as? UINavigationController) else {
+        assertionFailure("AppRouter.deeplink(.navigate): 該分頁的根不是 UINavigationController")
+        return
+      }
+      // 保留該分頁既有的根（那就是「往回按看得到的列表」），只推上目的地
+      let root = nav.viewControllers.prefix(1)
+      stack.forEach { $0.appTransitionStyle = .push }
+      nav.setViewControllers(Array(root) + stack, animated: animated)
+
+    case let .present(vc):
+      vc.appTransitionStyle = .sheet
+      let nav = UINavigationController(rootViewController: vc)
+      nav.modalPresentationStyle = .fullScreen
+      nav.appTransitionStyle = .sheet
+      rootVC.present(nav, animated: animated)
+    }
   }
 
   func tab(_ index: Int, from source: UIViewController) {
@@ -264,7 +289,7 @@ private extension AppTransitionAnimator {
 
 ## Deeplink.swift
 
-集中式路由。新增一個 deeplink 目標只需改這一檔：加一個 `case` + `init?(url:)` 一個分支 + `makeHostController()` 一個分支。
+集中式路由。新增一個 deeplink 目標只需改這一檔：加一個 `case` + `init?(url:)` 一個分支 + `makeDestination()` 一個分支。回傳 `Destination` 而非單一 `UIViewController`，是因為冷啟動的 deeplink 多半要建**一組** VC（切到分頁 + 把目的地推上該 stack），不是 present 一個孤兒頁。
 
 ```swift
 import UIKit
@@ -294,15 +319,33 @@ extension Deeplink {
   }
 }
 
-// MARK: - HostController Factory
+// MARK: - Destination
 
 extension Deeplink {
-  @MainActor func makeHostController() -> UIViewController {
+  /// deeplink 的目的地是「一組 VC ＋ 一個呈現意圖」，不是單一 VC。
+  ///
+  /// why：只 present 一個詳情頁，冷啟動時會得到一個**孤兒頁面**——使用者的心智模型是
+  /// 「往回按可以看到列表」，而那個 stack 是空的。真正該是 modal 的（獨立 onboarding、
+  /// 強制更新）才用 `.present`。
+  enum Destination {
+    /// 切到某個分頁，並把這一組 VC 推上該分頁的 stack（第一個是脈絡，最後一個是目的地）
+    case navigate(tab: Int, stack: [UIViewController])
+    /// 真正該是 modal 的：獨立於導航脈絡、看完就關
+    case present(UIViewController)
+  }
+
+  @MainActor func makeDestination() -> Destination {
     switch self {
     case .settings:
-      return SettingsHostController(viewModel: .init())
+      // 設定與任何分頁的脈絡無關，關掉就回到原本在看的東西 → modal
+      // 它的關閉入口由 SettingsView 的 .toolbar 自己提供（見 mvvmc-navigation）
+      return .present(SettingsHostController(viewModel: .init()))
+
     case let .postDetail(id):
-      return PostDetailHostController(id: id, title: "Post #\(id)", body: "")
+      // 詳情頁屬於 Posts 分頁的脈絡 → 切分頁 + 推上去，系統返回鈕自然存在
+      return .navigate(tab: 0, stack: [
+        PostDetailHostController(id: id, title: "Post #\(id)", body: "")
+      ])
     }
   }
 }
@@ -326,7 +369,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
     guard let url = URLContexts.first?.url,
           let deeplink = Deeplink(url: url) else { return }
-    AppRouter.shared.deeplink(deeplink.makeHostController())
+    AppRouter.shared.deeplink(deeplink.makeDestination())
   }
 
   func scene(
@@ -347,16 +390,16 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     let window = UIWindow(windowScene: windowScene)
     window.rootViewController = tabBar
-    window.backgroundColor = .systemBackground   // 防止轉場期間露出黑底
+    window.backgroundColor = .systemBackground   // 防止自訂轉場期間露出黑底
     window.makeKeyAndVisible()
     self.window = window
 
     UNUserNotificationCenter.current().delegate = self
 
-    // 進入點 2：冷啟動 URL Scheme（必須在 makeKeyAndVisible() 之後）
+    // 進入點 2：冷啟動 URL Scheme（必須在 makeKeyAndVisible() 之後，確保 rootVC 已存在）
     if let url = connectionOptions.urlContexts.first?.url,
        let deeplink = Deeplink(url: url) {
-      AppRouter.shared.deeplink(deeplink.makeHostController())
+      AppRouter.shared.deeplink(deeplink.makeDestination())
     }
   }
 }
@@ -374,7 +417,7 @@ extension SceneDelegate: UNUserNotificationCenterDelegate {
     guard let urlString = response.notification.request.content.userInfo["deeplink"] as? String,
           let url = URL(string: urlString),
           let deeplink = Deeplink(url: url) else { return }
-    Task { @MainActor in AppRouter.shared.deeplink(deeplink.makeHostController()) }
+    Task { @MainActor in AppRouter.shared.deeplink(deeplink.makeDestination()) }
   }
 
   nonisolated func userNotificationCenter(

@@ -175,4 +175,53 @@ struct BodyCountTests {
     print("PROBE_RESULT skip oneChanged A=\(ch[0]) B2=\(ch[1]) C=\(ch[2])")
     print("PROBE_RESULT skip reordered  A=\(re[0]) B2=\(re[1]) C=\(re[2])")
   }
+
+  /// §7 表格第四列（「MVVMC 形狀」）量的是「子組件只收值」，但規範要求每個
+  /// L2/L3 都帶 `let send: @MainActor (Action) -> Void`。這裡把 send 加回去，
+  /// 對照有無 closure 的差別。sendref = method reference（demo 的實際寫法），
+  /// inline = closure literal。
+  @Test
+  func `does the send closure defeat props-unchanged skipping`() async {
+    // 對照組：無 send（＝現有第四列）
+    let m0 = MVVMCModel()
+    let w0 = host(MVVMCSplitView(viewModel: m0))
+    await settle(w0)
+    BodyCounter.shared.reset()
+    m0.state.a += 1
+    await settle(w0)
+    let baseParent = BodyCounter.shared.count("mvvmc.parent")
+    let baseA = BodyCounter.shared.count("mvvmc.A")
+    let baseB = BodyCounter.shared.count("mvvmc.B")
+
+    // 版本 6：send 是 method reference
+    let m6 = MVVMCSendModel()
+    let w6 = host(MVVMCSendRefSplitView(viewModel: m6))
+    await settle(w6)
+    BodyCounter.shared.reset()
+    m6.state.a += 1
+    await settle(w6)
+    let refParent = BodyCounter.shared.count("sendref.parent")
+    let refA = BodyCounter.shared.count("sendref.A")
+    let refB = BodyCounter.shared.count("sendref.B")
+
+    // 版本 7：send 是 inline closure literal
+    let m7 = MVVMCSendModel()
+    let w7 = host(MVVMCInlineSendSplitView(viewModel: m7))
+    await settle(w7)
+    BodyCounter.shared.reset()
+    m7.state.a += 1
+    await settle(w7)
+    let inlineParent = BodyCounter.shared.count("inline.parent")
+    let inlineA = BodyCounter.shared.count("inline.A")
+    let inlineB = BodyCounter.shared.count("inline.B")
+
+    print("PROBE_RESULT send none    parent=\(baseParent) A=\(baseA) B=\(baseB)")
+    print("PROBE_RESULT send ref     parent=\(refParent) A=\(refA) B=\(refB)")
+    print("PROBE_RESULT send inline  parent=\(inlineParent) A=\(inlineA) B=\(inlineB)")
+
+    // 只驗證實驗有效（A 確實重繪），B 是觀測目標
+    #expect(baseA >= 1)
+    #expect(refA >= 1)
+    #expect(inlineA >= 1)
+  }
 }

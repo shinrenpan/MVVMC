@@ -88,6 +88,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 |---|---|
 | Rule 7 — the test is "does this layer have code other than forwarding", not "is there semantics to add" | `PostList/PostListView.swift` (`ListSection` has layout duties, its 1:1 forwards are legal) |
 | §7's skipping premise: the child must be a **value** type — a child holding `@State` re-runs on reorder | 🚫 — measured in `ViewSplitProbe`; the demo has no reorderable list |
+| §7's skipping premise survives the mandated `let send: @MainActor (Action) -> Void` on the child (both a method reference and a closure literal, Debug and `-O`) | 🚫 — measured in `ViewSplitProbe` 2026-09-11; the demo cannot show a *non*-invalidation |
 | §8's three claims (misplacement / `.id()` fixes it / `.id()` resets state) | 🚫 — **none reproduced under measurement**; annotated in `architecture.md`, not demonstrated |
 | Four-state skeleton × polling interaction (`.task` mounting point) | ❌ — no demo screen polls |
 | L1 holds `let viewModel`, never creates its own | all `*View.swift` |
@@ -139,7 +140,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | `back()` auto-detecting sheet → dismiss | `PostFilter`, `Settings` |
 | `backTo()` / `backToRoot()` | 🚫 — the demo's deepest stack is two levels, where these are indistinguishable from `back()` |
 | `tab()` | `Profile` |
-| `deeplink()` with injected Close button | `Sources/App/Deeplink.swift` |
+| `deeplink()` returning `Deeplink.Destination` — `.navigate(tab:stack:)` selects the tab and pushes onto the existing stack; `.present(_:)` for a true modal. **No injected Close button** | `Sources/App/Deeplink.swift` + `AppRouter.deeplink(_:)` |
 | Three SceneDelegate entry points (foreground / cold start / push) | `Sources/App/SceneDelegate.swift` |
 | Swipe-back gating to `.push` pages only | `AppRouter.gestureRecognizerShouldBegin` |
 | `window.backgroundColor` set | `SceneDelegate.swift` |

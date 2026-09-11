@@ -91,6 +91,38 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   Test for whether a check item will drift: **delete the upstream section it names — does the item still read as an instruction?** If yes it carries its own criteria and will drift; if it degrades into an empty pointer, it will not.
 
   **These four are not a spec-specific disease.** The same round that catalogued them also changed an API and left `README.md` describing the removed one, and changed twenty rules without rebuilding the demo — neither of which is a *restated rule*. The actual shape is **"something changed and its consumers did not"**, and the spec is merely its most visible host. So the question to ask after any change is not "did I restate this somewhere" but **"what reads this?"** — skills, the review skill, `TODO.md`, `SPEC-COVERAGE.md`, both READMEs, the demo, and the probes each consume something here.
+
+  **Ask it with `git grep`, not with memory.** That question was written down on 2026-09-08 and *still* failed three days later, in the very round that wrote it. `59f7e41` renamed `Deeplink.makeHostController()` → `makeDestination()`; the same commit edited `mvvmc-navigation/SKILL.md` — but only the six lines that were *about the Close button*, because that was the commit's topic. Four more mentions sat further down the same file, in the Deeplink section, which did not look related. Then `ebb7e1c`, the documentation-sync pass, touched `CLAUDE.md`, both READMEs, `SPEC-COVERAGE.md`, and `TODO.md` — **no `references/` file was in its list at all**, so `navigation-templates.md` stayed a generation behind and went on demonstrating a shape the rules had just forbidden. A 2026-09-11 sweep found the rename stale in **six** places and `SPEC-COVERAGE.md` carrying a row that contradicted its own text twelve lines earlier.
+
+  None of that needed judgment. It needed one line, run at the moment of the rename:
+
+  ```bash
+  git grep makeHostController          # the old name, everywhere, including references/
+  ```
+
+  So: **after renaming or removing anything, grep the old name across the whole repo before committing.** Enumerate consumers by what mentions the symbol, never by which directory feels like "the docs" — `references/` is where the pasteable code lives, which makes it the *worst* place to leave stale, not a lesser one.
+
+  The same sweep generalized (run it when a round has touched the demo's API):
+
+  ```bash
+  # every demo-specific symbol named in any .md that no longer exists in Sources/ or Tests/
+  python3 - <<'EOF'
+  import re, glob, collections
+  src = "".join(open(f).read() for p in ('Sources/**/*.swift','Tests/**/*.swift')
+                for f in glob.glob(p, recursive=True))
+  PREFIX = r'(?:AppRouter|Deeplink|PostList|PostDetail|PostFilter|Profile|Settings|UserDetail|AppTransition)'
+  hits = collections.defaultdict(list)
+  for pat in ('.claude/skills/**/*.md', '*.md', 'Experiments/**/*.md'):
+      for f in sorted(glob.glob(pat, recursive=True)):
+          for i, line in enumerate(open(f).read().splitlines(), 1):
+              for tok in re.findall(rf'`({PREFIX}[A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)\(?`?', line):
+                  if tok.endswith('.swift'): continue
+                  if tok.split('.')[-1].rstrip('(') not in src: hits[tok].append(f"{f}:{i}")
+  for k, v in sorted(hits.items()): print('STALE', k, '→', ', '.join(v))
+  EOF
+  ```
+
+  Two hits are known and deliberate, so treat anything **else** it prints as real: the Android column of `mvvmc-skip/references/android-router.md` (those are Kotlin-side names, not demo symbols), and the `Deeplink.makeHostController` in the paragraph above — this file tells the story of that rename, so it necessarily names the symbol that no longer exists.
 - This file may hold only what belongs to no single layer: the layer table, creation order, file structure, layer boundaries, and data flow.
 - **A new skill needs a symlink in `~/.claude/skills/`**, or it only exists while working inside this repo — which is precisely when you least need it. The skills are meant to travel to whatever project you are actually writing MVVMC code in.
 
