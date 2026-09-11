@@ -39,7 +39,7 @@ Cross-cutting concerns:
 | ViewModel unit tests | `mvvmc-testing` |
 | async / Task / actor / Sendable | `swift-concurrency` |
 | Feature review · single-file deep review | `mvvmc-review` · `mvvmc-deep-review` |
-| Skip.tools → Android | `mvvmc-skip` |
+| Skip.tools → Android | `mvvmc-skip` — 🧊 **凍結的筆記，不是規範**（從未被任何 Android 建置驗證；不得用來推導或修改 iOS 規則；每輪一致性檢查不涵蓋它） |
 
 ### Creation Order
 

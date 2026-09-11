@@ -13,7 +13,9 @@ Pending work tracker. Not part of the spec — see `CLAUDE.md` for the architect
 
 - [x] ~~**Demo coverage gaps / 規範成長超過 demo**~~ — **settled 2026-08: the spec is allowed to reach further than the demo.** The six demo features cover every structural rule; the remaining ❌ are scenario rules (pagination, forms, polling, deep return), and stuffing those into the demo would trade clarity for coverage. They are verified through `Experiments/GenerationProbe/` instead — five features built from the spec alone, each typechecked under Swift 6. Stated at the top of `SPEC-COVERAGE.md`, so ❌ now reads "not in the demo" rather than "never checked".
 
-- [ ] **Skip × V-layer Action Pattern** *(blocked: 需要有 Android target 的專案才能實測，非「還沒想」)* — `mvvmc-skip` 眉角 #6（巢狀 enum 在 Kotlin 要完整限定）目前只涵蓋 `doAction(.view(...))`。V 層的 `send(.rowDidTap)` 同樣是巢狀 enum 的 leading-dot 呼叫，理論上也會踩到，且 `send` 現在的型別是 `@MainActor (Action) -> Void`（Skip 如何轉譯 global-actor 隔離的函式型別未知）。**需要有 Android 目標的專案實測後才寫進 skill**——沒驗證過的規則不該進 skip，那份是實測筆記。
+- [ ] **Skip × V-layer Action Pattern** *(blocked: 需要有 Android target 的專案才能實測，非「還沒想」)* — `mvvmc-skip` 眉角 #6（巢狀 enum 在 Kotlin 要完整限定）目前只涵蓋 `doAction(.view(...))`。V 層的 `send(.rowDidTap)` 同樣是巢狀 enum 的 leading-dot 呼叫，理論上也會踩到，且 `send` 現在的型別是 `@MainActor (Action) -> Void`（Skip 如何轉譯 global-actor 隔離的函式型別未知）。**需要有 Android 目標的專案實測後才寫進 skill**——沒驗證過的規則不該進 skip。
+
+  **2026-09-11 追記：整份 `mvvmc-skip` 已標為凍結的筆記。** 它從未被任何 Android 建置驗證過，是十一份 skill 裡唯一實測／上架回報／demo 編譯三者皆無的一份，而按 `Experiments/README.md` 軸 2 的標準（依豁免密度排風險，不依主題），它同時是風險最高的一份。留著是採用決策——跨平台已排除 Flutter，Swift 只剩 Skip 這條路——不是驗證結果。**所以這條 TODO 不再是「待補的規則」，而是「解除凍結的條件之一」。**
 
 - [ ] **規範成長速度超過 demo** — `SPEC-COVERAGE.md` 現在有 **22 個 ❌ 對 15 個 🚫**（2026-09 那輪新增 20 列之後重數）。多數 ❌ 是 2026-08 生成測試補進來的**場景規範**（分頁、表單、輪詢、深層回傳、alert、樂觀更新），而 demo 六個 feature 完全沒有這些場景。需要決定走哪條路：(a) 擴充 demo 涵蓋主要場景，(b) 接受「規範涵蓋面大於 demo」並在 SPEC-COVERAGE 開頭講清楚這件事是刻意的。目前是預設 (b) 但沒有明講。
 
