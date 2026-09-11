@@ -36,24 +36,54 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 
 **Conflicts worth a decision (none is bug-level):**
 
-- [ ] **`@ViewBuilder private func` for section splitting.** `mvvmc-view` bans computed properties but *recommends* `@ViewBuilder` helpers; Apple's `structure.md` bans both, for the invalidation reason §7 already measured and states. **The rule and its own evidence disagree inside one file** — this is the cheapest of the lot and needs no new measurement.
-- [ ] **`@MainActor` on the ViewModel.** `mvvmc-viewmodel`'s headline rule says "always explicit, 定案"; Apple says always *unless* the project enables Main Actor default isolation. The skill's mode A/C table already handles this — only the headline is absolute. Reword the headline, do not reopen the decision.
+- [ ] **`@ViewBuilder private func` for section splitting — a deliberate divergence to document, not a defect.** Apple's `structure.md` says always factor a section into its own `View` type, never a computed property *or* a `@ViewBuilder` helper. `mvvmc-view` bans computed properties but allows the helper. **This is not the self-contradiction it first looked like**: rule 10 states plainly that `@ViewBuilder func` 「只換來可讀性」, §7 measures it (`B body = 1`, the unrelated section re-runs), and the decision criteria then *recommend* it for static sections specifically to avoid a `struct`'s boilerplate cost. The spec is internally consistent and is making a cost trade-off Apple does not. Decide whether to keep the trade-off and cite Apple beside it — do not "fix" it.
 - [ ] **Localization typing.** Apple puts `LocalizedStringResource` (not `String`) on view models; MVVMC stores translated `String` in State. Note this does **not** collide with the global "don't pass `LocalizedStringKey` as a parameter" rule — different type, different failure.
 - [ ] **`var state: State` as a single `@Observable` property.** Apple names this exact shape AVOID (per-property observation granularity). MVVMC already concedes the cost in `architecture.md` §7's ⚠️ block. Recommend keeping the shape and citing Apple there as external corroboration — but the concession should say it is a known trade-off *that Apple documents*, not an unexamined one.
 
 **Pure gaps — Apple has concrete rules where MVVMC has none:**
 
 - [ ] ForEach identity: `id: \.self`, `.indices`, `.enumerated().offset`, content-derived ids, expensive-to-hash ids (`foreach.md`). Overlaps the open `@State` misplacement measurement above.
-- [ ] List fast path: unary rows only — no top-level `switch`, bare `if`, or `AnyView` row. **`AnyView` appears nowhere in the spec.** `-LogForEachSlowPath YES` makes it checkable.
+- [ ] List fast path: unary rows only — no top-level `switch` or bare `if` in a row. `-LogForEachSlowPath YES` makes it checkable. **Scope this to `List` rows only.** `AnyView` is *not* an open gap: `mvvmc-deep-review` already covers it, measured under both the Xcode 26.4.1 and 27 SDKs, and reaches a **better-supported conclusion than Apple's blanket phrasing** — `AnyView`-wrapped children with unchanged props are still skipped, so the cost is unstable structural identity (broken animation, reset `@State`), not extra body runs. Apple's fast-path claim is about a different mechanism inside `List`; confirm it is actually a separate one before writing anything.
 - [ ] `init` must be constant-time (`structure.md`). Most likely to be violated in C, where HostControllers are built.
 - [ ] `Equatable` as a *performance* gate — the `@Observable` setter skips invalidation only for Equatable types. `mvvmc-model` justifies Equatable only via tests and `onChange`.
 - [ ] C layer: `window.windowScene.screen`, never `window.screen`; V layer must use `@Environment(\.displayScale)` / `GeometryReader`, never `UIScreen`; `prefersInterfaceOrientationLocked` (iOS 26+) — the spec has no orientation rule at all.
 - [ ] AppDelegate vs SceneDelegate responsibility split, and Apple's "migrate the four lifecycle methods as a set, not individually".
-- [ ] Testing: `@Suite(.serialized)` — **the word appears nowhere in `.claude/skills/`**, although `Experiments/ViewSplitProbe/README.md` records this repo being burned by exactly that, with a contaminated measurement reaching the spec. Also missing: `withKnownIssue`, `.disabled(if:)`, `Attachment.record(value)`.
+- [ ] Testing: `@Suite(.serialized)` — the word appears nowhere in `.claude/skills/`, although `Experiments/ViewSplitProbe/README.md` records this repo being burned by exactly that, with a contaminated measurement reaching the spec. **Exposure is narrower than that history suggests**: the invariant tests `mvvmc-testing` actually recommends (scan the String Catalog, scan source) only *read* files and are safe in parallel. The vulnerable shape is global mutable test state — which is what the probe has and what the spec never asks for. So this is worth one sentence naming the hazard, not a new rule. Also missing: `withKnownIssue`, `.disabled(if:)`, `Attachment.record(value)`.
 
 **One real conflict in the demo, not the spec:**
 
-- [ ] `AppRouter.deeplink()` reads `UIApplication.shared.connectedScenes…first?.keyWindow` (`Sources/App/AppRouter.swift`). Apple's rule 11 forbids walking global scene state and prescribes the fix this case needs — *add a parameter*: `deeplink(_:from scene:)`. All three entry points hold a scene. Stateless Router is unaffected, and the `.first` multi-window mis-target disappears with it. Note the spec pins `UIApplicationSupportsMultipleScenes: false`, so this is latent, not live.
+- [ ] `AppRouter.deeplink()` reads `UIApplication.shared.connectedScenes…first?.keyWindow` (`Sources/App/AppRouter.swift`). Apple's rule 11 forbids walking global scene state and prescribes exactly the fix this case needs — *add a parameter*: `deeplink(_:from scene:)`. All three SceneDelegate entry points already hold a scene; `AppRouter.swift`'s own comment admits the caller 「手上只有 window」 while the callee reaches back out to the global list. Stateless Router is unaffected and the `.first` multi-window mis-target disappears with it.
+
+  **Ready to do — deliberately not done in the round that found it (2026-09-11).** It is latent, not live: the spec pins `UIApplicationSupportsMultipleScenes: false`, so `.first` cannot currently pick the wrong window. Against that, it changes the Router's signature, which forces `navigation-templates.md` to regenerate, a `SPEC-COVERAGE.md` row to move, and every downstream project to re-read the rule. **That round had just spent itself cleaning up drift created by a hurried API change three days earlier** — shipping a second signature change in the same sitting is the behaviour that produced the mess, not the fix for it. Do it in its own round, with the demo rebuilt and the template check re-run in the same pass.
+
+  When picking it up: `deeplink(_:from scene: UIWindowScene)`, resolve `rootViewController` from `scene.keyWindow`, update the three call sites in `SceneDelegate.swift`, regenerate the template, and move the `SPEC-COVERAGE.md` Navigation row. The exemption in `mvvmc-review` does not need touching — it is about method *names*, not signatures.
+
+**Settled the same day — `@ViewBuilder` does NOT need renaming to `@ContentBuilder`.** Apple's `swiftui-whats-new-27` documents a "ContentBuilder unification", which reads like a migration. It is not one. The iOS 27 SDK spells it out (`SwiftUICore.swiftinterface:8598`):
+
+```swift
+@available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *)
+public typealias ContentBuilder = SwiftUICore.ViewBuilder
+```
+
+**They are the same type.** `ViewBuilder`'s own declaration carries no `deprecated:` attribute, and the alias back-deploys to iOS 13. Renaming every `@ViewBuilder private func` in the spec would be a no-op edit of a type alias — **do not do it, and do not let the "unification" wording talk anyone into it later.**
+
+What *did* change is the type-checking model behind that one type: builders no longer constrain block contents to conform to `View`, so `buildBlock()` now yields `EmptyContent` / `TupleContent` instead of `EmptyView` / `TupleView`. That switch is tied to the **linked SDK, not the spelling** — it lands the moment a project rebuilds with Xcode 27, whichever attribute name the source uses. Apple lists five ways it breaks the build:
+
+| Shape | Symptom |
+|---|---|
+| `.overlay(Color.blue.opacity(0.7))` as a direct argument rather than a trailing closure | `ambiguous use of 'opacity'` |
+| Another module declaring a type that shadows a SwiftUI one (its own `Color`, `Text`, …) | `ambiguous use of 'red'` |
+| `TupleView<…>` hard-coded in a nested generic parameter | type mismatch; use `TupleContent` |
+| An empty builder body (or a `#if` with no `#else`) in a target that has MapKit | `EmptyMapContent` does not conform to `View` |
+| Swift Charts with ~10+ branches **and a deployment target below 27** | `unable to type-check this expression in reasonable time` |
+
+The demo hits none of the five (it builds clean under Xcode 27). **The last row is the one that matters here**: it fires only when back-deploying, and MVVMC's baseline is iOS 17 — so any project on this spec that uses Swift Charts with a wide `switch` is exposed. The fix is to lift the branches into an `@ChartContentBuilder` function. This belongs with the two `Info.plist` launch/submission blockers below: same class, same trigger, **"things to check when upgrading Xcode", not "things to check when starting a project."**
+
+> ⚠️ **Four entries in this section were wrong when first written, and all four came from relaying a subagent's framing without re-deriving it.** `@ViewBuilder` was called a self-contradiction (the spec is consistent — rule 10, §7 and the decision criteria agree); `AnyView` was called an uncovered gap (`mvvmc-deep-review` covers it, with a *better*-evidenced conclusion than Apple's); `.serialized` was called a live trap (the invariant tests the spec recommends only read files). The corrections are in the entries themselves.
+>
+> The fourth is the one worth keeping as a warning. A `@MainActor` entry was filed reading "the headline is absolute, reword it" — but that question was **already `[x]` settled at the top of this very file**, with a re-open condition, a three-mode table in `mvvmc-viewmodel`, and a matching row in `mvvmc-review`'s exemption table. Filing it again created a second, weaker copy of a settled decision **inside the file that exists to track decisions** — precisely the failure `CLAUDE.md` opens with. It has been deleted.
+>
+> **A comparison against an external authority reads as authoritative, and that is exactly why every claim it produces has to be re-derived against this repo before being written down** — including a check that the question is not already answered here. Same standard the spec applies to its own measurements.
 
 **Assessed and dismissed:** `adopt-c-bounds-safety` (no C), `app-intents-specialist` / `app-intents-whats-new-27` (no App Intents), `building-document-based-swiftui-applications` (no document app). `audit-xcode-security-settings` yields only Phase 1 + entitlements for a pure-Swift target, drives everything through Xcode's MCP tools, and writes pbxproj/xcconfig — **which XcodeGen overwrites on the next `xcodegen generate`**. `device-interaction` is genuinely complementary to `ios-build-run` (UI hierarchy with `hitPoint`, synthesized touch/keyboard, `commandLineArguments` without editing the scheme) and overlaps it only on build/install/screenshot — but it is a subagent skill driving `DeviceInteraction*` MCP tools, and `~/Library/Developer/Xcode/CodingAssistant/mcp-servers.json` is currently **empty**. Confirm the tools resolve before writing any of it into `ios-build-run`.
 
