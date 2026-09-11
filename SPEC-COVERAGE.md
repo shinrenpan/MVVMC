@@ -100,7 +100,8 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Action handler extracted as `@MainActor private func`, kept beside `body` | `PostListView.handleListAction` |
 | Every interaction goes through `Task { await doAction(.view(...)) }` | `PostListView`, `PostFilterView` |
 | Preview injects mock state, wrapped in `#if DEBUG` | `PostListView`, `UserDetailView` (both spell out `Post.mocks` in full — the `.mocks` shorthand does not compile) |
-| Four-state block (loading / error / empty / content) | `PostListView` — covers loading / error / content; **empty state not shown** |
+| Four-state block (loading / error / empty / content) | `PostListView` — all four |
+| §1's **ordering** rule: test for content first, status second | `PostListView` — **and the demo violated it until 2026-09-11.** It switched on status at the top level with a guard on `.loading` only, so a failed pull-to-refresh fell into `.error` and replaced a populated list with `ContentUnavailableView`. `handleAPIResponse` had preserved `state.posts` correctly; the View discarded it. This is the exact failure §1 predicts, sitting in the one consumer that is supposed to keep the spec honest |
 | `@Bindable` inside `body` for a `TextField` binding | ❌ — demo has no text input |
 | Display helper (`private extension Model { var color: Color }`) | ❌ |
 | Slot pattern (`@ViewBuilder` container) | ❌ |
@@ -161,7 +162,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Router (navigation intent) assertion | `PostListViewModelTests` |
 | Whole-state comparison via `Equatable` | `PostListViewModelTests` |
 | ViewAction that chains into an API request (annotated, slow) | `PostListViewModelTests.didFilterUser` |
-| Parameterised tests / `#require` / `confirmation` | 🚫 — optional techniques; the demo's tests don't need them |
+| Parameterised tests / `#require` / `confirmation` | `SwiftTestingTechniqueTests` — **added 2026-09-11 for the spec's sake, not the demo's.** The three examples in `patterns.md` previously carried only a toolchain stamp (Swift 6.3.1 / Xcode 26.4.1) and nothing re-verified them; `TODO.md` recorded them as not re-run under Xcode 27. Living in the test target turns every `xcodebuild test` into a re-verification |
 
 ## Concurrency — `swift-concurrency`
 

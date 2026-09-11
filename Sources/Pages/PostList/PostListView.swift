@@ -5,12 +5,21 @@ struct PostListView: View {
 
   var body: some View {
     Group {
-      switch viewModel.state.api.fetchPosts {
-      case .loading where viewModel.state.posts.isEmpty:
-        ProgressView()
-      case let .error(message):
-        ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
-      default:
+      // 四態：先看有沒有內容，再看狀態（`mvvmc-view` §1）。
+      // 反過來寫（外層 switch status）會讓「下拉刷新失敗」落進 .error 分支，
+      // 把使用者眼前的清單整個換成錯誤畫面——VM 已經保留了 state.posts，是 View 把它丟掉。
+      if viewModel.state.posts.isEmpty {
+        switch viewModel.state.api.fetchPosts {
+        case .prepare, .loading:
+          ProgressView()
+        case let .error(message):
+          ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+        case .success:
+          ContentUnavailableView("No Posts", systemImage: "tray")
+        }
+      } else {
+        // 已經有內容：內容永遠留著。失敗只能表現成附加提示，不可蓋掉既有畫面。
+        // 這裡選擇靜默（規範明示這是產品決策，不指定作法）。
         ListSection(posts: viewModel.state.posts, send: handleListAction)
       }
     }

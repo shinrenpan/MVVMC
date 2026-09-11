@@ -120,7 +120,11 @@ func `didFilterUser sets filterUserId`() async {
 
 ## Swift Testing 實用手法（按需採用）
 
-以下不是規範，是遇到對應情境時比土法煉鋼更好的寫法。三段範例都在 demo 的測試 target 內編譯驗證過（Swift 6.3.1 / Xcode 26.4.1，2026-08）。
+以下不是規範，是遇到對應情境時比土法煉鋼更好的寫法。
+
+> 三段範例**活在 demo 的測試 target 裡**（`Tests/SwiftTestingTechniqueTests.swift`），每次 `xcodebuild test` 都會重新編譯並執行。
+>
+> 先前這裡寫的是「在 demo 的測試 target 內編譯驗證過（Swift 6.3.1 / Xcode 26.4.1，2026-08）」——**那是戳記不是檢查**：程式碼當時貼進去編過就移除了，工具鏈換代之後沒有任何東西會發現它失效，而 `TODO.md` 確實記著它們在 Xcode 27 下未重跑。**戳記會過期而不出聲，測試不會。** 下面的程式碼與那個檔案同形；若有出入，以那個檔案為準。
 
 **參數化測試**——同一段驗證跑多組輸入，失敗時報告會指出是哪一組：
 

@@ -127,8 +127,72 @@ The other five axes all test the spec **as a document**. This one tests what hap
 
 ---
 
+## Axis 0 — subtraction: "what may enter, and what should leave?"
+
+*(Added 2026-09-11. Every axis above hunts for things to **add**. None of them ever removes anything, and that turned out to be the spec's actual instability.)*
+
+### The measurement that prompted it
+
+Rule lines (`✅`/`❌`/`⚠️` bullets) across `.claude/skills/`, per release tag:
+
+```
+v1.0.0   36        added over the whole history:  117
+v2.0.0   70        removed:                        12
+v3.0.0  129        ratio:                        ~10:1
+v3.5.0  141
+```
+
+Nearly 4× in four months, with essentially no deletions — and half of those twelve were rewrites, not removals. Set that beside axis 5's own warning, *"new rules multiply the interaction surface faster than they add coverage"*, and **"every round of fixes creates the next round's bugs" stops being bad luck and becomes arithmetic.** The interaction surface of 141 rules is more than ten times that of 36. No amount of care at the authoring end compensates for a body of rules that only grows.
+
+A full inventory on the same day classified **217 normative statements** (counting table rows and prose rules, so finer-grained than the bullet count above) by what actually backs each one:
+
+**115 of them — 53% — had nothing behind them at all**: not a measurement, not a demo file, not a field report. Per layer: M/VM 52 of 89, V/C 38 of 72, cross-cutting 25 of 56. The remainder are backed by the demo compiling them (`D`, the largest group), a probe (`M`, concentrated in `mvvmc-view` §7–§8 and `swift-concurrency`), or a shipped project (`F`, the rarest and the most valuable).
+
+### The finding that matters more than the 53%
+
+**"Unbacked" is not one category, and treating it as a deletion list is wrong.** It is three, and only the middle one pays:
+
+1. **Axioms** — statements that *define* what MVVMC is: DTOs never leave M, `doAction` is the only entry point, C is the only layer that routes. These cannot be verified because they are not claims about the world; they are the architecture. `mvvmc-model`'s "State must never hold a DTO" says so in its own text — *"這是 M 層三段抽象存在的唯一理由"*. **Freeze them. Never ask for evidence.**
+
+2. **Unaudited rules** — correct, consequential rules that simply nobody has checked. The same inventory turned up `mvvmc-view` §1 (test for content first, status second) sitting in this pile — **and `PostListView` was violating it in exactly the way §1 predicts**: it switched on status at the top level, so a failed pull-to-refresh replaced a populated list with an error screen. The ViewModel had preserved `state.posts` correctly; the View threw it away. **This is where the payoff is.** The rule was right, the consumer was broken, and the inventory is what surfaced it.
+
+3. **Prudential judgments** — "in this situation, do it this way", about situations nobody here has run. `patterns.md`'s polling / pagination / form sections hold **19 hard rules** for scenarios `SPEC-COVERAGE.md` marks ❌. These are not wrong; they are **unearned**, and they are written in the imperative voice of category 1.
+
+**The instability is category 3 wearing category 1's clothes.** A `❌` that has shipped nowhere and been measured nowhere still gets enforced by `mvvmc-review`, still has to be kept consistent with every new rule, and still multiplies the interaction surface — while carrying none of the authority its phrasing claims.
+
+Across the whole spec the inventory found **16 unbacked hard prohibitions** (`❌` / 禁止 / 必須 / 一律), **9 of them in `swift-concurrency`** — the densest pocket, and the one where being confidently wrong costs the most.
+
+### The entry gate
+
+A statement may enter the spec as a `❌`/`✅` hard rule only if it is:
+
+- **an axiom** — it defines the architecture, and is written in a place that says so; or
+- **measured** — a probe in `Experiments/` produces the number, and the rule carries the toolchain version; or
+- **compiled** — the demo demonstrates it, and `SPEC-COVERAGE.md` names the file; or
+- **reported** — a shipped project hit it, and the entry says which.
+
+Everything else enters as `⚠️` advisory, and **`mvvmc-review` must not file against advisory text.** Whichever it is, **the entry must say which** — that is what made this inventory possible at all, and what makes the next one cheap.
+
+External documentation — Apple's agent skills, a framework's release notes, a well-argued blog post — is **a source of questions, never a source of rules**. The 2026-09-11 comparison against Apple's Xcode 27 skills produced roughly fifteen findings of which **four were wrong**, all in the same way: text compared against text generates conflicts that dissolve the moment you check this repo. The one that survived was the one Apple stated as a falsifiable mechanism, which was then *measured* (§7's table had never included the `send` closure the spec mandates). → **Let an external claim tell you what to measure. Never let it tell you what to write.**
+
+### Expiry conditions must name an observation, not a version
+
+Four rules currently expire on a version number or a date: `swift-concurrency` §versions, its module-default assertion, the `withTaskCancellationShield` note, and `patterns.md`'s toolchain stamp. Exactly one is written correctly — `cc:37`, which retires itself *"the day the probe stops showing a difference"* — and on the Swift 6.4 bump it was the only one that did not misfire.
+
+Better than either: **make the claim verify itself.** `patterns.md`'s three Swift Testing examples carried a stamp (*"compiled under Swift 6.3.1 / Xcode 26.4.1"*) that nothing re-checked; moving them into `Tests/SwiftTestingTechniqueTests.swift` means every `xcodebuild test` re-verifies them and no schedule is needed. **A stamp expires silently. A test in the target cannot.**
+
+### When to open a round, and when to stop
+
+Open a round only on one of: **a toolchain major upgrade**, **a field report carrying a re-runnable command**, or **a probe result that moved**. Curiosity is not a trigger — a review invited to find something will always find something, and the record above shows that five times in a row what it found was material added by the previous round.
+
+Stop on **severity**, never on exhaustion (see the pitfalls above) — and add the subtraction question to every round's close: **which rule did this round make unnecessary?** The wizard case is the worked example: an upstream decision dissolved the deep-return machinery downstream. A round that adds rules and removes none has not finished; it has deferred.
+
+---
+
 ## Where this leaves the spec
 
 As of 2026-08, after a full pass on all five axes: the *content* is close to complete — the last round's findings were all navigation problems (the rule existed, the index didn't point at it) rather than missing rules. What remains unverified is the one axis that cannot be run here: **sustained use on a real project**. Everything above tests the spec as a document and as instructions; none of it tests whether it is pleasant to work with over months.
+
+> **Revised 2026-09-11 by axis 0.** "The content is close to complete" was measuring the wrong thing. Judged by coverage it was true; judged by *backing* it was not — 53% of the spec's normative statements had none, and one of them (§1's four-state ordering) was being violated by the demo in precisely the way it warns about. **Completeness and stability are different properties, and only the first one had been measured.** The spec does not need more content. It needs its existing content sorted into what is definitional, what is measured, and what is merely opinion in a hard voice.
 
 When picking up spec work again, the cheapest useful move is a generation probe with a requirement shape that hasn't been tried yet (editing existing data, file upload with progress, offline/caching). If it comes back with only navigation-level findings, the content is holding.
