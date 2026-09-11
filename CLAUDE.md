@@ -132,21 +132,9 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
 
   This is the step most easily forgotten, and the cost is not hypothetical: `mvvmc-structure` went a whole session without one, and **`mvvmc-navigation` went 33 days** — during which two shipped apps wrote their entire Router layer with no access to it. One of them cited the skill *by name* in its planning document, a file it could not open. **Verify delivery, do not assume it**: `ls ~/.claude/skills/` after adding a skill, and treat a skill named in a plan but absent from that listing as a hard stop.
 
-- **Pin the skills to a tag before writing app code.** `~/.claude/skills/mvvmc-*` are symlinks; what they point *at* decides whether every project on this machine silently tracks HEAD. They used to point at this repo's working tree, so a rule edited here changed the rules of every app instantly — no version, no notice, and no way to say afterwards which version an app was written against. The three shipped apps each ended up on a different MVVMC, and they had no way not to.
+- **Do not build machinery to "pin" the skills — it was tried on 2026-09-11 and made things worse.** Two mechanisms were built in one day: copying the skills into each project (a **no-op** — skill name precedence is *Enterprise > Personal > Project*, so the `~/.claude/skills/` copy always wins; [docs](https://code.claude.com/docs/en/skills.md)), then repointing the symlinks at a tag-pinned worktree (which *worked*, and bought almost nothing: pinning is per-machine, so every project still moves together, while editing the spec stopped taking effect until you switched modes). Both were reverted. The symlinks point at this repo's working tree, which is what they should do.
 
-  ```bash
-  scripts/pin-skills.sh v3.6.0     # point the symlinks at a worktree frozen on that tag
-  scripts/pin-skills.sh --status   # pinned to what? is there a newer tag?
-  scripts/pin-skills.sh --dev      # point back at the working tree — for editing the spec itself
-  ```
-
-  It parks a detached worktree at `~/.mvvmc-pinned` and repoints the symlinks there. Upgrading is then an explicit act. **Nothing arrives while you sleep.**
-
-  > **Do not "fix" this by copying the skills into a project.** That was tried on 2026-09-11 and is a no-op: skill name precedence is **Enterprise > Personal > Project** ([docs](https://code.claude.com/docs/en/skills.md) — *"With `deploy` in both `~/.claude/skills/` and the project's `.claude/skills/`, `/deploy` runs the personal one"*). While anything sits in `~/.claude/skills/` under the same name, a project-level copy is never loaded. The assumption that project beat personal was written into three repositories before it was checked; the correction is this section.
-
-  The trade-off worth stating: pinning is **per machine, not per project**. Every project moves when you re-pin. Per-project versions would mean deleting the personal symlinks so project copies win — which re-creates the delivery failure recorded below (a skill that silently isn't there). Guaranteed delivery was chosen over per-project divergence, and divergence is what you were complaining about anyway.
-
-  **Stability is not something the spec reaches by being written well enough — it is something a consumer gets by pinning.** No amount of verification upstream helps a project that silently follows HEAD; and the reverse, a pinned consumer stays stable while the spec is still being worked on, which is what makes it safe to keep improving this repo at all.
+  **What the user actually wanted was a spec that does not move under them — and that is a discipline question, not a delivery-mechanism question.** The architecture has been stable for four months (`Sources/` changed meaningfully twice in twelve release intervals); what moved was the prose, because a round was opened whenever someone felt like looking. The control for that is axis 0's trigger conditions, not a worktree.
 
 - **Before another round of spec work, read `Experiments/README.md`** — it records which kind of check finds which kind of problem, and the pitfalls that cost the most to learn (a perfect enforcement score is not evidence of a good spec; every round of fixes creates the next round's bugs).
 
