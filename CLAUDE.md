@@ -151,6 +151,8 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   | For | working *on* the spec; exploratory code | any project whose code you intend to keep |
   | Upgrade | happens to you | you run a command |
 
+  **Spectra projects get this automatically** — `spectra-bootstrap` step 6 vendors and pins, so nothing new to remember. That skill previously said the opposite (*「全專案自動可用，不需複製」*), which is precisely where the three shipped apps' divergence came from; it and the `SpecDemo` template were corrected in the same pass (both live in other repos).
+
   **Stability is not a property the spec reaches by being written well enough — it is a property a consumer gets by pinning.** No amount of verification upstream helps a project that silently follows HEAD. And the reverse: a pinned project stays stable even while the spec is still being worked on, which is what makes it safe to keep improving this repo at all.
 
 - **Before another round of spec work, read `Experiments/README.md`** — it records which kind of check finds which kind of problem, and the pitfalls that cost the most to learn (a perfect enforcement score is not evidence of a good spec; every round of fixes creates the next round's bugs).
