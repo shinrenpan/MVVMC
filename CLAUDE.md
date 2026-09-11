@@ -132,6 +132,27 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
 
   This is the step most easily forgotten, and the cost is not hypothetical: `mvvmc-structure` went a whole session without one, and **`mvvmc-navigation` went 33 days** — during which two shipped apps wrote their entire Router layer with no access to it. One of them cited the skill *by name* in its planning document, a file it could not open. **Verify delivery, do not assume it**: `ls ~/.claude/skills/` after adding a skill, and treat a skill named in a plan but absent from that listing as a hard stop.
 
+- **The global symlink is the *development* channel, not the way a real project should consume this spec.** Because `~/.claude/skills/mvvmc-*` points into this repo's working tree, **every project on this machine silently tracks HEAD**: a rule edited here changes the rules of every app instantly, with no version, no notice, and no way to say afterwards which version an app was written against. That is not a hypothetical either — the three shipped apps are each on a different MVVMC, and they had no way not to be.
+
+  So a project that wants to build on a *stable* MVVMC vendors a pinned copy instead:
+
+  ```bash
+  scripts/vendor-skills.sh <project-dir> [tag]     # copy the skills at a tag + write a version stamp
+  scripts/vendor-skills.sh --check <project-dir>   # has the copy been edited? is a newer tag out?
+  ```
+
+  It copies the ten spec skills into `<project>/.claude/skills/` and writes `MVVMC-VERSION` (tag, commit, date). `mvvmc-skip` is excluded on purpose — it is frozen, unverified notes, not part of the spec. Upgrading is then an explicit act: re-run the command with a newer tag. **Nothing arrives while you sleep.**
+
+  Two channels, two purposes, and they must not be confused:
+
+  | | `~/.claude/skills/` symlink | vendored copy |
+  |---|---|---|
+  | Tracks | HEAD, live | one tag, frozen |
+  | For | working *on* the spec; exploratory code | any project whose code you intend to keep |
+  | Upgrade | happens to you | you run a command |
+
+  **Stability is not a property the spec reaches by being written well enough — it is a property a consumer gets by pinning.** No amount of verification upstream helps a project that silently follows HEAD. And the reverse: a pinned project stays stable even while the spec is still being worked on, which is what makes it safe to keep improving this repo at all.
+
 - **Before another round of spec work, read `Experiments/README.md`** — it records which kind of check finds which kind of problem, and the pitfalls that cost the most to learn (a perfect enforcement score is not evidence of a good spec; every round of fixes creates the next round's bugs).
 
   **Start with axis 0 (subtraction) — it is the one that decides whether a round helps.** Rule lines went 36 → 141 in four months with 117 additions against 12 removals, and that ratio, not carelessness, is why "every round of fixes creates the next round's bugs". Axis 0 carries the entry gate (what may enter as a hard rule at all), the three-way split of unbacked statements (axiom / unaudited / prudential — only the middle one pays), the rule that external documentation is a source of questions and never of rules, and the trigger conditions for opening a round. **A round that adds rules and removes none has not finished.**
