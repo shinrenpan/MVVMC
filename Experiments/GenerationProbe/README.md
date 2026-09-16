@@ -92,7 +92,7 @@ Eight gaps remained, and their character had shifted — from "this scenario is 
 | Gap | Outcome |
 |---|---|
 | **Splitting Views isn't enough.** A high-frequency field living inside a low-frequency Model makes that Model `!=` itself every tick, so every child holding it redraws — no amount of View splitting helps. The real gate is in M | 🔴 new rule: high-frequency fields become parallel State fields; §7 now says the first gate is in M, not V |
-| **§11's `@Bindable` example doesn't compile** — the `$` is on the wrong side. Verified: `cannot convert value of type 'VM' to expected argument type 'Bindable<VM>'` | 🔴 fixed: `$bVM` at the call site, `bVM.state.x` inside |
+| **§11's `@Bindable` example doesn't compile** — the `$` is on the wrong side. Verified: `cannot convert value 'bVM' of type 'VM' to expected type 'Bindable<VM>', use wrapper instead` (string corrected 2026-09-16 — the original paraphrase was copied into `mvvmc-view/references/architecture.md` verbatim) | 🔴 fixed: `$bVM` at the call site, `bVM.state.x` inside |
 | **Optimistic update races the silent poll** — both rules were added in this same cycle, and an in-flight poll response overwrites the optimistic value | 🔴 race documented with its two common resolutions; the point is knowing it exists, since it only appears on slow networks |
 | `.task` can only live on the L1 — a child's `send` is synchronous, so `.task { send(...) }` cancels the moment it returns. Two rules multiplied into a third that neither states | 🔴 stated |
 | Bool flags guarding poll re-entry can latch permanently (fail-closed: polling never restarts) | 🔴 stated as a prohibition |

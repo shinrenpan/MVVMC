@@ -1042,7 +1042,7 @@ struct UserSection: View {
 }
 ```
 
-> **`$` 的位置很容易寫反**（實測 Swift 6.3.1）：`@Bindable var bVM = viewModel` 之後，`bVM` 是 **VM 本身**、`$bVM` 才是 `Bindable<VM>`。所以**呼叫端傳 `$bVM`**、**func 內直接用 `bVM.state.x`**（`Bindable` 本身是 dynamicMemberLookup，會給你 Binding）。寫成 `userSection(bVM: bVM)` 會得到 `cannot convert value of type 'VM' to expected argument type 'Bindable<VM>'`。
+> **`$` 的位置很容易寫反**（實測 Swift 6.3.1 與 6.4，結果相同）：`@Bindable var bVM = viewModel` 之後，`bVM` 是 **VM 本身**、`$bVM` 才是 `Bindable<VM>`。所以**呼叫端傳 `$bVM`**、**func 內直接用 `bVM.state.x`**（`Bindable` 本身是 dynamicMemberLookup，會給你 Binding）。寫成 `userSection(bVM: bVM)` 會得到 `cannot convert value 'bVM' of type 'VM' to expected type 'Bindable<VM>', use wrapper instead`。
 >
 > **建議做法**：`@Bindable` 在 `body` 內宣告一次，拆分後的 `@ViewBuilder private func` 若需要 Binding，以 `bVM: Bindable<VM>` 作為參數接收。
 >
