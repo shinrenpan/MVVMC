@@ -36,7 +36,6 @@ DispatchQueue 遷移對照請見：`references/migration.md`
   >
   > **重開條件（當場驗得出來，不綁版本號）**：`Experiments/ConcurrencyProbe/` 在**開／關該 flag 兩種設定下不再產生不同結果**時，本條作廢。綁版本號是錯的觸發器——這條失效的方式不是 toolchain 上升，是那個 flag 從 opt-in 畢業成預設。**probe 跑不出差異的那天，它自己就會說。**
 - **要並行 / 離開 actor 得明講**：用 `Task { @concurrent in ... }` 讓 Task 從主 actor 外起跑（見〈離開主 actor〉）。
-- **6.3 Region-based isolation 正式可用**：編譯器能證明更多情況的資料安全，`Sendable` 假陽性大減。
 
 ## 專案脈絡
 
@@ -239,7 +238,7 @@ case .searchTextChanged(let text):
 
 - **priority 只是提示**：結構化 Task 繼承父 priority，`Task.detached` 不繼承；系統會為防優先反轉自動提權——別把 priority 當保證。
 
-- **6.3+**：`Task { try await ... }` 若**未處理**丟出的錯誤，編譯器會**警告**——要嘛在 Task 內處理，要嘛存下 Task 之後檢查。
+- **6.4+**：`Task { try await ... }` 若**未處理**丟出的錯誤，編譯器會**警告**——要嘛在 Task 內處理，要嘛存下 Task 之後檢查。
 - **`withTaskCancellationShield { }`——已出貨，但 iOS 17+ 專案還用不到。** 關鍵清理不想被取消打斷時它是正解，Swift 6.4 / iOS SDK 27 已隨附，但簽名上標著 `@available(anyAppleOS 27.0, *)`：
 
   ```swift
@@ -286,8 +285,8 @@ await withTaskGroup(of: UIImage?.self) { group in
 - **`@MainActor` 型別隱含 `Sendable`**：actor 隔離本身保證安全。
 - **class 要 `final` + 全不可變**才安全；否則得 `@unchecked Sendable` 自己負責。
 - **6.3 `weak let`**：有 `weak var` 成員而被迫 `@unchecked` 的 class，改成 `weak let`（不可變）即可正常 `Sendable`。
-- **6.3 `~Sendable`**：某型別刻意不該 `Sendable`，用 `~Sendable` 明講（且不擋子類別 Sendable）。
-- **6.3 Region-based isolation** 正式可用：以前要硬加 `@Sendable` / `@unchecked` 的地方，很多已不需要。
+- **6.4 `~Sendable`**：某型別刻意不該 `Sendable`，用 `~Sendable` 明講（且不擋子類別 Sendable）。
+- **Region-based isolation（Swift 6 language mode 起預設，決定它的是 `SWIFT_VERSION` 不是 toolchain 版本）**：以前要硬加 `@Sendable` / `@unchecked` 的地方，很多已不需要。
 
 ---
 

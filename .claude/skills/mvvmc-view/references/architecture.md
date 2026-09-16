@@ -163,7 +163,7 @@ struct SearchBar: View {
   <details><summary>這個標註的實際效果（Swift 6.3.1 實測）</summary>
 
   - **隱含 `@Sendable`**：編譯器把 `@MainActor (Action) -> Void` 的實際型別顯示為 `@MainActor @Sendable (Action) -> Void`，跨並發邊界傳遞不必再自己標
-  - **但不是「不標就會壞」**：未標註的 `(Action) -> Void` 在單純情況下靠 region-based isolation（Swift 6.3）也能通過檢查——編譯器逐案證明它沒被別處引用。那是證明不是保證，closure 一旦被存進會跨邊界傳遞的型別就會擋
+  - **但不是「不標就會壞」**：未標註的 `(Action) -> Void` 在單純情況下靠 region-based isolation（Swift 6 language mode 起預設）也能通過檢查——編譯器逐案證明它沒被別處引用。那是證明不是保證，closure 一旦被存進會跨邊界傳遞的型別就會擋
   - **代價**：`@MainActor` 函式型別**不能**轉成非隔離的 `@Sendable (Action) -> Void`（編譯器報 `loses global actor 'MainActor'`）。若有 API 要求非隔離回呼，這裡會卡——SwiftUI 場景幾乎都在主 actor 上，所以實務上碰不到，但要知道它存在
 
   所以標註的主要理由是**語意一致**（與 VM 的 closure 同一套），不是「不標會編不過」。
