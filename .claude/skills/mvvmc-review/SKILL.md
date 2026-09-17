@@ -31,6 +31,8 @@ argument-hint: [feature-path]
 | L3 以下的組件後綴命名不統一 | `architecture.md` §4「不強制」 |
 | 參數數量超過參考點 | `architecture.md`「不是強制門檻」 |
 | DTO 的命名風格 | `mvvmc-model`「不強制任何風格」 |
+| M 層三區塊（State / Domain Models / DTOs）未全部實作 | `mvvmc-model`「不強制全部實作」 |
+| **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | `mvvmc-skip`〈眉角對照表〉、`mvvmc-hostcontroller`〈iOS-branch 範圍註記〉「不得依本 skill 開單」。該 skill 是 `disable-model-invocation`，審查 agent 不會自動載入它，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該表，不得開單** |
 | ViewAction 用動詞風格而非事件風格 | `architecture.md`「推薦／避免」是**偏好不是硬規則**——只能列 ⚠️ |
 | Router 的方法名稱與數量跟 demo 的七個方法不吻合（`sheet()` / `backTo()` / `tab()` 等一個都不存在也一樣）——**查的是那張表的覆蓋率，不是 API 表面積** | `mvvmc-navigation`〈你的 Router 必須覆蓋的格子〉：「這一節列的是『要能做到什麼』，不是『必須叫什麼名字』……對齊方式是在專案 CLAUDE.md 寫一張對照表，**不需要改任何程式碼**」 |
 
@@ -38,9 +40,16 @@ argument-hint: [feature-path]
 >
 > 稽核方式（可機械執行）：
 > ```
-> grep -rn "不得.*開單\|不該當成違規\|不在規範範圍\|不強制\|規範不指定\|不是強制門檻" .claude/skills/
+> grep -rn "不得.*開單\|不該當成違規\|不在規範範圍\|不強制\|規範不指定\|不是強制門檻" \
+>   .claude/skills/ --exclude-dir=mvvmc-review --exclude-dir=mvvmc-deep-review
 > ```
-> 上游命中數應與本表列數相符。**2026-09-08 首次稽核時，上游 14 條、本檔 0 條。**
+> **判準不是數字相符，是每個上游命中都能對應到本表某一列**（多個命中可以對應同一列——同一條豁免常在 skill、`references/`、範例碼裡各寫一次）。**對不回來的那個就是漏的。**
+>
+> ⚠️ **兩個 `--exclude-dir` 不能拿掉。** 原本的寫法掃整個 `.claude/skills/`，於是把**本檔自己**也算進「上游」——本表每加一列，「上游」就跟著 +1（連上面那行 grep 指令自己都會被命中），數字等式因此**結構上不可能成立**。2026-09-17 實測：原式 34 = 本檔自身 12 + `mvvmc-deep-review` 2（那是另一份清單的豁免，不歸本表管）+ 真上游 20。
+>
+> **2026-09-08 首次稽核：上游 14 條、本檔 0 條。2026-09-17 第二次：真上游 20 個命中對應 13 條豁免，本表補到 14 列後只剩 0 條對不回來。**
+>
+> **2026-09-17 補**：Skip 那一列在此之前是 0 命中。它遲了三個月，成因是把「補 Skip 規則」（需要 Android 實測）和「補範圍排除」（不含任何 Skip 知識，正確性不依賴任何建置）當成同一件事擋在外面。**範圍排除不需要等驗證。**
 
 ---
 

@@ -113,7 +113,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Rule | Demonstrated in |
 |---|---|
 | Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — the demo's only callback (`PostFilter`) is same-feature, so it uses the standard shape |
-| iOS-branch scope note (`#else` branches are `mvvmc-skip`'s, not this skill's) | 🚫 — the demo has no Skip target |
+| iOS-branch scope note (`#else` branches are `mvvmc-skip`'s, not this skill's) | 🚫 — the demo has no Skip target. Exercised instead in the `MVVMC-Skip` fork (baseline `v1.1.0` `db9013d`, skip 1.9.3, Migration Log M0–M21) — that fork, not this demo, is what backs `mvvmc-skip` |
 | `@MainActor final class : UIHostingController<FeatureView>` | all six `*HostController.swift` |
 | Standard init: ViewModel injected from outside | `PostListHostController.swift` |
 | Variant: primitives in, ViewModel assembled inside C | `PostDetailHostController.swift` |

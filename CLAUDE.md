@@ -39,7 +39,7 @@ Cross-cutting concerns:
 | ViewModel unit tests | `mvvmc-testing` |
 | async / Task / actor / Sendable | `swift-concurrency` |
 | Feature review · single-file deep review | `mvvmc-review` · `mvvmc-deep-review` |
-| Skip.tools → Android | `mvvmc-skip` — 🧊 **凍結的筆記，不是規範**（從未被任何 Android 建置驗證；不得用來推導或修改 iOS 規則；每輪一致性檢查不涵蓋它） |
+| Skip.tools → Android | `mvvmc-skip` — 🧊 **凍結的筆記，不是規範**（驗證綁在 `v1.1.0` baseline 上、會過期而沒有機制會發現；不得用來推導或修改 iOS 規則；每輪一致性檢查不涵蓋它） |
 
 ### Creation Order
 
@@ -91,6 +91,8 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   Test for whether a check item will drift: **delete the upstream section it names — does the item still read as an instruction?** If yes it carries its own criteria and will drift; if it degrades into an empty pointer, it will not.
 
   **These four are not a spec-specific disease.** The same round that catalogued them also changed an API and left `README.md` describing the removed one, and changed twenty rules without rebuilding the demo — neither of which is a *restated rule*. The actual shape is **"something changed and its consumers did not"**, and the spec is merely its most visible host. So the question to ask after any change is not "did I restate this somewhere" but **"what reads this?"** — skills, the review skill, `TODO.md`, `SPEC-COVERAGE.md`, both READMEs, the demo, and the probes each consume something here.
+
+  **That list is complete only for consumers inside this repo — and the enumeration hides it.** Every name on it is reachable by `git grep`; **shipped projects are not**, so asking "what reads this?" returns zero for them by construction, no matter how carefully it is asked. A dated instance: `mvvmc-view` rule 5 gained `let send: @MainActor (Action) -> Void` on **2026-08-13** (`798906a`); `FoodEntropy`'s three `SettingsView` `send` declarations were written **2026-07-23** and still carry the old shape. **That is drift, not a violation** — the same file's `ExtendSheet`, written 2026-09-16, is the one that actually missed the rule, and only `git log` separates the two. **The current answer is to accept the drift**: each project finds it when it runs `mvvmc-review`, which is the enforcement path that already exists. Do not build a notification mechanism for this — that is the axis 0 trap, and this repo already paid for it once with the pinning machinery. Tracked in `TODO.md`.
 
   **Ask it with `git grep`, not with memory.** That question was written down on 2026-09-08 and *still* failed three days later, in the very round that wrote it. `59f7e41` renamed `Deeplink.makeHostController()` → `makeDestination()`; the same commit edited `mvvmc-navigation/SKILL.md` — but only the six lines that were *about the Close button*, because that was the commit's topic. Four more mentions sat further down the same file, in the Deeplink section, which did not look related. Then `ebb7e1c`, the documentation-sync pass, touched `CLAUDE.md`, both READMEs, `SPEC-COVERAGE.md`, and `TODO.md` — **no `references/` file was in its list at all**, so `navigation-templates.md` stayed a generation behind and went on demonstrating a shape the rules had just forbidden. A 2026-09-11 sweep found the rename stale in **six** places and `SPEC-COVERAGE.md` carrying a row that contradicted its own text twelve lines earlier.
 

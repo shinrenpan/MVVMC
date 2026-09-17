@@ -10,19 +10,23 @@ disable-model-invocation: true
 > 理由：多數 MVVMC 專案是純 iOS，不該為了少數跨平台專案讓這份規範常駐。決定要跨平台時再點名即可 ——
 > 載入後整個 session 都有效。
 
-> 🧊 **狀態：凍結的筆記，不是規範的一部分（2026-09-11 起）。**
+> 🧊 **狀態：凍結的筆記，不是規範的一部分（2026-09-11 起；驗證狀態 2026-09-17 更正）。**
 >
-> **本檔從未被任何 Android 建置驗證過。** 這個 repo 沒有 Skip target（`SPEC-COVERAGE.md` 的 C 層那列寫著「🚫 — the demo has no Skip target」），`TODO.md` 的 Skip 項目也明記「需要有 Android target 的專案才能實測」。換句話說，`mvvmc-*` 其餘每一份都至少有實測、上架回報或 demo 編譯其中之一撐著，**只有這一份三者皆無**。
+> **已被 Android 建置實測過，但驗證有邊界、而且會過期。** 證據是 `MVVMC-Skip`：fork 自 MVVMC `v1.1.0`（`db9013d`），Skip Lite，skip 1.9.3 + skip-ui 1.0.0，Migration Log M0–M21 全數 commit，最後一筆 2026-06-26。Settings 於 Pixel 9 模擬器渲染（M13）、PostList 完整資料渲染（M16）、Router 端到端（M20–M21）、`skip app launch --ios` 與 baseline 一致。本檔眉角表的編號 #2–#10 就是沿用該 repo 的 Migration Log。
 >
-> 留著的理由是採用決策而非驗證：跨平台已排除 Flutter，而 Swift 這條路只有 Skip，所以真要做的那天不該從零開始。**但「唯一的選項」不會讓內容變正確。**
+> **2026-09-11 原本寫的是「本檔從未被任何 Android 建置驗證過」，那是錯的**，2026-09-17 更正。成因值得留著：那句是在本 repo 裡往內看寫出來的——「這個 repo 沒有 Skip target」為真，於是推論成「沒有任何專案驗證過」，而沒有往旁邊看 fork。`SPEC-COVERAGE.md` 那句 `🚫 — the demo has no Skip target` 到今天仍然成立，它講的是 demo，不是全世界。
 >
-> 由此而來的三條紀律：
+> **驗證涵蓋不到的面向**（在 `MVVMC-Skip` 全數 0 命中，不要當成「試過沒問題」）：持久層（SwiftData / SkipSQL）、AdMob、Swift Charts、PhotosUI／影像、`Localizable.xcstrings` 多語系。推播通知是整個 `SceneDelegate` 被 `#if !SKIP` 排除，**Android 側連進入點都沒有**。
+>
+> **所以凍結仍然成立，只是理由換了**：不是「沒驗過」，而是**驗證會過期，而沒有任何機制會發現**。baseline 是 `v1.1.0`，本 repo 的 `Sources/` 此後又走了 9 個 commit。
+>
+> 由此而來的三條紀律（與驗證與否無關，全部保留）：
 >
 > - **不得從本檔推導或修改任何 `mvvmc-*` 的 iOS 規則。** 本檔整份都是對那些規則的豁免，方向是單向的
-> - **規範每一輪的一致性檢查不涵蓋本檔。** 其他 skill 改了不需要回頭同步這裡——沒有人驗得了，硬同步只會製造看起來很像證據的東西
-> - ⚠️ **現在不要對 Skip 專案跑 `mvvmc-review`。** 上游已經好了一半：`mvvmc-hostcontroller`、`mvvmc-navigation`、`mvvmc-view`、`mvvmc-viewmodel` 各有一條範圍註記（「看到 `#else` 分支就停手，那些偏離是明文要求，不得依本 skill 開單」），`mvvmc-model` 沒有。**但 `mvvmc-review` 本身 `Skip` / `Android` 是 0 命中**——而審查清單才是檢查項實際開火的地方，讀 skill 的註記救不了一個照清單逐條跑的 agent。`Experiments/README.md` 軸 2 記過後果：**五個假發現，照著修會靜默弄壞 Android 的畫面渲染。** 那些豁免要等真有專案能驗證時才補；現在補等於把未驗證的內容送進唯一的執法路徑
+> - **規範每一輪的一致性檢查不涵蓋本檔。** 其他 skill 改了不需要回頭同步這裡——硬同步只會製造看起來很像證據的東西
+> - ⚠️ **對 Skip 專案跑 `mvvmc-review` 之前，先確認它的〈開單前的排除清單〉裡還有 Skip 那一列。** `Experiments/README.md` 記過後果：**五個假發現，照著修會靜默弄壞 Android 的畫面渲染。** 該列 2026-09-17 已補上；在那之前 `mvvmc-review` 的 `Skip` / `Android` 是 0 命中。**豁免範圍不只 `#else` 分支**——三層內部有無條件的語法偏離（巢狀 enum 完整限定、`Result` 提為具型別 let、巢狀 case 解構拆成兩層 switch），那些不在任何 `#if` 裡。另外，單一 layer skill 的範圍註記只有 `mvvmc-hostcontroller` 有，`mvvmc-navigation` 那行只是 `Info.plist` 指路、不是豁免，`view` / `viewmodel` / `model` 三份沒有——**直接讀單一 skill 的 agent 不受保護，排除清單是唯一實際擋得住的地方**
 >
-> **解除凍結的條件**：有一個實際用 Skip 建置成功的專案。屆時要做的第一件事是**逐條對照本檔重跑**，把「觀測值」換成「在 X 專案、Skip 版本 Y 下實測」，而不是直接信任它。
+> **解除凍結的條件**：在**當前**的 MVVMC baseline 上重跑一次 Skip 建置成功（`v1.1.0` 那次不算數了）。屆時第一件事是**逐條對照本檔重跑**，把「觀測值」換成「在 X 專案、Skip 版本 Y 下實測」，而不是直接信任它。
 
 > ⚠️ **本檔的「症狀」全部是觀測值，不是規則。** 診斷手冊跟規範不同——規範可以被**違反**（拿碼比對就知道），診斷手冊只會**過期**，而且沒有任何機制會發現。
 >
@@ -41,7 +45,15 @@ iOS 側的 M/VM/V/C 規範請參考 `mvvmc-model`、`mvvmc-viewmodel`、`mvvmc-v
 
 ## 核心前提
 
-**iOS 架構零改動。** M / VM / V / C 的分層、`doAction` 單一進入點、`Router` enum、UIKit HostController — 這些都不因為要支援 Android 而改變。跨平台是「加上 `#if !SKIP` 分支」達成的，不是「重構成兩邊都能用的樣子」。
+**iOS 架構零改動——精確的意思是三分，不是字面上的零行。** 實測 `MVVMC-Skip` 對 baseline `db9013d` 的差異：
+
+| 面向 | 改動 |
+|---|---|
+| 分層邊界、`doAction` 單一進入點的形狀、`Router` enum、HostController 與 AppRouter 的職責劃分 | **0** |
+| M / VM / V 三層**內部**的 Swift 語法 | 有改動，全部落在下方眉角表編號內（M 4 行、VM 66 行、V 105 行） |
+| 鷹架層（`App/AppDelegate.swift`、`App/SceneDelegate.swift`） | +12 行 access modifier |
+
+跨平台是「加上 `#if !SKIP` 分支與 Skip 友善語法」達成的，不是「重構成兩邊都能用的樣子」。**三層內部有改動不等於架構有改動**——但也不要反過來宣稱三層一行都沒動，那是假的，而且會讓審查者把看到的偏離當成違規。
 
 | 允許改動 | 禁止改動 |
 |---|---|
