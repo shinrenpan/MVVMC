@@ -39,7 +39,7 @@ Cross-cutting concerns:
 | ViewModel unit tests | `mvvmc-testing` |
 | async / Task / actor / Sendable | `swift-concurrency` |
 | Feature review · single-file deep review | `mvvmc-review` · `mvvmc-deep-review` |
-| Skip.tools → Android | `mvvmc-skip` — 🧊 **凍結的筆記，不是規範**（驗證綁在 `v1.1.0` baseline 上、會過期而沒有機制會發現；不得用來推導或修改 iOS 規則；每輪一致性檢查不涵蓋它） |
+| Skip.tools → Android | **本 repo 沒有規範**（`mvvmc-skip` 於 2026-09-17 移除）。要做時讀 [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip)：Migration Log M0–M21（每條含 `Why` 與 `Verification`）與 Idiom #3–#10 |
 
 ### Creation Order
 
@@ -124,7 +124,7 @@ Cross-VC result   → child VM: await onCallback?(.xxx) → parent C → AppRout
   EOF
   ```
 
-  Two hits are known and deliberate, so treat anything **else** it prints as real: the Android column of `mvvmc-skip/references/android-router.md` (those are Kotlin-side names, not demo symbols), and the `Deeplink.makeHostController` in the paragraph above — this file tells the story of that rename, so it necessarily names the symbol that no longer exists.
+  One hit is known and deliberate, so treat anything **else** it prints as real: the `Deeplink.makeHostController` in the paragraph above — this file tells the story of that rename, so it necessarily names the symbol that no longer exists. (Until 2026-09-17 there was a second known hit, the Android column of `mvvmc-skip/references/android-router.md`; that skill was removed, and with it the exception.)
 - This file may hold only what belongs to no single layer: the layer table, creation order, file structure, layer boundaries, and data flow.
 - **A new skill needs a symlink in `~/.claude/skills/`**, or it only exists while working inside this repo — which is precisely when you least need it. The skills are meant to travel to whatever project you are actually writing MVVMC code in.
 

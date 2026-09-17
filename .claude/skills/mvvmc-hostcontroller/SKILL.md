@@ -115,7 +115,7 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 
 ## 核心規則
 
-> ⚠️ **本 skill 規範 iOS 分支。** 跨平台專案 `#if !SKIP` 的 `#else` 分支另見 `mvvmc-skip`（#9 C 層形狀、強引用規則、#10 生命週期），**那些偏離是明文要求，不得依本 skill 開單**。審查時看到 `#else` 分支就停手——`mvvmc-skip` 是 `disable-model-invocation`，做審查的 agent 不會自動載入它。
+> ⚠️ **本 skill 規範 iOS 分支。** 跨平台專案 `#if !SKIP` 的 `#else` 分支不歸本 skill 管，**那些偏離是明文要求，不得依本 skill 開單**——審查時看到 `#else` 就停手。依據在 [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip)（Idiom #9 C 層形狀與強引用規則、#10 生命週期，以及 Migration Log M0–M21 的逐步紀錄）。**本 repo 不再保有 Skip 規範**，所以做審查的 agent 手上不會有判斷依據，只能停手不能自行裁決。
 
 **強制宣告：**
 - ✅ `@MainActor`（class 層級）

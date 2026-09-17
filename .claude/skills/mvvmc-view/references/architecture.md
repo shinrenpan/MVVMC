@@ -439,7 +439,7 @@ struct FeatureView: View {
 - ViewModel 生命週期由 HostController 管理（UIKit 導航棧）
 - 與 Router、Coordinator 整合需要外部建立 VM
 - 此規範與 `mvvmc-hostcontroller` skill 對齊（該 skill 明確禁止 View 自建 ViewModel）
-- ⚠️ **本節規範 iOS 分支。** `#if !SKIP` 的 `#else` 分支裡出現 `@State private var viewModel = ...` 是 `mvvmc-skip` #9 的**明文要求**（Android 的 C 層是 SwiftUI `View` + `@State`，Compose 的 `trackState()` 需要 `MutableState` 背板），**不得依本節開單**。改成 `let` 會讓 Android 畫面停止重繪，而且編譯完全正常
+- ⚠️ **本節規範 iOS 分支。** `#if !SKIP` 的 `#else` 分支裡出現 `@State private var viewModel = ...` 是 [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) Idiom #9 的**明文要求**（Android 的 C 層是 SwiftUI `View` + `@State`，Compose 的 `trackState()` 需要 `MutableState` 背板），**不得依本節開單**。改成 `let` 會讓 Android 畫面停止重繪，而且編譯完全正常
 
 ### 模板
 

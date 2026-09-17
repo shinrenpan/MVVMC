@@ -32,7 +32,7 @@ argument-hint: [feature-path]
 | 參數數量超過參考點 | `architecture.md`「不是強制門檻」 |
 | DTO 的命名風格 | `mvvmc-model`「不強制任何風格」 |
 | M 層三區塊（State / Domain Models / DTOs）未全部實作 | `mvvmc-model`「不強制全部實作」 |
-| **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | `mvvmc-skip`〈眉角對照表〉、`mvvmc-hostcontroller`〈iOS-branch 範圍註記〉「不得依本 skill 開單」。該 skill 是 `disable-model-invocation`，審查 agent 不會自動載入它，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該表，不得開單** |
+| **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) 的 Idiom #3–#10、`mvvmc-hostcontroller`〈iOS-branch 範圍註記〉「不得依本 skill 開單」。**本 repo 已不保有 Skip 規範**，審查 agent 手上沒有判斷依據，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該 repo，不得開單** |
 | ViewAction 用動詞風格而非事件風格 | `architecture.md`「推薦／避免」是**偏好不是硬規則**——只能列 ⚠️ |
 | Router 的方法名稱與數量跟 demo 的七個方法不吻合（`sheet()` / `backTo()` / `tab()` 等一個都不存在也一樣）——**查的是那張表的覆蓋率，不是 API 表面積** | `mvvmc-navigation`〈你的 Router 必須覆蓋的格子〉：「這一節列的是『要能做到什麼』，不是『必須叫什麼名字』……對齊方式是在專案 CLAUDE.md 寫一張對照表，**不需要改任何程式碼**」 |
 

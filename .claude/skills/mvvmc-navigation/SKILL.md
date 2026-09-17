@@ -192,7 +192,7 @@ info:
 
 > 兩條都**綁 linked SDK**：用舊 Xcode 建的既有 app 不受影響，**改用 Xcode 27 重新建置的那一刻才生效**。所以這是升 Xcode 時要查一次的東西，不是寫新專案時才查。
 >
-> ⚠️ **`UISceneDelegateClassName` 在跨平台（Skip）專案要寫死模組名、不能用變數**——見 `mvvmc-skip`〈`Info.plist` 的地雷〉。
+> ⚠️ **`UISceneDelegateClassName` 在跨平台（Skip）專案要寫死模組名、不能用變數**——見 [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) 的 Migration Log（M7 / M10 記錄了這個踩點）。
 
 ---
 
