@@ -53,13 +53,9 @@ Each decides the wording of a rule that is currently hedged. None is bug-level; 
 - [ ] AppDelegate vs SceneDelegate responsibility split, and Apple's "migrate the four lifecycle methods as a set, not individually".
 - [ ] Testing: `@Suite(.serialized)` — the word appears nowhere in `.claude/skills/`, although `Experiments/ViewSplitProbe/README.md` records this repo being burned by exactly that, with a contaminated measurement reaching the spec. **Exposure is narrower than that history suggests**: the invariant tests `mvvmc-testing` actually recommends (scan the String Catalog, scan source) only *read* files and are safe in parallel. The vulnerable shape is global mutable test state — which is what the probe has and what the spec never asks for. So this is worth one sentence naming the hazard, not a new rule. Also missing: `withKnownIssue`, `.disabled(if:)`, `Attachment.record(value)`.
 
-**One real conflict in the demo, not the spec:**
+**One real conflict in the demo, not the spec — done 2026-10-07.** `AppRouter.deeplink()` walked `UIApplication.shared.connectedScenes…first?.keyWindow`; Apple's `app-resizability` rule 11 forbids it and prescribes the fix used: `deeplink(_:in scene: UIWindowScene)`, scene taken from each entry point (`openURLContexts`, `willConnectTo`, `response.targetScene`). Deferred on 2026-09-11 as latent; iPhone Duo (first iPhone with multiple scenes) was the trigger to do it in its own round. Demo rebuilt, 18 tests pass, template re-diffed against `Sources/App/` (identical), cold/warm URL deeplinks run by hand on the iPhone Duo simulator (iOS 27.1). **One thing the plan did not foresee:** carrying `response` into `Task { @MainActor in }` is a Swift 6 error (`UNNotificationResponse` is not `Sendable`) — extract `targetScene` first. Written into `mvvmc-navigation`.
 
-- [ ] `AppRouter.deeplink()` reads `UIApplication.shared.connectedScenes…first?.keyWindow` (`Sources/App/AppRouter.swift`). Apple's rule 11 forbids walking global scene state and prescribes exactly the fix this case needs — *add a parameter*: `deeplink(_:from scene:)`. All three SceneDelegate entry points already hold a scene; `AppRouter.swift`'s own comment admits the caller 「手上只有 window」 while the callee reaches back out to the global list. Stateless Router is unaffected and the `.first` multi-window mis-target disappears with it.
-
-  **Ready to do — deliberately not done in the round that found it (2026-09-11).** It is latent, not live: the spec pins `UIApplicationSupportsMultipleScenes: false`, so `.first` cannot currently pick the wrong window. Against that, it changes the Router's signature, which forces `navigation-templates.md` to regenerate, a `SPEC-COVERAGE.md` row to move, and every downstream project to re-read the rule. **That round had just spent itself cleaning up drift created by a hurried API change three days earlier** — shipping a second signature change in the same sitting is the behaviour that produced the mess, not the fix for it. Do it in its own round, with the demo rebuilt and the template check re-run in the same pass.
-
-  When picking it up: `deeplink(_:from scene: UIWindowScene)`, resolve `rootViewController` from `scene.keyWindow`, update the three call sites in `SceneDelegate.swift`, regenerate the template, and move the `SPEC-COVERAGE.md` Navigation row. The exemption in `mvvmc-review` does not need touching — it is about method *names*, not signatures.
+  **Still open from the same line of thought:** `UIApplicationSupportsMultipleScenes: false` stays pinned. Not verified: a second scene *of the demo itself* — the manual run had Safari beside the demo, which is two apps, not two scenes. Also unexamined: Apple's `scene-lifecycle-task.md` lists push notifications under "stays in AppDelegate", while the demo sets `UNUserNotificationCenter.current().delegate` in `SceneDelegate` — with several scenes, each would overwrite it. `targetScene` makes routing correct either way, so this is a question, not a defect.
 
 **Settled the same day — `@ViewBuilder` does NOT need renaming to `@ContentBuilder`.** Apple's `swiftui-whats-new-27` documents a "ContentBuilder unification", which reads like a migration. It is not one. The iOS 27 SDK spells it out (`SwiftUICore.swiftinterface:8598`):
 
@@ -90,7 +86,32 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 
 **Assessed and dismissed:** `adopt-c-bounds-safety` (no C), `app-intents-specialist` / `app-intents-whats-new-27` (no App Intents), `building-document-based-swiftui-applications` (no document app). `audit-xcode-security-settings` yields only Phase 1 + entitlements for a pure-Swift target, drives everything through Xcode's MCP tools, and writes pbxproj/xcconfig — **which XcodeGen overwrites on the next `xcodegen generate`**. `device-interaction` is genuinely complementary to `ios-build-run` (UI hierarchy with `hitPoint`, synthesized touch/keyboard, `commandLineArguments` without editing the scheme) and overlaps it only on build/install/screenshot — but it is a subagent skill driving `DeviceInteraction*` MCP tools, and `~/Library/Developer/Xcode/CodingAssistant/mcp-servers.json` is currently **empty**. Confirm the tools resolve before writing any of it into `ios-build-run`.
 
-## Blocked on tooling — iPhone Duo (foldable)
+## iPhone Duo (foldable) — unblocked 2026-10-07, measuring
+
+**解除條件已達成（2026-10-07）**：Xcode 27.1 RC（27A9275）本機在、`simctl` 有 iOS 27.1 runtime（24A94232）與 iPhone Duo。第一個落地的是 Router（見上方 `deeplink(_:in:)`）。以下素材**仍然不是規則**，進規範要過 `Experiments/README.md` 的 entry gate。
+
+### Demo 在 Duo 模擬器上的手動實跑（2026-10-07，iOS 27.1 / 24A94232，Xcode 27.1 RC 27A9275，`deeplink(_:in:)` 版）
+
+使用者手動操作、截圖確認。**全部通過，demo 不需要為 Duo 改任何程式**：
+
+- 外螢幕冷啟動：列表正常；tab bar 自動變直、在狀態列下方；內容不壓狀態列／鏡頭。
+- 外螢幕詳細頁 → 打開：停在同一頁（不重建），返回鈕移到右側直欄（27.1 垂直 nav bar），返回正常。
+- 內螢幕開 Settings sheet（`.medium`/`.large` detents）→ 闔上：sheet 存活，關閉正常。內螢幕 sheet 置中、toolbar 橫向。**外螢幕半高 sheet 的 toolbar 仍是橫的**——與上方研究筆記「外螢幕有 toolbar 的 sheet 顯示為垂直」不一致；FoodEntropy 的全螢幕 Safari sheet 則變直。差別可能是 sheet 高度，**未驗證**。
+- URL 冷／熱啟動與推播點擊（`response.targetScene`）三個進入點都導到正確頁面。
+- 非架構觀察：內螢幕上內文單行橫跨全寬並越過折線——V 層 readable width 的問題，不是規則。
+- **沒測到**：demo 自己的第二個 scene（`UIApplicationSupportsMultipleScenes: false`；使用者測的是 Safari 與 demo 並排，兩個 app）；半開（折線 active）姿態；內螢幕旋轉。
+
+### FoodEntropy 帶回的素材（2026-10-07，跨 session，可重跑的附 branch／commit）
+
+依據等級照原樣保留：**實測** = FoodEntropy 在 Duo 模擬器跑過；**文件** = 只有 Apple 文件／Tech Talk；**二手** = 第三方整理，引用前要對回原文。
+
+- **`sizeThatFits`（候選規則，待 MVVMC 自己的 probe）**：包進 SwiftUI 的 AdMob `BannerView` 沒實作 `sizeThatFits` 時，**app 執行中由單欄轉兩欄**（Duo 內螢幕直向冷啟動 → 轉橫向）會出事；冷啟動直接橫向不會。症狀依容器不同：`ArrangementView` 整欄被撐歪（home 寬停在 669、被蓋 236pt，frame 直讀，`248c804`）；HStack + `.frame(width:)` 欄位正確但 view 本身溢出、蓋進鄰欄 123pt（直讀，`ec0069f`）。GoogleMobileAds **13.7.0 與 13.11.0（官方宣稱支援 Duo）皆重現**。加 `sizeThatFits` 後：ArrangementView 重疊 0（直讀）、HStack 無溢出（**僅截圖**）。**缺口：只量過一種 view。** 下一步是 `Experiments/` 用自製、intrinsicContentSize 隨寬度變的 UIView 重跑；重現 → 範圍寫「所有自報尺寸的 UIView」，不重現 → 收窄成「執行中改變自身尺寸的第三方 SDK view」。
+- **「Pane 容器」提案（未成立）**：FoodEntropy 目前在 V 層組合（Home 的 HC 持有 SettingsViewModel、代處理設定的 `onRoute`、`SettingsView` 帶 `isEmbedded`）。提案是 C 層容器把兩個完整 feature HC 當 child。**反例（實測）**：從設定欄開 pageSheet 後直接闔上，sheet 存活並在外螢幕轉全螢幕——因為 presenter 是 Home HC、收合時仍在畫面上；容器版設定 pane 是 presenter，收合時被移除，sheet 很可能跟著消失（**推論，未測**）。所以「外層 HC 代處理內嵌 feature 的 onRoute」可能是正確歸屬、只是寫法（`static handle(_:from:)`）不對。容器同時會撞上 `deeplink(.navigate)` 的 `selectedViewController as? UINavigationController` cast。**容器與「外層代處理」要在 demo 並排做出來比較，才談得上規則。**
+- **Apple 的三層版面優先序（文件／二手）**：① 標準容器（`NavigationSplitView`／`UISplitViewController`／`TabView`）→ ② `ArrangementView` → ③ 自己排版＋`reservedRegions`。引文來源是 Anton Gubarenko 整理的 forums Q&A（二手）與 Tech Talk 111463。FoodEntropy 三層的落選理由（實測）：① `UISplitViewController` column 樣式收合時把 secondary 推到 primary 的 stack 上，與「首頁是 stack root」衝突；classic delegate 寫法在 iOS 27 SDK 斷言 crash ② `.split` 無指定 primary 邊的 API（27.1 SDK 比對）③ 採用 GeometryReader + HStack + `reservedRegions(kind: .division, options: .includeInactive)`。**開放問題：① 落選的原因是 MVVMC 的 Router 假設，不是 Duo。** Router 是否該接受系統容器的收合，是比 Pane 容器更上游的一題。
+- **事實（FoodEntropy 實測，二手數字，引用前重量）**：iOS 27.1 模擬器 runtime 只支援 iPhone Duo；內螢幕不理會 `supportedInterfaceOrientations`，直橫都是 regular/regular；折線 reserved region 寬度固定（量到 40pt），平放 off、任何彎曲 on；arrangement 環境值（`splitArrangementAxis` 等）只有子 view 讀得到，root 讀到預設值；常駐 pane 不再觸發 `onAppear`。
+- **不收**：「版面判斷寫成純函式來測」——好做法，但 `mvvmc-testing` 管的是 ViewModel；「姿態改變不可重建 identity」——來源是第三方 PR（`sven-ericmolzahn/iphone-duo-skill` #8），且 `if` 換 identity 是 SwiftUI 基本語意，`mvvmc-view` identity 段已涵蓋。
+
+### 舊段落（2026-09-11，模擬器到位前的研究）
 
 **不要在 Xcode 27.1 模擬器到位之前把下面任何一條寫成規範。** 這些是研究素材，不是規則。裝置 2026-10 底發售、API 在 iOS 27.1、模擬器要 Xcode 27.1（官方頁面標 "Coming later this month"），**今天一條都驗不了**。把未經量測的前提寫成規則，正是 `Experiments/README.md` 開宗明義在防的事。
 

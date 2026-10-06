@@ -7,9 +7,10 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
   // 進入點 1：前景 / 背景 URL Scheme
   func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-    guard let url = URLContexts.first?.url,
+    guard let windowScene = scene as? UIWindowScene,
+          let url = URLContexts.first?.url,
           let deeplink = Deeplink(url: url) else { return }
-    AppRouter.shared.deeplink(deeplink.makeDestination())
+    AppRouter.shared.deeplink(deeplink.makeDestination(), in: windowScene)
   }
 
   func scene(
@@ -39,7 +40,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     // 進入點 2：冷啟動 URL Scheme（必須在 makeKeyAndVisible() 之後，確保 rootVC 已存在）
     if let url = connectionOptions.urlContexts.first?.url,
        let deeplink = Deeplink(url: url) {
-      AppRouter.shared.deeplink(deeplink.makeDestination())
+      AppRouter.shared.deeplink(deeplink.makeDestination(), in: windowScene)
     }
   }
 }
@@ -48,6 +49,8 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
 extension SceneDelegate: UNUserNotificationCenterDelegate {
   // 進入點 3：Push 點擊（全狀態通用）— nonisolated，用 Task 跳回主執行緒
+  // 目的地 scene 取自 `response.targetScene`，不是 `self.window`：通知中心的 delegate 是
+  // 全域單一個，多 scene 時它不一定是使用者點的那個 scene 的 SceneDelegate
   nonisolated func userNotificationCenter(
     _ center: UNUserNotificationCenter,
     didReceive response: UNNotificationResponse,
@@ -57,7 +60,13 @@ extension SceneDelegate: UNUserNotificationCenterDelegate {
     guard let urlString = response.notification.request.content.userInfo["deeplink"] as? String,
           let url = URL(string: urlString),
           let deeplink = Deeplink(url: url) else { return }
-    Task { @MainActor in AppRouter.shared.deeplink(deeplink.makeDestination()) }
+    // 在這裡先取出 scene 再跳 Task：UNNotificationResponse 不是 Sendable，不能帶進 Task；
+    // UIScene 是 @MainActor 類別，本身就是 Sendable
+    let targetScene = response.targetScene
+    Task { @MainActor in
+      guard let scene = targetScene as? UIWindowScene else { return }
+      AppRouter.shared.deeplink(deeplink.makeDestination(), in: scene)
+    }
   }
 
   nonisolated func userNotificationCenter(

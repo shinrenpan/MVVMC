@@ -102,17 +102,20 @@ final class AppRouter: NSObject {
     source.present(destination, animated: animated)
   }
 
-  /// deeplink 的唯一入口。呼叫端是 SceneDelegate（三個進入點都走這裡），手上只有 window。
+  /// deeplink 的唯一入口。呼叫端是 SceneDelegate（三個進入點都走這裡），由它傳入事件所屬的 scene。
+  ///
+  /// ❌ **不從全域找 window。** `UIApplication.shared.connectedScenes.first` 在單一 scene 時
+  /// 碰巧對，多 scene（iPhone Duo 內螢幕、iPad）時會把 deeplink 送到錯的視窗。三個進入點
+  /// 手上本來就有 scene（`openURLContexts` 的 `scene`、`willConnectTo` 的 `scene`、
+  /// 通知回應的 `targetScene`），所以改成收參數——Apple `app-resizability` skill 原則 11：
+  /// 「沒有區域物件可用時，替方法加一個參數，並更新呼叫端」。
   ///
   /// ❌ **不注入 Close 鈕。** Router 往別人的 `navigationItem` 塞按鈕，那顆按鈕在 C 層與
   /// V 層之外被建立、沒有 `viewModel` 可以呼叫，結構上不可能遵守「導覽列按鈕的點擊要走
   /// `doAction`」；而且它不知道那一頁關閉時該做什麼（送出中的表單、要發 onCallback 的頁）。
   /// 關閉入口由目的地自己在 V 層提供（見 `SettingsView` 的 `.toolbar`）。
-  func deeplink(_ destination: Deeplink.Destination, animated: Bool = true) {
-    let rootVC = UIApplication.shared.connectedScenes
-      .compactMap { $0 as? UIWindowScene }
-      .first?.keyWindow?.rootViewController
-    guard let rootVC else {
+  func deeplink(_ destination: Deeplink.Destination, in scene: UIWindowScene, animated: Bool = true) {
+    guard let rootVC = scene.keyWindow?.rootViewController else {
       assertionFailure("AppRouter.deeplink(): 找不到 rootViewController")
       return
     }

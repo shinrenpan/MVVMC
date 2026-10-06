@@ -78,8 +78,8 @@ AppRouter.shared.backToRoot(from: self)
 AppRouter.shared.tab(1, from: self)
 
 // Deeplink (takes a set of VCs + an intent; does NOT inject a Close button)
-AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]))  // select tab + push onto its stack
-AppRouter.shared.deeplink(.present(settingsVC))                   // genuinely modal
+AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]), in: windowScene)  // select tab + push onto its stack
+AppRouter.shared.deeplink(.present(settingsVC), in: windowScene) // genuinely modal
 ```
 
 ---
@@ -106,9 +106,10 @@ enum Deeplink {
 
 // SceneDelegate — all three entry points call AppRouter.deeplink()
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-  guard let url = URLContexts.first?.url,
+  guard let windowScene = scene as? UIWindowScene,
+        let url = URLContexts.first?.url,
         let deeplink = Deeplink(url: url) else { return }
-  AppRouter.shared.deeplink(deeplink.makeDestination())
+  AppRouter.shared.deeplink(deeplink.makeDestination(), in: windowScene)
 }
 ```
 

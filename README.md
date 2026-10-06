@@ -78,8 +78,8 @@ AppRouter.shared.backToRoot(from: self)
 AppRouter.shared.tab(1, from: self)
 
 // Deeplink（收「一組 VC ＋ 呈現意圖」，不注入 Close button）
-AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]))  // 切分頁 + 推上脈絡
-AppRouter.shared.deeplink(.present(settingsVC))                   // 真正該是 modal 的
+AppRouter.shared.deeplink(.navigate(tab: 0, stack: [detailVC]), in: windowScene)  // 切分頁 + 推上脈絡
+AppRouter.shared.deeplink(.present(settingsVC), in: windowScene) // 真正該是 modal 的
 ```
 
 ---
@@ -106,9 +106,10 @@ enum Deeplink {
 
 // SceneDelegate — 三個入口統一走 AppRouter.deeplink()
 func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
-  guard let url = URLContexts.first?.url,
+  guard let windowScene = scene as? UIWindowScene,
+        let url = URLContexts.first?.url,
         let deeplink = Deeplink(url: url) else { return }
-  AppRouter.shared.deeplink(deeplink.makeDestination())
+  AppRouter.shared.deeplink(deeplink.makeDestination(), in: windowScene)
 }
 ```
 

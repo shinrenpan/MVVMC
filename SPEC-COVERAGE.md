@@ -141,8 +141,9 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | `back()` auto-detecting sheet → dismiss | `PostFilter`, `Settings` |
 | `backTo()` / `backToRoot()` | 🚫 — the demo's deepest stack is two levels, where these are indistinguishable from `back()` |
 | `tab()` | `Profile` |
-| `deeplink()` returning `Deeplink.Destination` — `.navigate(tab:stack:)` selects the tab and pushes onto the existing stack; `.present(_:)` for a true modal. **No injected Close button** | `Sources/App/Deeplink.swift` + `AppRouter.deeplink(_:)` |
+| `deeplink()` returning `Deeplink.Destination` — `.navigate(tab:stack:)` selects the tab and pushes onto the existing stack; `.present(_:)` for a true modal. **No injected Close button** | `Sources/App/Deeplink.swift` + `AppRouter.deeplink(_:in:)` |
 | Three SceneDelegate entry points (foreground / cold start / push) | `Sources/App/SceneDelegate.swift` |
+| `deeplink()` takes the event's `UIWindowScene`; no global scene/window walk (push: `response.targetScene`, extracted before `Task`) | `Sources/App/SceneDelegate.swift` + `AppRouter.deeplink(_:in:)` |
 | Swipe-back gating to `.push` pages only | `AppRouter.gestureRecognizerShouldBegin` |
 | `window.backgroundColor` set | `SceneDelegate.swift` |
 
