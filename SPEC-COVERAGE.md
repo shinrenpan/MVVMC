@@ -123,6 +123,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Child `onCallback` set before navigating, no `Task` wrapper | `PostListHostController.swift` → `PostFilter` |
 | Callback payload is a primitive, not a Domain Model | `PostFilterViewModel.Callback.didSelectUser(id:)` |
 | `required init?(coder:)` marked `@available(*, unavailable)` | all |
+| Vertical-bar opt-out lives in the HostController (`preferredVerticalBarBehavior`), not SwiftUI `.toolbarVerticalBehavior` | 🚫 — the demo does not opt out; backed by `Experiments/VerticalBarProbe` (measured) |
 
 ## Navigation — `mvvmc-navigation`
 

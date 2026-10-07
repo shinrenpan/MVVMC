@@ -154,6 +154,10 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 - ✅ 優先用 SwiftUI 的 `.navigationTitle` / `.toolbar`，寫在 V 層
   > why：導覽列按鈕的點擊要走 `doAction`，而 C 層**禁止啟動 Task 觸發 ViewModel**——按鈕放 `navigationItem.rightBarButtonItem` 就必然違規
 - ✅ 只有 SwiftUI 設不到的（`navigationItem` 的特殊配置、`largeTitleDisplayMode` 的細節行為）才留在 C 層，且僅限「設定外觀」不含互動
+- ✅ **iPhone Duo 垂直 bar 的退出寫在 C 層**：HostController 覆寫 `preferredVerticalBarBehavior`（iOS 27.1，需 `if #available` / `@available`）。**V 層的 SwiftUI `.toolbarVerticalBehavior(.disabled)` 在 MVVMC 的結構裡完全無效**——頁面是 `UIHostingController` 推在 UIKit `UINavigationController` 上，SwiftUI 這個 modifier 傳不到外層 UIKit 容器，寫了不報錯、也不生效
+  > 依據（measured）：`Experiments/VerticalBarProbe`（2026-10-07，Xcode 27.1 RC，iPhone Duo 內螢幕 iOS 27.1）。不設定與 SwiftUI modifier 兩組量到完全相同（`verticalBarEdge=trailing`、右側 inset 84pt、tab bar 直立在右緣）；C 層覆寫那組 `verticalBarEdge=unspecified`、右側 inset 0、tab bar 回到底部。退場條件：SwiftUI 那一組量到與 C 層相同的那天。
+  >
+  > Apple 要求把它當**固定選擇**（`UIViewController.h`：「avoid changing it frequently… don't toggle it… as a function of that view's state」）——所以回傳常數，不要讀 ViewModel 的 state 來決定。
 
 ---
 
