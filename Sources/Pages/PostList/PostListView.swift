@@ -26,12 +26,12 @@ struct PostListView: View {
     .navigationTitle(viewModel.state.filterUserId.map { "User \($0)'s Posts" } ?? "Posts")
     .toolbar {
       ToolbarItem(placement: .topBarLeading) {
-        Button("Profile") {
+        Button("Profile", systemImage: "person.crop.circle") {
           Task { await viewModel.doAction(.view(.toProfile)) }
         }
       }
       ToolbarItem(placement: .topBarTrailing) {
-        Button("Filter") {
+        Button("Filter", systemImage: "line.3.horizontal.decrease") {
           Task { await viewModel.doAction(.view(.showFilter)) }
         }
       }

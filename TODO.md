@@ -113,6 +113,14 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - **`reservedRegions` 預設是否包含 inactive：Apple 自相矛盾。** header 有 `.includeInactive`（暗示預設排除）；DocC 說「regardless of whether they are currently active」。帶 `.includeInactive` 在兩種解讀下都對。另觀察到 occlusion region 在前幾次 layout pass 為空（UIKit 第 1 pass、SwiftUI 前 3 次 GeometryReader 為 0），與第三方回報一致。
 - **版面值存不存進 ViewModel：Apple 兩份 skill 一致**——不存進業務型別；View 持有的 viewport model 可以。已寫成 `mvvmc-model` 的 ⚠️ advisory。
 
+### Bars（navigation／toolbar／tab bar）— 2026-10-07 查證＋實測
+
+- **只有系統容器的 bar 會直排**；自建 `UIToolbar`／`UINavigationBar`／`UITabBar` 永遠橫向（111462）。內螢幕**直向**維持橫向 bar（HIG）。`.bottomBar` 也會併入垂直 bar。
+- **按鈕**：只有文字永遠不直排；`.horizontalOnly` 在沒有橫向 bar 時**不顯示**（`UIBarButtonItem.h:76`）。返回／關閉在最上方（`.cancellationAction`）；重要動作 `.topBarPinnedTrailing`（27.0）；溢出由下往上，`visibilityPriority`（27.0）調整；tab bar 與按鈕互擠時預設保 tab bar。
+- **MVVMC 特有、已實測（`Experiments/VerticalBarProbe`）**：整頁退出只能 C 層覆寫 `preferredVerticalBarBehavior`，SwiftUI `.toolbarVerticalBehavior` 傳不過 `UIHostingController`；按鈕層級 `.axisBehavior` 與 `.toolbarVerticalCompressionBehavior` 傳得過去。已寫入 `mvvmc-hostcontroller`。
+- **demo**：四顆 toolbar 按鈕都改成圖示＋文字（Apple 建議；設計，非規則）。
+- **未查／UNKNOWN**：搜尋列、大標題、`titleView` 在垂直 bar 下的行為；`.confirmationAction`／`.primaryAction`／`.principal` 的位置；垂直 bar 容量。內螢幕 tab sidebar（`sidebar.preferredPlacement`，27.0）為 opt-in，demo 未採用。
+
 ### Pane 容器：Apple 的官方形狀（2026-10-07，HIG／Tech Talk 111463／Apple 論壇 848000、847800／27.1 SDK）
 
 - **導覽容器放在 arrangement 外面，不是每個 pane 自帶。** HIG：「Keep navigation outside of arrangement views… place navigation containers… around it rather than within it.」111463 的 UIKit 範例是 `UINavigationController(rootViewController: arrangementVC)`。Apple 工程師（848000）：「We do not recommend embedding a `UINavigationController` in a `UIArrangementViewController`.」→ FoodEntropy 提案 A 的「每個 pane 自帶 nav」**被官方否決**。

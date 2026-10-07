@@ -18,7 +18,7 @@ struct PostFilterView: View {
     .navigationTitle("Filter by User")
     .toolbar {
       ToolbarItem(placement: .cancellationAction) {
-        Button("Cancel") {
+        Button("Cancel", systemImage: "xmark") {
           Task { await viewModel.doAction(.view(.cancel)) }
         }
       }
