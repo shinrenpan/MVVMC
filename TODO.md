@@ -127,7 +127,9 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - **形狀**：Tab → `UINavigationController` → 容器頁（nav root）→ 兩個 pane。兩個 pane 的 `navigationController` 都是同一個，所以任一 pane `AppRouter.to(_:from:)` 會**蓋住兩欄**。pane 需要自己的下鑽堆疊 → arrangement 不是對的工具，改 `UISplitViewController`（Apple：arrangement 用於「不需要展開收合行為」的並排）。
 - **收合**：split 無法滿足時只顯示 `layoutPriority` 較高者，預設 primary（DTS，847800）。primary 在 leading 無 API 可改（`UISplitArrangement.ViewProperties` 只有 width／height／layoutPriority；只有 overlay 有 edge）。→ ~~FoodEntropy 的「左設定、右首頁、窄時只剩首頁」**可能**可以用「設定 = primary、首頁 = secondary、首頁 layoutPriority 較高」達成~~ **SwiftUI 已被 FoodEntropy 實測否定（同日）**：外螢幕只剩首頁（優先權生效），但**內螢幕直向 669pt 仍分成兩欄**、冷啟動直向亦同；對照組（首頁 primary、無 layoutPriority）同步驟只顯示首頁。layoutPriority 似乎也改變了「分不分得了」的判定。DTS 847800 的「保留高優先權者」只在分不了時成立。`UIArrangementViewController` 未測——demo probe 必測「內螢幕直向」。
 - **重新評估 FoodEntropy 的兩筆「架構債」**：「Home HC 代處理 Settings 的 onRoute」符合官方形狀（容器頁負責呈現），也與它實測的 sheet 存活一致——**可能不是債**，只是 `static handle(_:from:)` 的寫法不對。`isEmbedded` 仍是債。
-- **Apple 沒回答、只能實測**：被隱藏的 pane 是否仍在 hierarchy、從它開的 sheet 如何；垂直 bar 歸哪個 pane（`childForPreferredVerticalBarBehavior` 只列 nav／tab）；deeplink 到另一個 pane。
+- **已實測（`Experiments/PaneProbe`，同日）**：UIKit `UIArrangementViewController` 與 SwiftUI `ArrangementView`＋representable 兩種容器，**每個 pane 都可以是完整的 HostController**——收合時被隱藏的 pane 被移出 hierarchy、展開時接回同一個實例；從它開的 sheet 收合後**存活**（UIKit 交給最外層 presenter）；push 蓋兩欄。→ FoodEntropy 的兩筆債（`static handle`、`isEmbedded`）都可以用「pane = HostController」消掉，**不需要外層代處理**。風險：收合期間被隱藏 pane 的 `navigationController == nil`，非同步觸發的 push 會靜默失效。
+- **「設定在左、首頁在右、窄時只剩首頁」無法用宣告式設定達成**（UIKit `b2`／`b3` 與 FoodEntropy 的 SwiftUI 結果一致）：secondary 設 priority 就不再於直向收合，最小寬度也不會強制收合。容器必須自己在尺寸改變時調整 arrangement。
+- **仍未測**：垂直 bar 歸哪個 pane；deeplink 到另一個 pane。**下一步才是規則**：demo 是否要加一個並排範例（axis 0：只有在第二個專案需要時才值得），或先把結論寫成 `mvvmc-hostcontroller` 的 ⚠️。
 - **閱讀已飽和**：三輪、四路來源（Apple agent skill、官方頁／DocC／Tech Talk、27.0→27.1 SDK diff、14 篇 blog——全部早於 RC）。剩下的問題 Apple 文件都標不出答案，下一步只能是 probe。
 
 ### FoodEntropy 帶回的素材（2026-10-07，跨 session，可重跑的附 branch／commit）
