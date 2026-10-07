@@ -35,6 +35,7 @@ description: |
 | 12 | `@Bindable` 在 `body` 內宣告一次，拆分 func 以 `bVM: Bindable<VM>` 參數接收；**子元件只收切片**（強制） | §11 |
 | 13 | **四態呈現的判斷順序**：先看 `items.isEmpty` 再看 status。順序顛倒會讓「刷新失敗」「第 N 頁失敗」把使用者眼前的內容整個換成錯誤畫面 | §1 |
 | 14 | Preview 與 Mocks 檔都是**選用**的；但只要有 Preview，就必須 `#if DEBUG` 包裹、注入 M 層的 `.mock` / `.mocks`、並關掉 run-once 旗標，禁止觸發真實網路 | §12 |
+| 15 | 包進 SwiftUI 的 UIView 若 `intrinsicContentSize` 會跟著自身寬度變大（adaptive banner 一類），`UIViewRepresentable` 必須實作 `sizeThatFits` 並以 `proposal.width` 為準；否則**執行中容器變窄**時 view 不縮、蓋到鄰欄。冷啟動測不出來 | §8 |
 
 ---
 

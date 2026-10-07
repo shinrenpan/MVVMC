@@ -1,0 +1,16 @@
+name: SizeThatFitsProbe
+options:
+  bundleIdPrefix: com.probe
+  deploymentTarget:
+    iOS: "17.0"
+targets:
+  SizeThatFitsProbe:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+        SWIFT_VERSION: "6.0"

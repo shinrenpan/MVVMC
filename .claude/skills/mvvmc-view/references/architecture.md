@@ -902,6 +902,34 @@ struct ChildView: View {
 
 狀態的 Model 定義放在 `FeatureViewModel+Models.swift`，詳見 `mvvmc-model` skill。
 
+### UIViewRepresentable：自報尺寸會跟著寬度長的 UIView 必須實作 `sizeThatFits`
+
+**規則**：包進 SwiftUI 的 UIView，若它的 `intrinsicContentSize` 會跟著自己被排到的寬度變大（典型是第三方 SDK 的 adaptive banner），`UIViewRepresentable` **必須**實作 `sizeThatFits(_:uiView:context:)`，回傳以 `proposal.width` 為準的尺寸：
+
+```swift
+func sizeThatFits(_ proposal: ProposedViewSize, uiView: BannerView, context: Context) -> CGSize? {
+    CGSize(width: proposal.width ?? 320, height: 50)
+}
+```
+
+**觸發條件只有一個：app 執行中容器變窄**——單欄轉兩欄（iPhone Duo 內螢幕轉向）、iPad 分割畫面縮窄、旋轉。view 在寬的時候把自報寬度撐大，容器變窄時它拒絕縮回去。**一開始就是窄的不會出事**，所以冷啟動測一次看到正常，不代表沒問題——這是這條規則最容易被誤刪的地方。
+
+症狀依容器不同：
+
+| 容器 | 症狀 |
+|---|---|
+| 依子 view 理想尺寸分欄（`ArrangementView`） | **整欄被撐寬**，蓋進另一欄 |
+| 給子 view 確定寬度（`HStack` + `.frame(width:)`） | 欄位本身正確，**UIView 自己畫到 frame 外**，蓋進鄰欄、超出螢幕 |
+
+**不需要的情況**：`intrinsicContentSize` 固定（且小於欄寬），或不自報（`noIntrinsicMetric`）——probe 量到這兩種在任何組合下都不溢出。
+
+**依據**（entry gate：measured + reported）：
+
+- **measured**：`Experiments/SizeThatFitsProbe`（2026-10-07，Xcode 27.1 RC 27A9275）。自製 UIView、無第三方程式碼。單欄 → 兩欄後，**只有「自報寬度跟著長」×「沒有 `sizeThatFits`」×「執行中轉換」這一格溢出**：iPhone Duo（iOS 27.1）`HStack` 蓋進鄰欄 201pt、超出螢幕 117pt；`ArrangementView` 欄位 456 → 603pt、蓋進鄰欄 92pt；**iPhone 18 Pro（iOS 27.0）`HStack` 蓋進鄰欄 84pt——不是 Duo 特有**。加 `sizeThatFits`、或一開始就兩欄，全部 0。
+- **reported**：FoodEntropy 的 AdMob `BannerView`（GoogleMobileAds 13.7.0 與 13.11.0 皆重現；ArrangementView 重疊 236pt、HStack 溢出 123pt，frame 直讀）。
+
+> 退場條件：probe 的 `sticky × fit=0 × start=0` 那一格在新 SDK 量到 0 的那天，這條改為 ⚠️。
+
 ---
 
 ## 9. 灰色地帶判斷原則
