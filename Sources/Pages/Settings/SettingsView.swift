@@ -12,8 +12,8 @@ struct SettingsView: View {
     }
     .navigationTitle("設定")
     .toolbar {
-      ToolbarItem(placement: .topBarLeading) {
-        Button("關閉") {
+      ToolbarItem(placement: .cancellationAction) {
+        Button("關閉", systemImage: "xmark") {
           Task { await viewModel.doAction(.view(.close)) }
         }
       }

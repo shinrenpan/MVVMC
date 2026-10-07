@@ -100,7 +100,7 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 
 - 外螢幕冷啟動：列表正常；tab bar 自動變直、在狀態列下方；內容不壓狀態列／鏡頭。
 - 外螢幕詳細頁 → 打開：停在同一頁（不重建），返回鈕移到右側直欄（27.1 垂直 nav bar），返回正常。
-- 內螢幕開 Settings sheet（`.medium`/`.large` detents）→ 闔上：sheet 存活，關閉正常。內螢幕 sheet 置中、toolbar 橫向。**外螢幕半高 sheet 的 toolbar 仍是橫的**——與上方研究筆記「外螢幕有 toolbar 的 sheet 顯示為垂直」不一致；FoodEntropy 的全螢幕 Safari sheet 則變直。差別可能是 sheet 高度，**未驗證**。
+- 內螢幕開 Settings sheet（`.medium`/`.large` detents）→ 闔上：sheet 存活，關閉正常。內螢幕 sheet 置中、toolbar 橫向。~~差別可能是 sheet 高度~~ **已量（同日 A/B，外螢幕 Settings sheet）**：只有文字的 `Button("關閉")`／`.topBarLeading` 在半高與全高**都維持橫向**、從未消失；改成 `Button("關閉", systemImage: "xmark")`／`.cancellationAction` 後，半高是橫向（移到右上），**全高變成右側直欄**。要直排得同時滿足「有圖示」與「sheet 全高」。Apple DocC／HIG 說只有文字的按鈕永遠不直排；SDK header（`UIBarButtonItem.h:76`）說只支援橫向的按鈕在沒有橫向 bar 時**不顯示**——這個消失情境本次沒觀察到。demo 改用 B 的寫法（與 `PostFilterView` 已用的 `.cancellationAction` 一致），**不寫成規則**：這是設計取捨，不是架構。
 - URL 冷／熱啟動與推播點擊（`response.targetScene`）三個進入點都導到正確頁面。
 - 非架構觀察：內螢幕上內文單行橫跨全寬並越過折線——V 層 readable width 的問題，不是規則。
 - **外螢幕遵守 `supportedInterfaceOrientations`，內螢幕不理會**（FoodEntropy 實測，兩邊成對照）：FoodEntropy 只宣告 Portrait → 闔上後旋轉介面不轉；demo 沒宣告（iPhone 預設含橫向）→ 闔上後旋轉介面跟著轉、tab bar 移到右側直欄，compact/compact 矮版面——一般 iPhone 橫向也是如此，非 Duo 特有。
@@ -118,6 +118,8 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - **不收**：「版面判斷寫成純函式來測」——好做法，但 `mvvmc-testing` 管的是 ViewModel；「姿態改變不可重建 identity」——來源是第三方 PR（`sven-ericmolzahn/iphone-duo-skill` #8），且 `if` 換 identity 是 SwiftUI 基本語意，`mvvmc-view` identity 段已涵蓋。
 
 ### 舊段落（2026-09-11，模擬器到位前的研究）
+
+> ⚠️ **2026-10-07 對照官方網頁與 27.1 RC SDK 後，下列說法已過時或錯誤**：「27.1 摺疊 API 一條都還沒發布」——全部都在 27.1 SDK（`ArrangementView`、`UIArrangementViewController`、`UISplitArrangement`、`reservedRegions(kind:options:)`、`UIHingeInteraction`、`verticalBarEdge`、`preferredVerticalBarBehavior`、`UIBarButtonItem.axisBehavior`、`toolbarVerticalBehavior`）；「等 27.1 的只是排成垂直的呈現」——`axisBehavior` 等是新 API；「舊 SDK 照跑、熟悉尺寸」——現在分三級（SDK 26 置中留白／27 填滿大部分／27.1 滿版＋垂直 bar）；「demo 無 TabBar」——demo 根就是 `UITabBarController`；「五支 Tech Talk」——是 111461–111466 七支加 Group Labs。sheet 擺放 API（`preferredPlacement`／`presentationPlacement`）確為 **27.0** 不是 27.1。
 
 **不要在 Xcode 27.1 模擬器到位之前把下面任何一條寫成規範。** 這些是研究素材，不是規則。裝置 2026-10 底發售、API 在 iOS 27.1、模擬器要 Xcode 27.1（官方頁面標 "Coming later this month"），**今天一條都驗不了**。把未經量測的前提寫成規則，正是 `Experiments/README.md` 開宗明義在防的事。
 
