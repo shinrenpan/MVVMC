@@ -120,31 +120,45 @@ final class AppRouter: NSObject {
       return
     }
 
-    switch destination {
-    case let .navigate(tab, stack):
-      guard let tabBar = rootVC as? UITabBarController else {
-        assertionFailure("AppRouter.deeplink(.navigate): rootViewController 不是 UITabBarController")
-        return
-      }
-      // 已經有 modal 蓋在上面時先收掉，否則切了分頁使用者也看不到
-      tabBar.presentedViewController?.dismiss(animated: false)
-      tabBar.selectedIndex = tab
-      guard let nav = (tabBar.selectedViewController as? UINavigationController) else {
-        assertionFailure("AppRouter.deeplink(.navigate): 該分頁的根不是 UINavigationController")
-        return
-      }
-      // 保留該分頁既有的根（那就是「往回按看得到的列表」），只推上目的地
-      let root = nav.viewControllers.prefix(1)
-      stack.forEach { $0.appTransitionStyle = .push }
-      nav.setViewControllers(Array(root) + stack, animated: animated)
+    // 已經有 modal 蓋在上面時先收掉，**在 completion 裡**才做後續：
+    // - `.present`：有 modal 時 UIKit 拒絕再 present，deeplink 被吃掉（AppRouterDeeplinkTests 重現）
+    // - `.navigate`：切了分頁、推了頁面，使用者卻被 modal 擋著看不到；dismiss 與設堆疊放在
+    //   同一個 runloop 會漏 push（FoodEntropy fix-deeplink-dropped-push 回報）
+    dismissPresented(on: rootVC) {
+      switch destination {
+      case let .navigate(tab, stack):
+        guard let tabBar = rootVC as? UITabBarController else {
+          assertionFailure("AppRouter.deeplink(.navigate): rootViewController 不是 UITabBarController")
+          return
+        }
+        tabBar.selectedIndex = tab
+        guard let nav = (tabBar.selectedViewController as? UINavigationController) else {
+          assertionFailure("AppRouter.deeplink(.navigate): 該分頁的根不是 UINavigationController")
+          return
+        }
+        // 保留該分頁既有的根（那就是「往回按看得到的列表」），只推上目的地
+        let root = nav.viewControllers.prefix(1)
+        stack.forEach { $0.appTransitionStyle = .push }
+        nav.setViewControllers(Array(root) + stack, animated: animated)
 
-    case let .present(vc):
-      vc.appTransitionStyle = .sheet
-      let nav = UINavigationController(rootViewController: vc)
-      nav.modalPresentationStyle = .fullScreen
-      nav.appTransitionStyle = .sheet
-      rootVC.present(nav, animated: animated)
+      case let .present(vc):
+        vc.appTransitionStyle = .sheet
+        let nav = UINavigationController(rootViewController: vc)
+        nav.modalPresentationStyle = .fullScreen
+        nav.appTransitionStyle = .sheet
+        rootVC.present(nav, animated: animated)
+      }
     }
+  }
+
+  /// 沒有 modal 時直接執行；有的話收掉後在 completion 執行。
+  /// 不能無條件呼叫 `dismiss(animated:completion:)`：沒有東西可收時，UIKit 不保證會呼叫 completion。
+  private func dismissPresented(on root: UIViewController, then work: @escaping @MainActor () -> Void) {
+    guard let presented = root.presentedViewController else {
+      work()
+      return
+    }
+    presented.dismiss(animated: false) { work() }
   }
 
   func tab(_ index: Int, from source: UIViewController) {
