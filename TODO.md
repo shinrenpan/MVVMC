@@ -107,6 +107,21 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - **原則 11 的另一個落點（開放問題）**：FoodEntropy `BannerAdView.keyRootViewController()` 在 `UIViewRepresentable` 內以 `connectedScenes … isKeyWindow` 取 rootVC 交給 AdMob。`mvvmc-navigation` 新寫的那條只管 `deeplink()`；第三方 SDK 橋接要一個 VC 時怎麼取（例如在 `didMoveToWindow` 讀 `window?.rootViewController`）**沒有規範也沒有實測**。單一 scene 下是潛在而非現行錯誤；demo 沒有這種橋接，要寫規則得先有可編譯的形狀。
 - **沒測到**：demo 自己的第二個 scene（`UIApplicationSupportsMultipleScenes: false`；使用者測的是 Safari 與 demo 並排，兩個 app）；半開（折線 active）姿態；內螢幕旋轉。
 
+### 第二輪查證（2026-10-07，SDK／DocC／probe）
+
+- **27.1 起 `UIView` 預設 layout margins 為 0**——iOS 27.2 beta 3 release notes 原文（186294594）。**實測要「27.1 SDK 建置」×「iOS 27.1 執行」兩者同時才歸零**（任一為 27.0 都還是 8pt），release note 沒寫這個條件。歸零的只是 8pt 基底，safe area 仍會加上去；VC 的 view 仍有 `systemMinimumLayoutMargins`；子 view 要繼承得設 `preservesSuperviewLayoutMargins = true`。**MVVMC 頁面是 SwiftUI，不受影響**；影響的是 UIKit 橋接 view 裡用 `layoutMarginsGuide` 的約束。記為事實，不是規則。
+- **`reservedRegions` 預設是否包含 inactive：Apple 自相矛盾。** header 有 `.includeInactive`（暗示預設排除）；DocC 說「regardless of whether they are currently active」。帶 `.includeInactive` 在兩種解讀下都對。另觀察到 occlusion region 在前幾次 layout pass 為空（UIKit 第 1 pass、SwiftUI 前 3 次 GeometryReader 為 0），與第三方回報一致。
+- **版面值存不存進 ViewModel：Apple 兩份 skill 一致**——不存進業務型別；View 持有的 viewport model 可以。已寫成 `mvvmc-model` 的 ⚠️ advisory。
+
+### Pane 容器：Apple 的官方形狀（2026-10-07，HIG／Tech Talk 111463／Apple 論壇 848000、847800／27.1 SDK）
+
+- **導覽容器放在 arrangement 外面，不是每個 pane 自帶。** HIG：「Keep navigation outside of arrangement views… place navigation containers… around it rather than within it.」111463 的 UIKit 範例是 `UINavigationController(rootViewController: arrangementVC)`。Apple 工程師（848000）：「We do not recommend embedding a `UINavigationController` in a `UIArrangementViewController`.」→ FoodEntropy 提案 A 的「每個 pane 自帶 nav」**被官方否決**。
+- **形狀**：Tab → `UINavigationController` → 容器頁（nav root）→ 兩個 pane。兩個 pane 的 `navigationController` 都是同一個，所以任一 pane `AppRouter.to(_:from:)` 會**蓋住兩欄**。pane 需要自己的下鑽堆疊 → arrangement 不是對的工具，改 `UISplitViewController`（Apple：arrangement 用於「不需要展開收合行為」的並排）。
+- **收合**：split 無法滿足時只顯示 `layoutPriority` 較高者，預設 primary（DTS，847800）。primary 在 leading 無 API 可改（`UISplitArrangement.ViewProperties` 只有 width／height／layoutPriority；只有 overlay 有 edge）。→ FoodEntropy 的「左設定、右首頁、窄時只剩首頁」**可能**可以用「設定 = primary、首頁 = secondary、首頁 layoutPriority 較高」達成——**未實測**。
+- **重新評估 FoodEntropy 的兩筆「架構債」**：「Home HC 代處理 Settings 的 onRoute」符合官方形狀（容器頁負責呈現），也與它實測的 sheet 存活一致——**可能不是債**，只是 `static handle(_:from:)` 的寫法不對。`isEmbedded` 仍是債。
+- **Apple 沒回答、只能實測**：被隱藏的 pane 是否仍在 hierarchy、從它開的 sheet 如何；垂直 bar 歸哪個 pane（`childForPreferredVerticalBarBehavior` 只列 nav／tab）；deeplink 到另一個 pane。
+- **閱讀已飽和**：三輪、四路來源（Apple agent skill、官方頁／DocC／Tech Talk、27.0→27.1 SDK diff、14 篇 blog——全部早於 RC）。剩下的問題 Apple 文件都標不出答案，下一步只能是 probe。
+
 ### FoodEntropy 帶回的素材（2026-10-07，跨 session，可重跑的附 branch／commit）
 
 依據等級照原樣保留：**實測** = FoodEntropy 在 Duo 模擬器跑過；**文件** = 只有 Apple 文件／Tech Talk；**二手** = 第三方整理，引用前要對回原文。
