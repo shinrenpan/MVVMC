@@ -1,6 +1,6 @@
 # PaneProbe
 
-Backs the "two features side by side" research in `TODO.md` (iPhone Duo section). Question: in MVVMC, can each pane of an arrangement be a **complete HostController** — so the feature boundary (`mvvmc-structure`: features meet only through HostController init parameters) survives — instead of one HostController composing two features' Views and ViewModels?
+Backs the "two features side by side" item in `TODO.md` (iPhone Duo); background research is in `../iPhoneDuo/README.md`. Question: in MVVMC, can each pane of an arrangement be a **complete HostController** — so the feature boundary (`mvvmc-structure`: features meet only through HostController init parameters) survives — instead of one HostController composing two features' Views and ViewModels?
 
 ## Shapes
 

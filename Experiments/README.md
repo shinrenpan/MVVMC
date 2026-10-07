@@ -12,7 +12,7 @@ Each answers a different question. They are not interchangeable, and passing one
 
 ### 1. Measurement — "is this claim about the world true?"
 
-`ViewSplitProbe/`, `ConcurrencyProbe/`, `CancellationProbe/`, `SizeThatFitsProbe/`, `VerticalBarProbe/`, `PaneProbe/` (the last three: iPhone Duo, 2026-10-07)
+`ViewSplitProbe/`, `ConcurrencyProbe/`, `CancellationProbe/`, `SizeThatFitsProbe/`, `VerticalBarProbe/`, `PaneProbe/` (the last three: iPhone Duo, 2026-10-07; the round's research record is `iPhoneDuo/README.md`)
 
 Take a factual assertion the spec relies on and put it in front of a compiler or a simulator. Both probes are re-runnable; both README files record the toolchain version, because these answers expire.
 
