@@ -94,6 +94,16 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 
 **解除條件已達成（2026-10-07）**：Xcode 27.1 RC（27A9275）本機在、`simctl` 有 iOS 27.1 runtime（24A94232）與 iPhone Duo。第一個落地的是 Router（見上方 `deeplink(_:in:)`）。以下素材**仍然不是規則**，進規範要過 `Experiments/README.md` 的 entry gate。
 
+### 刻意延後的測試（2026-10-07）——不是遺漏，每項都附重開條件
+
+| 未測項目 | 為什麼現在不測 | 什麼時候重開 |
+|---|---|---|
+| demo 自己開第二個 scene（`UIApplicationSupportsMultipleScenes: true`），含通知 delegate 為 `weak` 被覆蓋的問題 | 沒有任何規則鎖定單 scene；沒有專案開啟多 scene | 有專案要開啟多 scene 時（細節見上方 deeplink 段的 "Still open"） |
+| 冷啟動點推播在**真機**上是否漏接（delegate 晚於 `didFinishLaunching` 設定） | 模擬器量到正常；真機需要實機與推播憑證 | 有上架專案回報冷啟動點推播沒反應時 |
+| 搜尋列、大標題、`titleView`、`.confirmationAction`／`.primaryAction`／`.principal` 在垂直 bar 下的行為；垂直 bar 容量 | demo 沒用到；Apple 文件也沒寫 | 有專案用到其中任一項並在 Duo 上看到異常時 |
+| deeplink 直接導到並排容器的另一個 pane | 並排寫法還沒寫成規則，介面未定 | 並排容器寫進 skill（或 demo 加並排範例）時一起設計 |
+
+
 ### Demo 在 Duo 模擬器上的手動實跑（2026-10-07，iOS 27.1 / 24A94232，Xcode 27.1 RC 27A9275，`deeplink(_:in:)` 版）
 
 使用者手動操作、截圖確認。**全部通過，demo 不需要為 Duo 改任何程式**：
@@ -130,7 +140,7 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - **已實測（`Experiments/PaneProbe`，同日）**：UIKit `UIArrangementViewController` 與 SwiftUI `ArrangementView`＋representable 兩種容器，**每個 pane 都可以是完整的 HostController**——收合時被隱藏的 pane 被移出 hierarchy、展開時接回同一個實例；從它開的 sheet 收合後**存活**（UIKit 交給最外層 presenter）；push 蓋兩欄。→ FoodEntropy 的兩筆債（`static handle`、`isEmbedded`）都可以用「pane = HostController」消掉，**不需要外層代處理**。風險：收合期間被隱藏 pane 的 `navigationController == nil`，非同步觸發的 push 會靜默失效。
 - **「設定在左、首頁在右、窄時只剩首頁」無法用宣告式設定達成**（UIKit `b2`／`b3` 與 FoodEntropy 的 SwiftUI 結果一致）：secondary 設 priority 就不再於直向收合，最小寬度也不會強制收合。容器必須自己在尺寸改變時調整 arrangement。**已實測可行（`b4`）**：繼承 `UIArrangementViewController`，在 `viewWillLayoutSubviews` 依「`horizontalSizeClass == .regular` 且寬 > 高」互換 primary／secondary——外螢幕直橫、內螢幕直橫全對，互換時 Settings 開的 sheet 存活。只看寬 > 高會在外螢幕橫放出錯（compact 但寬 > 高）。半開姿態：自動空出 40pt 折線，不需 `reservedRegions`。
 - **pane 的 `.toolbar` 不會出現在導覽列**（B、C 皆然）：寫進了 pane 自己的 `navigationItem`，但只有最上層的容器會被顯示。**容器必須轉接**——`viewDidLayoutSubviews` 把畫面上 pane 的 bar items 設給自己，實測點得動、會進垂直 bar。標題不轉接，由容器決定。FoodEntropy 現行的「一個 HC 組兩個 View」沒有這問題（SwiftUI 自動合併 toolbar）——這是兩種做法的真實取捨。
-- **仍未測**：垂直 bar 歸哪個 pane；deeplink 到另一個 pane。**下一步才是規則**：demo 是否要加一個並排範例（axis 0：只有在第二個專案需要時才值得），或先把結論寫成 `mvvmc-hostcontroller` 的 ⚠️。
+- **仍未測**：deeplink 到另一個 pane。（垂直 bar：已量——pane 的按鈕要由容器轉接，轉接後進容器的垂直 bar，見上一條。）**下一步才是規則**：demo 是否要加一個並排範例（axis 0：只有在第二個專案需要時才值得），或先把結論寫成 `mvvmc-hostcontroller` 的 ⚠️。
 - **閱讀已飽和**：三輪、四路來源（Apple agent skill、官方頁／DocC／Tech Talk、27.0→27.1 SDK diff、14 篇 blog——全部早於 RC）。剩下的問題 Apple 文件都標不出答案，下一步只能是 probe。
 
 ### FoodEntropy 帶回的素材（2026-10-07，跨 session，可重跑的附 branch／commit）
