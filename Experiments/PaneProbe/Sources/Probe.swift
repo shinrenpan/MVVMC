@@ -5,6 +5,7 @@ import UIKit
 //   -mode b   UIKit：UINavigationController(root: UIArrangementViewController)，兩個 pane 各是一個 HostController
 //   -mode b2  同 b，但設定在 primary、首頁在 secondary 且 layoutPriority = 1（FoodEntropy 想要的版面）
 //   -mode b3  同 b2，再給兩欄各 400pt 最小寬度（讓窄螢幕物理上分不了）
+//   -mode b4  容器在寬／窄切換時互換 primary 與 secondary（寬 = regular 且寬 > 高：設定左首頁右；其他：只剩首頁）
 //   -mode c   SwiftUI：UINavigationController(root: 容器 HostController)，裡面 ArrangementView 的兩個 pane
 //             各用 UIViewControllerRepresentable 包一個 HostController
 // primary = Home（窄時預設保留），secondary = Settings（窄時被藏起來）。
@@ -61,6 +62,47 @@ final class PaneHostController: UIHostingController<PaneView> {
   @MainActor required dynamic init?(coder: NSCoder) { fatalError() }
 }
 
+// MARK: - B4：尺寸改變時互換 primary／secondary
+
+/// 寬（寬 > 高）：設定 = primary（左）、首頁 = secondary（右）
+/// 窄：首頁 = primary → arrangement 收合時保留首頁
+@available(iOS 27.1, *)
+final class SwappingArrangementController: UIArrangementViewController {
+  let home: PaneHostController
+  let settings: PaneHostController
+  private var isWide: Bool?
+
+  init(home: PaneHostController, settings: PaneHostController) {
+    self.home = home
+    self.settings = settings
+    super.init()
+    updateArrangement(UISplitArrangement.split.axes(.horizontal))
+  }
+
+  @MainActor required dynamic init?(coder: NSCoder) { fatalError() }
+
+  // 只在 layout 時判斷：那時 bounds 與 trait 都已是新的（viewWillTransition 拿到的 size 早於 trait 更新）
+  override func viewWillLayoutSubviews() {
+    super.viewWillLayoutSubviews()
+    apply(size: view.bounds.size)
+  }
+
+  private func apply(size: CGSize) {
+    // 第一版只看「寬 > 高」：外螢幕橫放（678×466）也算寬，被換成設定當 primary 後又收合，只剩設定。
+    // 內螢幕直橫都是 regular、外螢幕橫放是 compact，所以要兩個條件一起看。
+    let wide = traitCollection.horizontalSizeClass == .regular && size.width > size.height
+    guard wide != isWide else { return }
+    isWide = wide
+    let (primary, secondary) = wide ? (settings, home) : (home, settings)
+    setViewController(nil, for: .primary)
+    setViewController(nil, for: .secondary)
+    setViewController(primary, for: .primary)
+    setViewController(secondary, for: .secondary)
+    swaps += 1
+  }
+  var swaps = 0
+}
+
 // MARK: - C：SwiftUI ArrangementView 包 HostController
 
 struct PaneRepresentable: UIViewControllerRepresentable {
@@ -102,8 +144,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     if mode == "c" {
       root = UIHostingController(rootView: SwiftUIContainer(home: home, settings: settings))
     } else if #available(iOS 27.1, *) {
-      let avc = UIArrangementViewController()
-      if mode == "b2" || mode == "b3" {
+      let avc = mode == "b4"
+        ? SwappingArrangementController(home: home, settings: settings)
+        : UIArrangementViewController()
+      if mode == "b4" {
+        // 由 SwappingArrangementController 自己依寬高決定
+      } else if mode == "b2" || mode == "b3" {
         // FoodEntropy 想要的版面：設定在左（primary）、首頁在右（secondary），窄時只留首頁
         avc.setViewController(settings, for: .primary)
         avc.setViewController(home, for: .secondary)
@@ -153,12 +199,17 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     func r(_ x: CGFloat) -> String { String(format: "%.0f", x) }
     var parts = ["STATE mode=\(mode) window=\(r(window.bounds.width))x\(r(window.bounds.height))",
                  "navTop=\(nav?.topViewController?.title ?? "-")"]
+    if #available(iOS 27.1, *), let avc = arrangement as? UIArrangementViewController {
+      let primary = (avc.viewController(for: .primary) as? PaneHostController)?.name ?? "-"
+      let swaps = (avc as? SwappingArrangementController)?.swaps ?? 0
+      parts.append("primary=\(primary) swaps=\(swaps) hsc=\(avc.traitCollection.horizontalSizeClass == .regular ? "R" : "C")")
+    }
     for name in ["Home", "Settings"] {
       guard let p = Registry.panes[name] else { continue }
       let f = p.viewIfLoaded.map { $0.convert($0.bounds, to: nil) } ?? .zero
       var hidden = "?"
       if mode.hasPrefix("b"), #available(iOS 27.1, *), let avc = arrangement as? UIArrangementViewController {
-        let homeIsPrimary = mode == "b"
+        let homeIsPrimary = avc.viewController(for: .primary) === Registry.panes["Home"]
         let placement: UIArrangementViewController.ViewPlacement = (name == "Home") == homeIsPrimary ? .primary : .secondary
         hidden = avc.state(for: placement).map { "\($0.isHidden)" } ?? "nil"
       }

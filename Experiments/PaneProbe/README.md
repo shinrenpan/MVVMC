@@ -12,6 +12,7 @@ Apple's shape (HIG, Tech Talk 111463, forums 848000): navigation container **out
 | `c` | `UIHostingController` hosting SwiftUI `ArrangementView` | each wrapped by `UIViewControllerRepresentable` |
 | `b2` | as `b`, but Settings = primary, Home = secondary with `layoutPriority = 1` | FoodEntropy's wanted layout |
 | `b3` | as `b2`, plus `width.minimum = .absolute(400)` on both | |
+| `b4` | `UIArrangementViewController` subclass that **swaps placements** in `viewWillLayoutSubviews`: wide (`horizontalSizeClass == .regular` **and** width > height) → Settings primary, Home secondary; otherwise Home primary | |
 
 Panes present a `.pageSheet` and push from `self`, the same path an MVVMC HostController uses. A loop prints one `STATE` line per second (window size; per pane: in window, parent, `navigationController != nil`, frame, `isHidden`, presented sheet), so posture changes can be read from the log while a human folds the simulator.
 
@@ -41,8 +42,23 @@ FoodEntropy's layout (Settings left, Home right, Home only when narrow):
 
 Matches FoodEntropy's SwiftUI measurement of the `b2` shape. Giving the secondary a priority stops the portrait collapse, and minimum widths do not force one. **No declarative arrangement setting yields "secondary kept, collapse in portrait"**; the container has to change the arrangement itself on size change (`updateArrangement`, or swapping placements) — which is what FoodEntropy's GeometryReader + HStack already does.
 
+### `b4`: swapping placements gets FoodEntropy's layout
+
+| Posture | Result |
+|---|---|
+| Outer display, landscape (678×466, compact) | Home only |
+| Outer display, portrait | Home only |
+| Inner display, landscape (951×669, regular) | Settings │ Home |
+| Inner display, portrait (669×951, regular) | Home only |
+| Sheet opened from Settings in inner landscape, then rotated to portrait (Settings swapped out of primary and removed) | **sheet survives** |
+
+The swap moves the same two instances; nothing is rebuilt. **The first version tested only `width > height` and was wrong on the outer display in landscape**: 678×466 counts as wide, Settings became primary, the arrangement then collapsed and showed Settings alone. The inner display is regular in both orientations and the outer display is compact in landscape, so the condition needs both. (FoodEntropy's own `width > height` rule never hits this because the app locks portrait, which the outer display honours.)
+
+Not tested: the half-open posture (fold active) with `b4`; Apple documents that arrangements avoid the division region on their own.
+
 ## Conclusions
 
 - **Each pane can be a full HostController**, in both UIKit and SwiftUI containers. It presents its own sheets and handles its own routes; no parent needs to route on its behalf for the sheet to survive a collapse.
 - **One hazard follows from "removed from the hierarchy"**: while collapsed, the hidden pane's `navigationController` is `nil`, so a push it issues does nothing. In practice it cannot receive taps while hidden; anything it triggers asynchronously (a completion that routes) would be dropped.
+- **FoodEntropy's layout is reachable with the system container** by swapping placements on size change (`b4`); no declarative setting does it.
 - **Push always covers both panes.** A pane that needs its own drill-down is a `UISplitViewController` case, not an arrangement.
