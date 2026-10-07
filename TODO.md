@@ -94,6 +94,21 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 
 **解除條件已達成（2026-10-07）**：Xcode 27.1 RC（27A9275）本機在、`simctl` 有 iOS 27.1 runtime（24A94232）與 iPhone Duo。第一個落地的是 Router（見上方 `deeplink(_:in:)`）。以下素材**仍然不是規則**，進規範要過 `Experiments/README.md` 的 entry gate。
 
+### demo 缺陷：deeplink 遇到已開著的 modal（FoodEntropy 盤點第 9 條，2026-10-07）
+
+- [ ] **`.present` 分支沒有先收 modal**（`AppRouter.swift` `case let .present`）：已有 sheet 時直接 `rootVC.present(...)`，UIKit 會拒絕，deeplink 被吃掉。程式碼確認，**執行期未驗證**。
+- [ ] **`.navigate` 分支先 `dismiss(animated: false)` 但同一 runloop 就設 `selectedIndex`／`setViewControllers`**，沒有放進 completion。FoodEntropy 的 `fix-deeplink-dropped-push` 教訓是同一 runloop 連續做會漏 push；它的修法是 completion 內才設堆疊，並以 `AppRouterTests` 掛 host window 真的 present 後斷言（reported）。本機一次 `openurl settings → settings → posts/2` 序列最後停在 Post 2，**這一次**沒漏——不足以排除。
+- [ ] `backToRoot`／`backTo` 遇到 presented modal 該不該收——skill 沒說。
+- 下一步：在 demo 重現 → 修 `deeplink` 兩個分支 → 決定規則措辭；測試照 FoodEntropy 的 host window 寫法。
+
+### FoodEntropy 盤點中 MVVMC「沒有」的四條（素材，只有一個專案的實測，未過 entry gate）
+
+- **量錯寬窄的對象**：量 HStack 自身會被固定欄寬撐住、退不回單欄 → 量外層提案（GeometryReader）；兩欄只給 `maxWidth: .infinity` 分配不穩定。
+- **同一個「寬」判斷在 V、C 各寫一份會漂**，且兩邊量的尺寸不同（整個畫面 vs 扣導覽列）→ 單一出處。PaneProbe b4 把判斷收在容器是一種解。
+- **常駐 pane 不再觸發 `onAppear`** → 回前景重讀改聽 `didBecomeActive`（UIKit 生命週期收不到 `scenePhase`），跨畫面狀態改聽資料層廣播。
+- **被推入的頁面在姿態改變後自動退回**（設定頁翻開時已在左欄）→ `viewWillTransition` 轉場完成後經 Router `back`。
+- 測試工具：`simctl openurl` 的系統確認框只在第一次出現。
+
 ### 刻意延後的測試（2026-10-07）——不是遺漏，每項都附重開條件
 
 | 未測項目 | 為什麼現在不測 | 什麼時候重開 |
