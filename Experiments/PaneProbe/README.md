@@ -54,11 +54,24 @@ Matches FoodEntropy's SwiftUI measurement of the `b2` shape. Giving the secondar
 
 The swap moves the same two instances; nothing is rebuilt. **The first version tested only `width > height` and was wrong on the outer display in landscape**: 678×466 counts as wide, Settings became primary, the arrangement then collapsed and showed Settings alone. The inner display is regular in both orientations and the outer display is compact in landscape, so the condition needs both. (FoodEntropy's own `width > height` rule never hits this because the app locks portrait, which the outer display honours.)
 
-Not tested: the half-open posture (fold active) with `b4`; Apple documents that arrangements avoid the division region on their own.
+### Pane toolbars do not reach the navigation bar — the container must forward them
+
+Each pane's SwiftUI `.toolbar` / `.navigationTitle` **is** written into that pane's own `navigationItem` (logged: `Home.ownNavItems=1`, `ownTitle=Home title`), but `UINavigationController` shows only its top view controller's item — the container's. Measured in `b4` and `c`: `navItems=0`, title = the container's, no buttons on screen. (A single HostController composing two SwiftUI Views, FoodEntropy's current shape, does not have this problem: SwiftUI merges both Views' toolbars into the one hosting controller.)
+
+`b4` then forwards: in `viewDidLayoutSubviews` the container sets its own `rightBarButtonItems` to the bar items of the panes currently in the window. Result:
+
+- portrait: one button (Home's); landscape: two (Home's and Settings'), placed in the vertical bar automatically;
+- tapping each forwarded button runs the pane's SwiftUI action (`TAP Home action` ×3, `TAP Settings action` ×1 in the log).
+
+Titles are not forwarded; the container has to choose its own.
+
+### Half-open posture
+
+`b4` in inner landscape, half-open: Settings `x0 w456`, Home `x496 w455` — the arrangement leaves the 40pt division region empty on its own, as Apple documents. No `reservedRegions` code needed.
 
 ## Conclusions
 
-- **Each pane can be a full HostController**, in both UIKit and SwiftUI containers. It presents its own sheets and handles its own routes; no parent needs to route on its behalf for the sheet to survive a collapse.
+- **Each pane can be a full HostController**, in both UIKit and SwiftUI containers. It presents its own sheets and handles its own routes; no parent needs to route on its behalf for the sheet to survive a collapse. **But its navigation-bar buttons only appear if the container forwards them** (C-layer appearance work, ~10 lines).
 - **One hazard follows from "removed from the hierarchy"**: while collapsed, the hidden pane's `navigationController` is `nil`, so a push it issues does nothing. In practice it cannot receive taps while hidden; anything it triggers asynchronously (a completion that routes) would be dropped.
 - **FoodEntropy's layout is reachable with the system container** by swapping placements on size change (`b4`); no declarative setting does it.
 - **Push always covers both panes.** A pane that needs its own drill-down is a `UISplitViewController` case, not an arrangement.

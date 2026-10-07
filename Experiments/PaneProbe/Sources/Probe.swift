@@ -33,6 +33,13 @@ struct PaneView: View {
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(color.opacity(0.15))
+    // MVVMC 的按鈕寫在每個 HostController 的 SwiftUI .toolbar——pane 裡的這顆會不會出現在共用的導覽列？
+    .navigationTitle("\(name) title")
+    .toolbar {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button("\(name) action", systemImage: name == "Home" ? "house" : "gearshape") { print("TAP \(name) action") }
+      }
+    }
   }
 }
 
@@ -85,6 +92,19 @@ final class SwappingArrangementController: UIArrangementViewController {
   override func viewWillLayoutSubviews() {
     super.viewWillLayoutSubviews()
     apply(size: view.bounds.size)
+  }
+
+  // 導覽列只顯示最上層 VC（這個容器）的 navigationItem。pane 的 SwiftUI .toolbar 有寫進 pane 自己的
+  // navigationItem，只是不會被顯示——所以由容器把畫面上 pane 的按鈕轉接到自己身上。
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    let visible = [viewController(for: .primary), viewController(for: .secondary)]
+      .compactMap { $0 }
+      .filter { $0.viewIfLoaded?.window != nil }
+    let items = visible.flatMap { ($0.navigationItem.rightBarButtonItems ?? []) + $0.navigationItem.trailingItemGroups.flatMap(\.barButtonItems) }
+    if navigationItem.rightBarButtonItems.map({ $0.map(ObjectIdentifier.init) }) != items.map(ObjectIdentifier.init) {
+      navigationItem.rightBarButtonItems = items
+    }
   }
 
   private func apply(size: CGSize) {
@@ -204,6 +224,12 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
       let swaps = (avc as? SwappingArrangementController)?.swaps ?? 0
       parts.append("primary=\(primary) swaps=\(swaps) hsc=\(avc.traitCollection.horizontalSizeClass == .regular ? "R" : "C")")
     }
+    if let top = nav?.topViewController {
+      let ni = top.navigationItem
+      let items = (ni.rightBarButtonItems ?? []) + (ni.leftBarButtonItems ?? [])
+        + ni.trailingItemGroups.flatMap(\.barButtonItems) + ni.leadingItemGroups.flatMap(\.barButtonItems)
+      parts.append("navItems=\(items.count)[\(items.map { $0.title ?? "-" }.joined(separator: ","))] navTitle=\(ni.title ?? top.title ?? "-")")
+    }
     for name in ["Home", "Settings"] {
       guard let p = Registry.panes[name] else { continue }
       let f = p.viewIfLoaded.map { $0.convert($0.bounds, to: nil) } ?? .zero
@@ -214,6 +240,9 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         hidden = avc.state(for: placement).map { "\($0.isHidden)" } ?? "nil"
       }
       let presented = p.presentedViewController.map { _ in "yes" } ?? "no"
+      let pni = p.navigationItem
+      let pItems = (pni.rightBarButtonItems ?? []) + pni.trailingItemGroups.flatMap(\.barButtonItems)
+      parts.append("\(name).ownNavItems=\(pItems.count) \(name).ownTitle=\(pni.title ?? "-")")
       parts.append("\(name)=[inWindow=\(p.viewIfLoaded?.window != nil) parent=\(p.parent.map { String(describing: type(of: $0)) } ?? "nil")"
         + " nav=\(p.navigationController != nil) frame=x\(r(f.minX)) w\(r(f.width)) hidden=\(hidden) sheet=\(presented)]")
     }
