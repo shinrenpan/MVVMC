@@ -27,4 +27,15 @@ RESULT mode=uikit   verticalBarEdge=unspecified hostInsets=[t82 l0 b83 r0]  navB
 
 **The SwiftUI modifier is a silent no-op in this hierarchy**: `swiftui` is identical to `none`. Overriding `preferredVerticalBarBehavior` on the hosting controller works — the vertical bar disappears and the tab bar returns to the bottom. So in MVVMC the opt-out is a C-layer appearance setting, not a V-layer modifier.
 
+## Item-level and navigationItem-level settings do cross the bridge
+
+Two more modes (same run conditions):
+
+```
+RESULT mode=axis     … items=compression=0 2:Profile/axis=1,Filter/axis=1   ← ToolbarItem.axisBehavior(.horizontalOnly)
+RESULT mode=compress … items=compression=1 2:Profile/axis=0,Filter/axis=0   ← .toolbarVerticalCompressionBehavior(.prefersToolbarItems)
+```
+
+`items=` reads the hosting controller's UIKit `navigationItem` directly. Item-level `.axisBehavior` lands on each `UIBarButtonItem` (screenshot confirms both icons leave the vertical bar for the top row), and the compression modifier lands on `navigationItem.verticalBarCompressionBehavior`. They travel the same bridge as the toolbar items themselves. **Only the view-controller property `preferredVerticalBarBehavior` does not** — `UIHostingController` does not forward it to its SwiftUI content.
+
 Not measured: whether the SwiftUI modifier works when SwiftUI owns the navigation container (`NavigationStack` / `TabView`) — MVVMC never has that shape.

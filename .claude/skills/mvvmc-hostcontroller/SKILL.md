@@ -157,6 +157,8 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 - ✅ **iPhone Duo 垂直 bar 的退出寫在 C 層**：HostController 覆寫 `preferredVerticalBarBehavior`（iOS 27.1，需 `if #available` / `@available`）。**V 層的 SwiftUI `.toolbarVerticalBehavior(.disabled)` 在 MVVMC 的結構裡完全無效**——頁面是 `UIHostingController` 推在 UIKit `UINavigationController` 上，SwiftUI 這個 modifier 傳不到外層 UIKit 容器，寫了不報錯、也不生效
   > 依據（measured）：`Experiments/VerticalBarProbe`（2026-10-07，Xcode 27.1 RC，iPhone Duo 內螢幕 iOS 27.1）。不設定與 SwiftUI modifier 兩組量到完全相同（`verticalBarEdge=trailing`、右側 inset 84pt、tab bar 直立在右緣）；C 層覆寫那組 `verticalBarEdge=unspecified`、右側 inset 0、tab bar 回到底部。退場條件：SwiftUI 那一組量到與 C 層相同的那天。
   >
+  > **只有這一個傳不過去，其他垂直 bar 設定照常寫在 V 層**：同一個 probe 量到按鈕層級的 `.axisBehavior(_:)` 會寫進 UIKit 的 `UIBarButtonItem.axisBehavior`、`.toolbarVerticalCompressionBehavior(_:)` 會寫進 `navigationItem.verticalBarCompressionBehavior`——它們跟 toolbar 按鈕走同一條橋。傳不過去的是 `UIViewController` 屬性（`preferredVerticalBarBehavior`），因為 `UIHostingController` 沒有把它轉給 SwiftUI 內容。
+  >
   > Apple 要求把它當**固定選擇**（`UIViewController.h`：「avoid changing it frequently… don't toggle it… as a function of that view's state」）——所以回傳常數，不要讀 ViewModel 的 state 來決定。
 
 ---

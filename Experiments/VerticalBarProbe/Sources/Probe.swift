@@ -11,19 +11,38 @@ import UIKit
 let mode = UserDefaults.standard.string(forKey: "mode") ?? "none"
 
 struct ProbeView: View {
+  /// -mode axis：兩顆按鈕標 `.axisBehavior(.horizontalOnly)`——單一按鈕層級的 SwiftUI 設定
+  /// 傳不傳得過 UIHostingController 到 UIKit 的 UIBarButtonItem？
+  @ToolbarContentBuilder
+  var items: some ToolbarContent {
+    if mode == "axis", #available(iOS 27.1, *) {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button("Filter", systemImage: "line.3.horizontal.decrease") {}
+      }
+      .axisBehavior(.horizontalOnly)
+      ToolbarItem(placement: .topBarLeading) {
+        Button("Profile", systemImage: "person") {}
+      }
+      .axisBehavior(.horizontalOnly)
+    } else {
+      ToolbarItem(placement: .topBarTrailing) {
+        Button("Filter", systemImage: "line.3.horizontal.decrease") {}
+      }
+      ToolbarItem(placement: .topBarLeading) {
+        Button("Profile", systemImage: "person") {}
+      }
+    }
+  }
+
   var body: some View {
     let base = List(0..<20, id: \.self) { Text("Row \($0)") }
       .navigationTitle("Probe")
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button("Filter", systemImage: "line.3.horizontal.decrease") {}
-        }
-        ToolbarItem(placement: .topBarLeading) {
-          Button("Profile", systemImage: "person") {}
-        }
-      }
+      .toolbar { items }
     if mode == "swiftui", #available(iOS 27.1, *) {
       base.toolbarVerticalBehavior(.disabled)
+    } else if mode == "compress", #available(iOS 27.1, *) {
+      // 頁面層級、但 UIKit 端掛在 navigationItem 上的設定——傳不傳得過去？
+      base.toolbarVerticalCompressionBehavior(.prefersToolbarItems)
     } else {
       base
     }
@@ -69,12 +88,19 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         default: "unspecified"
         }
       }
+      var itemsDesc = "n/a"
+      if #available(iOS 27.1, *) {
+        let ni = host.navigationItem
+        let all = (ni.leftBarButtonItems ?? []) + (ni.rightBarButtonItems ?? [])
+          + ni.leadingItemGroups.flatMap(\.barButtonItems) + ni.trailingItemGroups.flatMap(\.barButtonItems)
+        itemsDesc = "compression=\(ni.verticalBarCompressionBehavior.rawValue) \(all.count):" + all.map { "\($0.title ?? "-")/axis=\($0.axisBehavior.rawValue)" }.joined(separator: ",")
+      }
       let bar = nav.navigationBar.frame
       let tb = tab.tabBar.frame
       print("RESULT mode=\(mode) window=\(r(window.bounds.width))x\(r(window.bounds.height))"
         + " verticalBarEdge=\(edge) hostInsets=[t\(r(inset.top)) l\(r(inset.left)) b\(r(inset.bottom)) r\(r(inset.right))]"
         + " navBar=[x\(r(bar.minX)) y\(r(bar.minY)) w\(r(bar.width)) h\(r(bar.height)) hidden=\(nav.navigationBar.isHidden)]"
-        + " tabBar=[x\(r(tb.minX)) y\(r(tb.minY)) w\(r(tb.width)) h\(r(tb.height)) hidden=\(tab.tabBar.isHidden)]")
+        + " items=\(itemsDesc) tabBar=[x\(r(tb.minX)) y\(r(tb.minY)) w\(r(tb.width)) h\(r(tb.height)) hidden=\(tab.tabBar.isHidden)]")
       exit(0)
     }
   }
