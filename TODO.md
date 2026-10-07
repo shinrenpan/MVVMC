@@ -101,6 +101,7 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 | demo 自己開第二個 scene（`UIApplicationSupportsMultipleScenes: true`），含通知 delegate 為 `weak` 被覆蓋的問題 | 沒有任何規則鎖定單 scene；沒有專案開啟多 scene | 有專案要開啟多 scene 時（細節見上方 deeplink 段的 "Still open"） |
 | 冷啟動點推播在**真機**上是否漏接（delegate 晚於 `didFinishLaunching` 設定） | 模擬器量到正常；真機需要實機與推播憑證 | 有上架專案回報冷啟動點推播沒反應時 |
 | 搜尋列、大標題、`titleView`、`.confirmationAction`／`.primaryAction`／`.principal` 在垂直 bar 下的行為；垂直 bar 容量 | demo 沒用到；Apple 文件也沒寫 | 有專案用到其中任一項並在 Duo 上看到異常時 |
+| 沒有 scene 的進入點（App Intents、由 NotificationCenter 廣播再於 `sceneDidBecomeActive` 消化的 pending deeplink）在多 scene 時該由哪個 scene 處理（FoodEntropy 反例 4b） | 單 scene 下行為確定；多 scene 時目前是「誰先拿到誰處理」，未定義 | 有專案開啟多 scene 時，與上面第一列一起處理 |
 | deeplink 直接導到並排容器的另一個 pane | 並排寫法還沒寫成規則，介面未定 | 並排容器寫進 skill（或 demo 加並排範例）時一起設計 |
 
 

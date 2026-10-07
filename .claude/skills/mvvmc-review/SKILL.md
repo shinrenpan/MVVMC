@@ -36,7 +36,7 @@ argument-hint: [feature-path]
 | ViewAction 用動詞風格而非事件風格 | `architecture.md`「推薦／避免」是**偏好不是硬規則**——只能列 ⚠️ |
 | Router 的方法名稱與數量跟 demo 的七個方法不吻合（`sheet()` / `backTo()` / `tab()` 等一個都不存在也一樣）——**查的是那張表的覆蓋率，不是 API 表面積** | `mvvmc-navigation`〈你的 Router 必須覆蓋的格子〉：「這一節列的是『要能做到什麼』，不是『必須叫什麼名字』……對齊方式是在專案 CLAUDE.md 寫一張對照表，**不需要改任何程式碼**」 |
 | 版面環境推導值（size class、`isWide`、容器寬度）存進 State | `mvvmc-model`〈除此之外皆可〉下方的 ⚠️ advisory——外部文件依據，明文「`mvvmc-review` 不得據此開單」 |
-| `UIViewRepresentable` 沒實作 `sizeThatFits`，但它包的 UIView `intrinsicContentSize` 固定或不自報 | `mvvmc-view` 規則 15 只涵蓋「自報寬度會跟著自身寬度長」的 view；probe 量到另外兩種在任何組合下都不溢出 |
+| `UIViewRepresentable` 沒實作 `sizeThatFits`，但它包的是**專案自己寫的** UIView，且 `intrinsicContentSize` 確定固定或不自報（第三方 SDK 的 view **不在此列**，照開） | `mvvmc-view` §8 規則 15〈不需要的情況〉 |
 
 > **維護規則**：新增或修改任何一條上游豁免時，**必須同步更新這張表**。它的存在價值就是讓「有沒有同步」變成一個看得見的問題——14 條散在 6 個檔案裡時，沒有人能一眼看出漏了哪條。
 >

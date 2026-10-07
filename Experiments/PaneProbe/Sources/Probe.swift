@@ -67,6 +67,13 @@ final class PaneHostController: UIHostingController<PaneView> {
   }
 
   @MainActor required dynamic init?(coder: NSCoder) { fatalError() }
+
+  /// -paneOptOut 1：pane 自己（照 mvvmc-hostcontroller 的規則）在 C 層退出垂直 bar——
+  /// 放在自訂容器裡時，這個覆寫還會生效嗎？
+  @available(iOS 27.1, *)
+  override var preferredVerticalBarBehavior: UIVerticalBarBehavior {
+    UserDefaults.standard.bool(forKey: "paneOptOut") ? .disabled : .automatic
+  }
 }
 
 // MARK: - B4：尺寸改變時互換 primary／secondary
@@ -107,6 +114,16 @@ final class SwappingArrangementController: UIArrangementViewController {
     }
   }
 
+  /// -forward 1：容器把垂直 bar 的決定權轉給 primary pane（UIKit 只替 nav／tab 容器自動轉發）
+  /// -containerOptOut 1：對照組——容器自己回傳 .disabled
+  override var preferredVerticalBarBehavior: UIVerticalBarBehavior {
+    UserDefaults.standard.bool(forKey: "containerOptOut") ? .disabled : .automatic
+  }
+
+  override var childForPreferredVerticalBarBehavior: UIViewController? {
+    UserDefaults.standard.bool(forKey: "forward") ? viewController(for: .primary) : nil
+  }
+
   private func apply(size: CGSize) {
     // 第一版只看「寬 > 高」：外螢幕橫放（678×466）也算寬，被換成設定當 primary 後又收合，只剩設定。
     // 內螢幕直橫都是 regular、外螢幕橫放是 compact，所以要兩個條件一起看。
@@ -119,6 +136,8 @@ final class SwappingArrangementController: UIArrangementViewController {
     setViewController(primary, for: .primary)
     setViewController(secondary, for: .secondary)
     swaps += 1
+    // 換了 primary，childForPreferredVerticalBarBehavior 的答案也變了——要通知系統重新查詢
+    setNeedsUpdateOfVerticalBarConfiguration()
   }
   var swaps = 0
 }
@@ -222,7 +241,13 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     if #available(iOS 27.1, *), let avc = arrangement as? UIArrangementViewController {
       let primary = (avc.viewController(for: .primary) as? PaneHostController)?.name ?? "-"
       let swaps = (avc as? SwappingArrangementController)?.swaps ?? 0
-      parts.append("primary=\(primary) swaps=\(swaps) hsc=\(avc.traitCollection.horizontalSizeClass == .regular ? "R" : "C")")
+      var edge = "?"
+      switch avc.traitCollection.verticalBarEdge {
+      case .leading: edge = "leading"
+      case .trailing: edge = "trailing"
+      default: edge = "unspecified"
+      }
+      parts.append("primary=\(primary) swaps=\(swaps) hsc=\(avc.traitCollection.horizontalSizeClass == .regular ? "R" : "C") verticalBarEdge=\(edge)")
     }
     if let top = nav?.topViewController {
       let ni = top.navigationItem

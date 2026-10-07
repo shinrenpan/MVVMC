@@ -157,6 +157,8 @@ enum Deeplink {
 - ✅ Push 的 `didReceive` 是 `nonisolated`，內部用 `Task { @MainActor in ... }` 跳回主執行緒
 - ✅ 三個進入點最終都呼叫 `AppRouter.shared.deeplink(deeplink.makeDestination(), in: windowScene)`，scene 各自取自 `openURLContexts` 的 `scene`、`willConnectTo` 的 `scene`、通知回應的 `response.targetScene`
 - ❌ **`deeplink()` 內不得走全域找 window**（`UIApplication.shared.connectedScenes.first`、`keyWindow` 全域查詢）。單一 scene 時碰巧對，多 scene 時把 deeplink 送到錯的視窗——iPhone Duo 內螢幕是第一台支援多 scene 的 iPhone。依據：Apple `app-resizability` agent skill（Xcode 27.1）原則 11「Never walk global scene/window state … modify the method to accept a new parameter」；demo 以 `deeplink(_:in:)` 編譯並於 iPhone Duo 模擬器（iOS 27.1）實跑冷／熱啟動 URL（2026-10-07）
+  > `response.targetScene` 是 **nullable 的 `UIScene`**（不是 `UIWindowScene`）。nil 時退回處理這則通知的 SceneDelegate 自己的 `window?.windowScene`，**不可退回 `connectedScenes.first`**——那會把這條規則要消滅的全域查找從後門帶回來（反例由 FoodEntropy 依 `UNNotificationResponse+UIKitAdditions.h:18` 提出）。
+  >
   > 通知那一條要在 `nonisolated` 的 `didReceive` 內**先取出 `response.targetScene` 再進 `Task`**：`UNNotificationResponse` 不是 `Sendable`，整個帶進 `Task { @MainActor in }` 在 Swift 6 是編譯錯誤（`sending 'response' risks causing data races`）；`UIScene` 是 `@MainActor` 類別，本身 `Sendable`
 - ✅ Push payload 慣例：`{ "deeplink": "mvvmc://posts/1" }`，取 `userInfo["deeplink"]` 餵給 `Deeplink(url:)`
 

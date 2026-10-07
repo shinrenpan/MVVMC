@@ -904,11 +904,14 @@ struct ChildView: View {
 
 ### UIViewRepresentable：自報尺寸會跟著寬度長的 UIView 必須實作 `sizeThatFits`
 
-**規則**：包進 SwiftUI 的 UIView，若它的 `intrinsicContentSize` 會跟著自己被排到的寬度變大（典型是第三方 SDK 的 adaptive banner），`UIViewRepresentable` **必須**實作 `sizeThatFits(_:uiView:context:)`，回傳以 `proposal.width` 為準的尺寸：
+**規則**：包進 SwiftUI 的 UIView，若它的 `intrinsicContentSize` 會跟著自己被排到的寬度變大，`UIViewRepresentable` **必須**實作 `sizeThatFits(_:uiView:context:)`，回傳以 `proposal.width` 為準的尺寸。**第三方 SDK 的 view 一律實作**——它會不會自己長，要看實測，不看 API 宣告的尺寸：FoodEntropy 用的是名義上固定 320×50 的 `BannerView(adSize: AdSizeBanner)`，實測照樣被撐到 637pt。
 
 ```swift
 func sizeThatFits(_ proposal: ProposedViewSize, uiView: BannerView, context: Context) -> CGSize? {
-    CGSize(width: proposal.width ?? 320, height: 50)
+    // proposal.width 可能是 nil（要理想尺寸）或 .infinity（外層用無限提案量測）——兩者都退回預設寬
+    let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 320
+    // 高度寫死只適用固定尺寸的 banner；adaptive banner 的高度隨寬度變，要用 SDK 的尺寸函式依 width 算
+    return CGSize(width: width, height: 50)
 }
 ```
 
@@ -921,7 +924,7 @@ func sizeThatFits(_ proposal: ProposedViewSize, uiView: BannerView, context: Con
 | 依子 view 理想尺寸分欄（`ArrangementView`） | **整欄被撐寬**，蓋進另一欄 |
 | 給子 view 確定寬度（`HStack` + `.frame(width:)`） | 欄位本身正確，**UIView 自己畫到 frame 外**，蓋進鄰欄、超出螢幕 |
 
-**不需要的情況**：`intrinsicContentSize` 固定（且小於欄寬），或不自報（`noIntrinsicMetric`）——probe 量到這兩種在任何組合下都不溢出。
+**不需要的情況**：**你自己寫的** UIView，`intrinsicContentSize` 確定固定（且小於欄寬）或不自報（`noIntrinsicMetric`）——probe 量到這兩種在任何組合下都不溢出。第三方 view 不適用這條豁免（見上方 AdMob 的例子）。
 
 **依據**（entry gate：measured + reported）：
 

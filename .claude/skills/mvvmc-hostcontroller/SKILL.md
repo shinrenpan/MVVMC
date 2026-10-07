@@ -159,6 +159,8 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
   >
   > **只有這一個傳不過去，其他垂直 bar 設定照常寫在 V 層**：同一個 probe 量到按鈕層級的 `.axisBehavior(_:)` 會寫進 UIKit 的 `UIBarButtonItem.axisBehavior`、`.toolbarVerticalCompressionBehavior(_:)` 會寫進 `navigationItem.verticalBarCompressionBehavior`——它們跟 toolbar 按鈕走同一條橋。傳不過去的是 `UIViewController` 屬性（`preferredVerticalBarBehavior`），因為 `UIHostingController` 沒有把它轉給 SwiftUI 內容。
   >
+  > **HostController 放在自訂容器裡（例如並排容器的 pane）時，它的覆寫會被忽略**——UIKit 只替 `UINavigationController`（轉給 top VC）與 `UITabBarController`（轉給 selected VC）自動轉發。這時要由**容器**覆寫 `preferredVerticalBarBehavior`。同一 probe（`Experiments/PaneProbe` b4，2026-10-07）量到：pane 自己覆寫 → 無效；容器覆寫 `childForPreferredVerticalBarBehavior` 轉給 pane（加 `setNeedsUpdateOfVerticalBarConfiguration()`）→ **仍無效，原因未明**；容器自己回傳 `.disabled` → 有效。反例由 FoodEntropy 依 header 提出、本 probe 證實。
+  >
   > Apple 要求把它當**固定選擇**（`UIViewController.h`：「avoid changing it frequently… don't toggle it… as a function of that view's state」）——所以回傳常數，不要讀 ViewModel 的 state 來決定。
 
 ---

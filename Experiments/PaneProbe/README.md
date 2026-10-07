@@ -65,6 +65,17 @@ Each pane's SwiftUI `.toolbar` / `.navigationTitle` **is** written into that pan
 
 Titles are not forwarded; the container has to choose its own.
 
+### Vertical-bar opt-out inside a custom container
+
+FoodEntropy flagged from the header that UIKit forwards `preferredVerticalBarBehavior` automatically only through `UINavigationController` and `UITabBarController`. Measured in `b4` (inner landscape, `verticalBarEdge` read from the container's traits):
+
+| Who opts out | `verticalBarEdge` |
+|---|---|
+| nobody | trailing |
+| the pane HostController overrides it (`-paneOptOut 1`) | **trailing — ignored** |
+| the container overrides `childForPreferredVerticalBarBehavior` → primary pane, and calls `setNeedsUpdateOfVerticalBarConfiguration()` after each swap (`-forward 1`) | **trailing — still ignored**, cause unknown |
+| the container returns `.disabled` itself (`-containerOptOut 1`) | unspecified — works |
+
 ### Half-open posture
 
 `b4` in inner landscape, half-open: Settings `x0 w456`, Home `x496 w455` — the arrangement leaves the 40pt division region empty on its own, as Apple documents. No `reservedRegions` code needed.

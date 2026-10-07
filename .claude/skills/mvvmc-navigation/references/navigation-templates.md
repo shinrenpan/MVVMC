@@ -427,7 +427,9 @@ extension SceneDelegate: UNUserNotificationCenterDelegate {
     // UIScene 是 @MainActor 類別，本身就是 Sendable
     let targetScene = response.targetScene
     Task { @MainActor in
-      guard let scene = targetScene as? UIWindowScene else { return }
+      // targetScene 是 nullable 的 UIScene。nil 時退回這個 SceneDelegate 自己的 scene——
+      // 不可退回 connectedScenes.first，那正是 deeplink(_:in:) 要消滅的全域查找
+      guard let scene = (targetScene as? UIWindowScene) ?? self.window?.windowScene else { return }
       AppRouter.shared.deeplink(deeplink.makeDestination(), in: scene)
     }
   }

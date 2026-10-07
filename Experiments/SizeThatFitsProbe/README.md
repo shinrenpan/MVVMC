@@ -44,7 +44,7 @@ Conclusions:
 
 - **Not AdMob-specific.** A plain `UIView` whose intrinsic width follows its laid-out width reproduces both of FoodEntropy's symptoms — the stretched column under `ArrangementView` and the self-overflow under `HStack`.
 - **Not Duo-specific.** It reproduces on a non-foldable iPhone on iOS 27.0. Duo merely makes the trigger (a runtime width shrink) routine.
-- **Not every UIView.** Fixed or absent intrinsic size is safe in every combination, which is why the rule is scoped to self-growing views rather than "every `UIViewRepresentable`".
+- **Not every UIView.** Fixed or absent intrinsic size is safe in every combination, which is why the rule is scoped to self-growing views rather than "every `UIViewRepresentable`". **But "fixed" means measured, not declared**: FoodEntropy's `BannerView(adSize: AdSizeBanner)` is nominally 320×50 and was still laid out at 637pt. The rule therefore covers every third-party SDK view and exempts only views the project wrote itself.
 - **SDK control not run.** Only Xcode 27.x was installed at the time; whether an older linked SDK behaves differently is unmeasured.
 
 Raw output:
