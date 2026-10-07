@@ -99,6 +99,8 @@ The demo hits none of the five (it builds clean under Xcode 27). **The last row 
 - 內螢幕開 Settings sheet（`.medium`/`.large` detents）→ 闔上：sheet 存活，關閉正常。內螢幕 sheet 置中、toolbar 橫向。**外螢幕半高 sheet 的 toolbar 仍是橫的**——與上方研究筆記「外螢幕有 toolbar 的 sheet 顯示為垂直」不一致；FoodEntropy 的全螢幕 Safari sheet 則變直。差別可能是 sheet 高度，**未驗證**。
 - URL 冷／熱啟動與推播點擊（`response.targetScene`）三個進入點都導到正確頁面。
 - 非架構觀察：內螢幕上內文單行橫跨全寬並越過折線——V 層 readable width 的問題，不是規則。
+- **外螢幕遵守 `supportedInterfaceOrientations`，內螢幕不理會**（FoodEntropy 實測，兩邊成對照）：FoodEntropy 只宣告 Portrait → 闔上後旋轉介面不轉；demo 沒宣告（iPhone 預設含橫向）→ 闔上後旋轉介面跟著轉、tab bar 移到右側直欄，compact/compact 矮版面——一般 iPhone 橫向也是如此，非 Duo 特有。
+- **原則 11 的另一個落點（開放問題）**：FoodEntropy `BannerAdView.keyRootViewController()` 在 `UIViewRepresentable` 內以 `connectedScenes … isKeyWindow` 取 rootVC 交給 AdMob。`mvvmc-navigation` 新寫的那條只管 `deeplink()`；第三方 SDK 橋接要一個 VC 時怎麼取（例如在 `didMoveToWindow` 讀 `window?.rootViewController`）**沒有規範也沒有實測**。單一 scene 下是潛在而非現行錯誤；demo 沒有這種橋接，要寫規則得先有可編譯的形狀。
 - **沒測到**：demo 自己的第二個 scene（`UIApplicationSupportsMultipleScenes: false`；使用者測的是 Safari 與 demo 並排，兩個 app）；半開（折線 active）姿態；內螢幕旋轉。
 
 ### FoodEntropy 帶回的素材（2026-10-07，跨 session，可重跑的附 branch／commit）
