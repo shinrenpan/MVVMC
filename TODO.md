@@ -100,6 +100,7 @@ MVVMC apps that show one feature per screen are adapted: verified on the iPhone 
 | 搜尋列、大標題、`titleView`、`.confirmationAction`／`.primaryAction`／`.principal` 在垂直 bar 下的行為；垂直 bar 容量 | demo 沒用到；Apple 文件也沒寫 | 有專案用到其中任一項並在 Duo 上看到異常時 |
 | 沒有 scene 的進入點（App Intents、由 NotificationCenter 廣播再於 `sceneDidBecomeActive` 消化的 pending deeplink）在多 scene 時該由哪個 scene 處理（FoodEntropy 反例 4b） | 單 scene 下行為確定；多 scene 時目前是「誰先拿到誰處理」，未定義 | 有專案開啟多 scene 時，與上面第一列一起處理 |
 | deeplink 直接導到並排容器的另一個 pane | 並排寫法還沒寫成規則，介面未定 | 並排容器寫進 skill（或 demo 加並排範例）時一起設計 |
+| demo 加 iPad（`TARGETED_DEVICE_FAMILY` 含 2）當「規則在任意寬度下能否實作」的檢查 | 沒有專案出 iPad 版；iPad 視窗可任意縮放，會帶進 Duo 沒有的情境（不對稱分割、寬度門檻與遲滯），現在加只是多一組沒人要的測試 | 第一個要出 iPad 版的 MVVMC 專案出現時——先在 demo 量，再談規則 |
 
 
 ## Environment notes

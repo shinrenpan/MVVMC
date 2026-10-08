@@ -154,6 +154,7 @@ Demo includes:
 ## Tech Stack
 
 - iOS 17+
+- **Premise: the app runs in a window whose size changes** (unfolding/folding, rotation, Split View while running) — not "an iPhone has one width". The primary test device is the iPhone Duo simulator (Xcode 27.1: outer display, inner portrait/landscape, left/right half of Split View). The rules that follow from this live in the individual skills, each with its evidence; the research record is `Experiments/iPhoneDuo/`. Side-by-side columns are a product feature, not the baseline. The demo is iPhone-only — iPad windows resize freely, so Duo findings (e.g. Split View resting only at 50/50) do not carry over
 - Swift 6.2+ toolchain
 - Swift 6 language mode with `SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES` (builds warning-free) (the test suite uses raw identifier test names, which require a Swift 6.2 toolchain)
 - SwiftUI + UIKit hybrid

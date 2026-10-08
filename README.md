@@ -155,6 +155,7 @@ open MVVMCDemo.xcodeproj
 ## Tech Stack
 
 - iOS 17+
+- **前提：app 跑在會變大小的視窗裡**（執行中展開／闔上、旋轉、分割畫面），不是「iPhone 只有一種寬度」。主要測試機是 iPhone Duo 模擬器（Xcode 27.1，外螢幕、內螢幕直／橫、分割左右半）。由此而來的規則分散在各 skill，各自附依據；研究紀錄在 `Experiments/iPhoneDuo/`。並排兩欄是產品功能，不是基線。demo 只支援 iPhone——iPad 的視窗可任意調整大小，Duo 上的結論（例如分割只停在 50/50）不能直接搬過去
 - Swift 6.2+ toolchain（測試套件使用 raw identifier 測試名）
 - Swift 6 language mode，`SWIFT_STRICT_CONCURRENCY: complete` + `SWIFT_APPROACHABLE_CONCURRENCY: YES`（零警告通過）
 - SwiftUI + UIKit 混合
