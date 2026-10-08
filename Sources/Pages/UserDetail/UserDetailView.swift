@@ -5,14 +5,17 @@ struct UserDetailView: View {
 
   var body: some View {
     Group {
-      switch viewModel.state.api.fetchUser {
-      case .loading where viewModel.state.user == nil:
-        ProgressView()
-      case let .error(message):
-        ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
-      default:
-        if let user = viewModel.state.user {
-          InfoSection(user: user)
+      // 四態：先看有沒有內容，再看狀態（`mvvmc-view` 規則 13）——與 PostListView 同一個形狀
+      if let user = viewModel.state.user {
+        InfoSection(user: user)
+      } else {
+        switch viewModel.state.api.fetchUser {
+        case .prepare, .loading:
+          ProgressView()
+        case let .error(message):
+          ContentUnavailableView(message, systemImage: "exclamationmark.triangle")
+        case .success:
+          ContentUnavailableView("User Not Found", systemImage: "person.slash")
         }
       }
     }

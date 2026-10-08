@@ -17,7 +17,7 @@ extension UserDetailViewModel {
 // MARK: - Domain Models
 
 extension UserDetailViewModel {
-  struct User: Equatable, Sendable {
+  struct User: Identifiable, Equatable, Sendable {
     let id: Int
     var name: String
     var email: String
