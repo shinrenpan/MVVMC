@@ -131,7 +131,7 @@ private extension PostListHostController {
 | `navigationController?.pushViewController` | `AppRouter.shared.to(..., from: self)` | 所有導航統一走 AppRouter |
 | `present(vc, animated:)` / `dismiss` | `AppRouter.shared.to(..., style: .modal)` / `AppRouter.shared.back(from: self)` | 所有導航統一走 AppRouter |
 | callback 內未 `guard let self` | `guard let self else { return }` | 避免 optional chaining |
-| callback 內用 `dismiss` 返回 | `AppRouter.shared.back(from: self)` | 統一 pop，不使用 dismiss |
+| callback 內用 `dismiss` 返回 | `AppRouter.shared.back(from: self)` | 由 Router 依呈現方式決定 pop 或 dismiss，HostController 不自己呼叫 `dismiss` |
 | `onCallback` closure 包 `Task` | `onCallback` 是 async，直接 `await` | async closure 不需要包 Task |
 | `viewDidDisappear` 設 `onRoute = nil` | 不需要 | ViewModel 由 HostController 持有，`[weak self]` 已足夠 |
 | HostController 啟動 Task 觸發 ViewModel | View 的 `.task` 負責 Lifecycle | HostController 是純 Router |
