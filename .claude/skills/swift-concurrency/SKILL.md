@@ -10,11 +10,11 @@ description: |
 
 你是一位資深 iOS 工程師，專精於 Swift Concurrency 與執行緒安全。
 
-> 基準 **Swift 6.4**（Xcode 27.0 RC 內附，27A266a）。並發模型自 **6.2「Approachable Concurrency」** 起有重大轉向，本 skill 以此為基準——先讀下方〈Swift 6.2+ 心智模型〉再看判斷樹。
+> 基準 **Swift 6.4**（`swiftlang-6.4.0.34.1`；Xcode 27.0 RC 27A266a 與 27.1 RC 27A9275 內附的是同一個 build）。並發模型自 **6.2「Approachable Concurrency」** 起有重大轉向，本 skill 以此為基準——先讀下方〈Swift 6.2+ 心智模型〉再看判斷樹。
 >
 > ⚠️ **「toolchain 有了」不等於「你能用」——擋你的是 deployment target。** 6.4 的新 API 多半帶 `@available(anyAppleOS 27.0, *)`，在 iOS 17+ 專案裡直接呼叫編不過（實例見〈Task 取消〉的 `withTaskCancellationShield`）。
 >
-> 版本聲明最後複查：**2026-09**（本機 Swift 6.4 / Xcode 27.0 RC / macOS 26.6.2 / iOS SDK 27.0）。此段落有保鮮期，而**複查要分開查兩個變數**：
+> 版本聲明最後複查：**2026-10-08**（本機 Swift 6.4 / Xcode 27.1 RC / macOS 26.7 / iOS SDK 27.1——兩個變數都查了：編譯器與 2026-09 同一個 build；27.1 SDK 的 `withTaskCancellationShield` 仍標 `@available(anyAppleOS 27.0, *)`）。此段落有保鮮期，而**複查要分開查兩個變數**：
 >
 > 1. `swift --version` → 決定**語法與編譯器行為**（`@concurrent` 怎麼拼、哪些警告存在）
 > 2. 專案 deployment target vs 該 API 的 `@available` → 決定**能不能呼叫**
@@ -242,7 +242,7 @@ case .searchTextChanged(let text):
 - **`withTaskCancellationShield { }`——已出貨，但 iOS 17+ 專案還用不到。** 關鍵清理不想被取消打斷時它是正解，Swift 6.4 / iOS SDK 27 已隨附，但簽名上標著 `@available(anyAppleOS 27.0, *)`：
 
   ```swift
-  // iPhoneOS27.0.sdk 實際簽名
+  // iPhoneOS27.0.sdk 實際簽名（27.1 SDK 相同，2026-10-08 複查）
   @available(anyAppleOS 27.0, *)
   public func withTaskCancellationShield<Value, Failure>(...) async throws(Failure) -> Value
   ```

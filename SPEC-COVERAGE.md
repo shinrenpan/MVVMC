@@ -6,11 +6,11 @@ Maps each load-bearing rule to the demo file that proves it compiles.
 
 Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demonstrated
 
-**❌ vs 🚫**: ❌ means the demo *could* show it and doesn't — those are candidate work, listed in `TODO.md`. 🚫 means demonstrating it would require bending the demo out of shape (inventing a feature, adding a navigation level, or breaking an existing demonstration). A 🚫 rule is validated by reasoning and by other projects, not by this demo — and that is a deliberate trade, because a demo that shows everything stops showing anything clearly.
+**❌ vs 🚫**: ❌ means the demo *could* show it and doesn't — not a to-do: those rules are checked through `Experiments/GenerationProbe/` instead (see "Why the spec reaches further than the demo"). 🚫 means demonstrating it would require bending the demo out of shape (inventing a feature, adding a navigation level, or breaking an existing demonstration). A 🚫 rule is validated by reasoning and by other projects, not by this demo — and that is a deliberate trade, because a demo that shows everything stops showing anything clearly.
 
 ## Why the spec reaches further than the demo
 
-As of 2026-10-08 this table carries **22 ❌ against 18 🚫** (the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
+As of 2026-10-08 this table carries **21 ❌ against 19 🚫** (the module-default-isolation row was reclassified ❌ → 🚫 the same day — "deliberately not enabled" is the 🚫 meaning; the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
 
 The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
 
@@ -99,7 +99,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Same-prefix components share one `private extension` | `PostListView` (`ListSection` + `ListRow`) |
 | Action handler extracted as `@MainActor private func`, kept beside `body` | `PostListView.handleListAction` |
 | Every interaction goes through `Task { await doAction(.view(...)) }` | `PostListView`, `PostFilterView` |
-| Preview injects mock state, wrapped in `#if DEBUG` | `PostListView`, `UserDetailView` (both spell out `Post.mocks` in full — the `.mocks` shorthand does not compile) |
+| Preview injects mock state, wrapped in `#if DEBUG` | `PostListView` (spells out `PostListViewModel.Post.mocks` in full — the `.mocks` shorthand does not compile), `PostDetailView`, `UserDetailView` (`.mock` from `*Mocks.swift`; `UserDetailView` built its user inline until 2026-10-08, against rule 14) |
 | `UIViewRepresentable` wrapping a self-growing `UIView` implements `sizeThatFits` (rule 15) | 🚫 — the demo wraps no UIKit view; backed by `Experiments/SizeThatFitsProbe` (measured) and FoodEntropy's AdMob banner (reported) |
 | One-shot commands to a wrapped `UIView` carry a serial, not value-equality dedupe (rule 16) | 🚫 — the demo wraps no UIKit view; backed by HerbMeet's `recenterTo` (reported, `240f9f5`) |
 | Four-state block (loading / error / empty / content) | `PostListView` — all four |
@@ -158,7 +158,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Architectural invariant tests (localisation coverage, cross-feature references) | ❌ — the demo has no localisation and one module |
 | Whole-state comparison misses hand-written `==` members **and computed properties** | ❌ — no demo State has either |
 | Every new technique carries a greppable "applies when" signal | 🚫 — a maintenance convention, not code |
-| Inject results via `doAction(.apiResponse(...))`, no protocol / mock class | all three test files |
+| Inject results via `doAction(.apiResponse(...))`, no protocol / mock class | `PostListViewModelTests`, `UserDetailViewModelTests`, `SwiftTestingTechniqueTests` |
 | Raw identifier test names (Swift 6.2+) | all |
 | `@MainActor` on the suite struct | all |
 | Guard logic (`isFirstAppear`) | `PostListViewModelTests`, `UserDetailViewModelTests` |
@@ -177,8 +177,8 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | `@MainActor` ViewModels + `Sendable` Action enums survive complete checking | all `*ViewModel.swift` |
 | `nonisolated(unsafe)` escape hatch with a written justification | `AppRouter.swift` (associated-object key) |
 | `@concurrent` / `Task.detached` / `actor` / `nonisolated` computation | 🚫 — no demo screen has work heavy enough to leave the main actor; inventing one would be decoration. Validated by `Experiments/` and external references instead |
-| Module-default `MainActor` isolation (`SWIFT_DEFAULT_ACTOR_ISOLATION`) | ❌ — deliberately not enabled; see `TODO.md`, it would change the VM-layer rule |
+| Module-default `MainActor` isolation (`SWIFT_DEFAULT_ACTOR_ISOLATION`) | 🚫 — deliberately not enabled; see `TODO.md`, it would change the VM-layer rule |
 
-> Last verified **2026-09** on Swift 6.4 / Xcode 27.0 RC, iOS 27.0 simulator: build clean, `14 tests in 3 suites passed`. The first row is the one that decays on a toolchain bump, so it carries a date — a "zero warnings" claim is only ever true of a specific compiler.
+> Last verified **2026-10-08** on Swift 6.4 / Xcode 27.1 RC (27A9275), iPhone Duo iOS 27.1 simulator: clean build with zero warnings, `20 tests in 5 suites passed`. The first row is the one that decays on a toolchain bump, so it carries a date — a "zero warnings" claim is only ever true of a specific compiler.
 >
 > Until 2026-08 the demo built with `SWIFT_STRICT_CONCURRENCY: targeted` and no explicit `SWIFT_VERSION` — meaning this repo claimed Swift 6.2+ while never actually having its Swift 6 compatibility checked by a compiler. It now builds clean in full Swift 6 mode, and that took zero source changes.

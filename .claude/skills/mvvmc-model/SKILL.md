@@ -47,7 +47,7 @@ extension FeatureViewModel {
 - `struct`（值類型），遵守 `Equatable` 與 `Sendable`
 - 所有屬性給定預設值（確保 `.init()` 無參數可用）
 - **預設加 `Equatable`**（例外見下方〈Equatable 規則〉）
-- 欄位型別採**黑名單**：只禁兩類，其餘自由（見下方〈State 欄位型別〉）
+- 欄位型別採**黑名單**：只禁三類，其餘自由（見下方〈State 欄位型別〉）
 
 #### State 欄位型別
 
@@ -71,7 +71,7 @@ extension FeatureViewModel {
 
 > 這類容器型別的**形狀**不在規範範圍（見下一段）；**位置**分兩種：
 > - **只有這個 feature 用** → 放 State 區塊，與 `State` 同一個或緊鄰的 `extension`
-> - **兩個以上 feature 用**（`APIStatus` / `APIError` 幾乎必然如此）→ **提拔到 `Shared/`**，見 `mvvmc-structure`〈`Shared/` 判準〉，那裡明列它們是可以放的
+> - **兩個以上 feature 用**（`APIStatus` / `APIError` 幾乎必然如此）→ **提拔到 `Shared/`**，見 `mvvmc-structure`〈Shared/ 放什麼〉，那裡明列它們是可以放的
 >
 > 先前這裡只寫了前者，而 `mvvmc-structure` 明列 `APIStatus` 可放 `Shared/`——**同一個具名型別兩份文件給了不同位置**，第二個 feature 出現時必然踩到。
 >
@@ -127,7 +127,7 @@ extension PostDetailViewModel {
 >
 > ⚠️ **不要改用 `init(state:)` 繞過這個例外**——那會讓呼叫端決定子頁的 UI 初始狀態（`isFirstAppear`、請求狀態容器、展開中的 id 集合），比傳 Domain Model 更深一層耦合。測試要注入 state 直接寫 `vm.state.xxx`（見 `mvvmc-testing`），不需要這個 init。
 
-此例外的代價：`let post` 無預設值 → **同時放棄第 46 行的無參 `.init()`**，`State()` 會編不過。因此 Preview／Mock／測試不能再用「先無參建 State 再塞值」的套路，必須改成帶參注入 `State(post: .mock)`。
+此例外的代價：`let post` 無預設值 → **同時放棄〈State〉「所有屬性給定預設值」換來的無參 `.init()`**，`State()` 會編不過。因此 Preview／Mock／測試不能再用「先無參建 State 再塞值」的套路，必須改成帶參注入 `State(post: .mock)`。
 
 **代價會擴散到另外兩份 skill，套用前要一起改**：
 

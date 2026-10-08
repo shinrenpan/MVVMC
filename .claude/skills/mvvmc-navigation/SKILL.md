@@ -58,7 +58,7 @@ final class AppRouter: NSObject {
 
 **②的 `.topMost` 不是選配。** 畫面上一旦有常駐 sheet 佔住 presentation slot，從 host controller 直接 present 會「already presenting」——這是規範自己在〈預設立場〉承認的 present-based 例外變體，而它**必須有一格可以落**，否則走那條路的專案會從「規範明文承認的例外」退化成「連座標系都對不上」。
 
-**③④ 歸目的地不歸 Router**，這是〈Close 鈕〉那條的根據：
+**③④ 歸目的地不歸 Router**，這是「Router 不得往目的地的 `navigationItem` 塞按鈕」那條的根據：
 
 - ❌ **Router 不得往目的地的 `navigationItem` 塞按鈕。** 這條**禁的是動作的人，不是那顆按鈕**——目的地當然可以有 Close 鈕，只是不能由 Router 來裝。Router 的職責是「這個意圖對應到哪一頁」（`go_router` 的那種角色），它不碰那一頁長什麼樣；一旦它開始畫 UI，就沒有任何界線可以說明下一個按鈕為什麼不行。而且注入的按鈕在 C 層與 V 層之外被建立，**沒有 `viewModel` 可以呼叫**，於是它結構上不可能遵守 `mvvmc-hostcontroller`「導覽列按鈕的點擊要走 `doAction`」那條硬規則。更實際的是它**不知道那一頁關閉時該做什麼**——送出中的表單（VM 有防重送 guard）、要發 `onCallback` 的頁、有草稿的頁，它一律直接關掉，VM 全程不知情
 - ✅ **目的地在 V 層自己提供關閉入口**：`.toolbar` → `send(.closeDidTap)` → `doAction` → `onRoute?(.dismiss)` → C 層 `back(from:)`。**這是規範對其他每一顆按鈕已經要求的路徑，不需要新規則**

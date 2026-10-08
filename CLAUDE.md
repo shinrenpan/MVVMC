@@ -14,7 +14,9 @@ A personal MVVMC architecture guideline, continuously evolved through discussion
 |---|---|
 | `.claude/skills/` | **The specification.** One skill per layer / concern; each is the single source of truth for its own rules |
 | `Sources/` | Demo app — the compile-time test for the spec |
-| `Tests/` | ViewModel unit tests |
+| `Tests/` | ViewModel unit tests, plus window-hosted `AppRouter` deeplink tests |
+| `Experiments/` | Probes that back the spec's measured claims, and dated research records — not compiled into the demo |
+| `SPEC-COVERAGE.md` / `TODO.md` | Which rules the demo demonstrates; open spec work |
 | `README.md` / `README.en.md` | Human-facing overview |
 
 ---

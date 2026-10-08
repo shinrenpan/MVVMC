@@ -125,7 +125,7 @@ func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>)
 | 目錄 | 用途 |
 |---|---|
 | `Sources/` | Demo 實作（可跑的 Xcode 專案） |
-| `Tests/` | ViewModel 單元測試，驗證 `doAction` 流程 |
+| `Tests/` | ViewModel 單元測試（驗證 `doAction` 流程），以及掛真 window 的 `AppRouter` deeplink 測試 |
 | `.claude/skills/` | **MVVMC 規範本體**（每個 skill 是該層規則的單一事實來源） |
 | `CLAUDE.md` | 架構總覽與 skill 索引（不重述各層細則） |
 | `SPEC-COVERAGE.md` | 規範條文 ↔ demo 示範位置對照表 |

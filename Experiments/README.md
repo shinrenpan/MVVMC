@@ -6,7 +6,7 @@ Read this before starting another round of spec work — the useful thing to car
 
 ---
 
-## The five axes
+## The six axes
 
 Each answers a different question. They are not interchangeable, and passing one says almost nothing about the others.
 
@@ -14,7 +14,7 @@ Each answers a different question. They are not interchangeable, and passing one
 
 `ViewSplitProbe/`, `ConcurrencyProbe/`, `CancellationProbe/`, `SizeThatFitsProbe/`, `VerticalBarProbe/`, `PaneProbe/` (the last three: iPhone Duo, 2026-10-07; the round's research record is `iPhoneDuo/README.md`)
 
-Take a factual assertion the spec relies on and put it in front of a compiler or a simulator. Both probes are re-runnable; both README files record the toolchain version, because these answers expire.
+Take a factual assertion the spec relies on and put it in front of a compiler or a simulator. Each probe is re-runnable; each README records the toolchain version, because these answers expire.
 
 **Caught:** six pieces of received wisdom that turned out to be false — **all three of `mvvmc-view` §8's claims at once** — the problem (`ForEach` misplaces a child's `@State` on reorder), the fix (`.id(item.id)` corrects it — with and without produced *identical* numbers), and the side effect (adding it resets the state). A prescription for a problem that didn't reproduce, with no measurable effect, guarding against something that doesn't happen (`ViewSplitProbe`); a rule asserting that a reset written after `await` "will not run" on cancellation, which holds only when the cancellation is actually *thrown* (`CancellationProbe`); and three older ones — `AnyView` does *not* stop a child's body from being skipped; "precise injection" cannot be justified on performance grounds (passing the whole object redraws *less*); `nonisolated async` behaviour flips depending on one build flag.
 
@@ -74,7 +74,7 @@ The deliverable that matters is not the code. It is the **gap list**: every deci
 
 No dedicated directory; done by hand.
 
-Extract every hard prohibition across all skills, then reason about which combinations become unsatisfiable in some concrete situation. This is the only proactive axis — the other four wait for an agent to walk into the problem.
+Extract every hard prohibition across all skills, then reason about which combinations become unsatisfiable in some concrete situation. This is the only proactive axis — the other five wait for an agent to walk into the problem.
 
 **Caught:** Preview forbids hitting the network, but a View's `.task` always runs during Preview rendering — two rules, written months apart, in direct conflict. The demo had been violating its own spec.
 
@@ -183,7 +183,7 @@ External documentation — Apple's agent skills, a framework's release notes, a 
 
 ### Expiry conditions must name an observation, not a version
 
-Four rules currently expire on a version number or a date: `swift-concurrency` §versions, its module-default assertion, the `withTaskCancellationShield` note, and `patterns.md`'s toolchain stamp. Exactly one is written correctly — `cc:37`, which retires itself *"the day the probe stops showing a difference"* — and on the Swift 6.4 bump it was the only one that did not misfire.
+Four rules expired on a version number or a date (2026-09): `swift-concurrency` §versions, its module-default assertion, the `withTaskCancellationShield` note, and `patterns.md`'s toolchain stamp (since replaced by a test, below). Exactly one is written correctly — `cc:37`, which retires itself *"the day the probe stops showing a difference"* — and on the Swift 6.4 bump it was the only one that did not misfire.
 
 Better than either: **make the claim verify itself.** `patterns.md`'s three Swift Testing examples carried a stamp (*"compiled under Swift 6.3.1 / Xcode 26.4.1"*) that nothing re-checked; moving them into `Tests/SwiftTestingTechniqueTests.swift` means every `xcodebuild test` re-verifies them and no schedule is needed. **A stamp expires silently. A test in the target cannot.**
 

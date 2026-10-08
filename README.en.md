@@ -124,7 +124,7 @@ Push notification payload convention: `{ "deeplink": "mvvmc://posts/1" }` — re
 | Directory | Purpose |
 |---|---|
 | `Sources/` | Demo implementation (runnable Xcode project) |
-| `Tests/` | ViewModel unit tests validating the `doAction` flow |
+| `Tests/` | ViewModel unit tests validating the `doAction` flow, plus window-hosted `AppRouter` deeplink tests |
 | `.claude/skills/` | **The MVVMC specification** (each skill is the single source of truth for its layer) |
 | `CLAUDE.md` | Architecture overview and skill index (does not restate layer rules) |
 | `SPEC-COVERAGE.md` | Rule → demo mapping |

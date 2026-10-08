@@ -32,18 +32,18 @@ argument-hint: [feature-path]
 | 參數數量超過參考點 | `architecture.md`「不是強制門檻」 |
 | DTO 的命名風格 | `mvvmc-model`「不強制任何風格」 |
 | M 層三區塊（State / Domain Models / DTOs）未全部實作 | `mvvmc-model`「不強制全部實作」 |
-| **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) 的 Idiom #3–#10、`mvvmc-hostcontroller`〈iOS-branch 範圍註記〉「不得依本 skill 開單」。**本 repo 已不保有 Skip 規範**，審查 agent 手上沒有判斷依據，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該 repo，不得開單** |
+| **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) 的 Idiom #3–#10、`mvvmc-hostcontroller`〈核心規則〉開頭的「本 skill 規範 iOS 分支」註記「不得依本 skill 開單」。**本 repo 已不保有 Skip 規範**，審查 agent 手上沒有判斷依據，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該 repo，不得開單** |
 | ViewAction 用動詞風格而非事件風格 | `architecture.md`「推薦／避免」是**偏好不是硬規則**——只能列 ⚠️ |
 | Router 的方法名稱與數量跟 demo 的七個方法不吻合（`sheet()` / `backTo()` / `tab()` 等一個都不存在也一樣）——**查的是那張表的覆蓋率，不是 API 表面積** | `mvvmc-navigation`〈你的 Router 必須覆蓋的格子〉：「這一節列的是『要能做到什麼』，不是『必須叫什麼名字』……對齊方式是在專案 CLAUDE.md 寫一張對照表，**不需要改任何程式碼**」 |
 | 版面環境推導值（size class、`isWide`、容器寬度）存進 State；改變版面結構的判斷量的是 view 而不是視窗 | `mvvmc-model`〈除此之外皆可〉下方的 ⚠️ advisory——外部文件與單一專案回報，明文「`mvvmc-review` 不得據此開單」 |
 | `UIViewRepresentable` 沒實作 `sizeThatFits`，但它包的是**專案自己寫的** UIView，且 `intrinsicContentSize` 確定固定或不自報（第三方 SDK 的 view **不在此列**，照開） | `mvvmc-view` §8 規則 15〈不需要的情況〉 |
 | `updateUIView` 以值比對決定要不要套用，但該值是 UIView **應持續呈現的狀態、且使用者無法繞過 ViewModel 改變它**（標記清單、樣式） | `mvvmc-view` §8 規則 16〈不需要的情況〉 |
 
-> **維護規則**：新增或修改任何一條上游豁免時，**必須同步更新這張表**。它的存在價值就是讓「有沒有同步」變成一個看得見的問題——14 條散在 6 個檔案裡時，沒有人能一眼看出漏了哪條。
+> **維護規則**：新增或修改任何一條上游豁免時，**必須同步更新這張表**。它的存在價值就是讓「有沒有同步」變成一個看得見的問題——14 條散在 6 個檔案裡時（2026-09 的數字；2026-10 已 18 列），沒有人能一眼看出漏了哪條。
 >
 > 稽核方式（可機械執行）：
 > ```
-> grep -rn "不得.*開單\|不該當成違規\|不在規範範圍\|不強制\|規範不指定\|不是強制門檻" \
+> grep -rn "不得.*開單\|不該當成違規\|不在規範範圍\|不強制\|規範不指定\|不是強制門檻\|不需要的情況" \
 >   .claude/skills/ --exclude-dir=mvvmc-review --exclude-dir=mvvmc-deep-review
 > ```
 > **判準不是數字相符，是每個上游命中都能對應到本表某一列**（多個命中可以對應同一列——同一條豁免常在 skill、`references/`、範例碼裡各寫一次）。**對不回來的那個就是漏的。**
@@ -59,7 +59,7 @@ argument-hint: [feature-path]
 ## Pass 1 — MVVMC 架構合規
 
 1. 列出 `$ARGUMENTS` 目錄下所有 Swift 檔案
-   > ⚠️ **另外把 `Shared/` 與 `Components/`（或該專案的等價目錄）也讀進來**。它們依定義不在任何 feature 目錄底下，所以永遠不在 `$ARGUMENTS` 範圍內——而上游對它們有硬規則（`mvvmc-structure`〈`Shared/` 判準〉、`mvvmc-view` §4 第三階的跨 feature 共用組件）。**不讀進來就永遠是零執法途徑，而輸出還會是 ✅。**
+   > ⚠️ **另外把 `Shared/` 與 `Components/`（或該專案的等價目錄）也讀進來**。它們依定義不在任何 feature 目錄底下，所以永遠不在 `$ARGUMENTS` 範圍內——而上游對它們有硬規則（`mvvmc-structure`〈Shared/ 放什麼〉、`mvvmc-view` §4 第三階的跨 feature 共用組件）。**不讀進來就永遠是零執法途徑，而輸出還會是 ✅。**
 2. 依 M → VM → V → C 順序逐層讀取並審查：
    - `*ViewModel+Models.swift`：套用 `mvvmc-model` 規範
    - `*ViewModel.swift` + `*ViewModel+APIs.swift`：套用 `mvvmc-viewmodel` 規範
@@ -67,7 +67,7 @@ argument-hint: [feature-path]
    - `*View.swift`：套用 `mvvmc-view` 規範
    - `*HostController.swift`：套用 `mvvmc-hostcontroller` 規範
    - **跨 feature 型別引用**：套用 `mvvmc-structure` 規範——檢查 State / Domain Model 有沒有引用其他 `XxxViewModel.` 命名空間的型別，這是最容易漏掉的一類違規
-   - `*Mocks.swift`（若存在）：套用 `mvvmc-model`〈Mock 規範〉——**❌ 禁止 mock 出現在非 `#if DEBUG` 區塊**（漏掉的後果是 mock 資料進正式 build）、mock 掛在 Domain Model 而非 DTO
+   - `*Mocks.swift`（若存在）：套用 `mvvmc-model`〈Mock 資料〉——**❌ 禁止 mock 出現在非 `#if DEBUG` 區塊**（漏掉的後果是 mock 資料進正式 build）、mock 掛在 Domain Model 而非 DTO
    - 對應的 `Tests/*ViewModelTests.swift`（若存在）：套用 `mvvmc-testing` 規範
    - **`Tests/` 底下不符合上述 glob 的測試檔**：套用 `mvvmc-testing`〈架構不變式測試〉
      > ⚠️ 那個 glob 把「測試」寫死成「ViewModel 測試」。不變式測試（在地化覆蓋、跨 feature 引用、字面值覆蓋）不對應任何 feature，**檔名不會符合**——不另外讀進來的話，審查在檔名層級就看不見它們，而它們擋的正是「編譯器沉默、執行期沉默、review 看不出來」那一類
@@ -162,11 +162,11 @@ argument-hint: [feature-path]
   > ⚠️ **啟動輪詢的 ViewAction 要測，但不能直接 `await vm.doAction(...)`**。它不是「永不返回」，是**「不被取消就不返回」**——而取消正是正式環境每次離開畫面都會發生的事。直接 await 會讓套件掛住、CI 逾時、且沒有錯誤訊息。
   > 正確做法：包進可取消的 `Task`、明確 `cancel()`、並掛 `.timeLimit`（掛住時給出真正的失敗而不是卡住）。測的是〈週期性更新〉那兩條**編譯器不管、code review 也看不出來**的規則——「取消後迴圈是否真的結束」（寫成 `while true` 或把取消吞掉，症狀只是耗電，使用者永遠不會回報）與「`.loading` 是否只寫一次」（寫錯的症狀是畫面每 N 秒閃一次，interval 設長就看不到）
 - **命名前綴**：HostController / ViewModel / View 三者的 Feature prefix 是否一致
-- **高頻欄位隔離**（M 層）：**套用 `mvvmc-model`〈高頻變動欄位〉**——高頻更新的欄位有沒有從低頻 Model 拆出來。
+- **高頻欄位隔離**（M 層）：**套用 `mvvmc-model` 的「高頻變動的欄位不要塞進低頻 Model」**——高頻更新的欄位有沒有從低頻 Model 拆出來。
   > 上游自己的定位是「**這是效能隔離的第一道閘門，而且它在 M 層不在 V 層**——`mvvmc-view` §7 講的拆 View 是第二道。**第一道沒做，第二道就形同虛設**」。而它的症狀是「跑起來沒事、只是慢」，不會有人主動去查——**規範自稱的第一道閘門，先前是唯一沒有檢查項的那一道**
 - **`Router` / `Callback` 的 `Equatable`**：**套用 `mvvmc-viewmodel`〈onRoute / onCallback〉**——帶 associated value 的 enum 要顯式加。沒有它就寫不出 `#expect(received == .toDetail(post))`，等於整條導航意圖無法測試
 - **feature 邊界**：有沒有直接引用其他 feature 的 Domain Model（應改傳 primitive）；`Shared/` 有沒有混入業務型別——**套用 `mvvmc-structure` 的判準「這個名字會出現在業務對話裡嗎」**
-  > ⚠️ 這一項**不能用 `XxxViewModel.` 字串樣式偵測**。已經被提拔到 `Shared/` 的業務型別**沒有那個前綴**（`Sources/Shared/Post.swift` 被兩個 feature 直接 import，零個 `XxxViewModel.` 引用），而那正是 `mvvmc-structure` 說的「防止 God module 的唯一屏障」要擋的形狀。這是語意判斷，`findReferences` 給不出答案
+  > ⚠️ 這一項**不能用 `XxxViewModel.` 字串樣式偵測**。已經被提拔到 `Shared/` 的業務型別**沒有那個前綴**（假設的例子：若 `Sources/Shared/Post.swift` 被兩個 feature 直接 import，就有零個 `XxxViewModel.` 引用），而那正是 `mvvmc-structure` 說的「防止 God module 的唯一屏障」要擋的形狀。這是語意判斷，`findReferences` 給不出答案
   > ⚠️ **`Shared/` 與 `Components/` 不在 `$ARGUMENTS` 的掃描範圍內**（Pass 1 只列該 feature 目錄）。要檢查這一項必須另外把那些目錄讀進來，否則輸出的 ✅ 依據是零個檔案——**假通過比假發現危險，因為假發現會被反駁，假通過不會**
 
 輸出格式：

@@ -1,6 +1,6 @@
 # DispatchQueue 遷移規範
 
-> 基準 Swift 6.4（Xcode 27.0 RC 內附）；版本聲明與其複查方式一律以 `SKILL.md` 開頭那段為準，本檔不另行聲明。並發模型脈絡見 `SKILL.md`〈Swift 6.2+ 心智模型〉。
+> 基準 Swift 6.4（Xcode 27.0／27.1 RC 內附同一個 build）；版本聲明與其複查方式一律以 `SKILL.md` 開頭那段為準，本檔不另行聲明。並發模型脈絡見 `SKILL.md`〈Swift 6.2+ 心智模型〉。
 
 ## 強制原則
 
@@ -18,7 +18,7 @@
 
 > ⚠️ **這張表刻意不是一對一的。** `global().async` 的正確翻譯**取決於呼叫端在不在主 actor**，那是表格裝不下的條件——所以右欄寫的是「要達成原意該用什麼」，不是「語法上最像的東西」。照抄語法最像的那個（`Task { }`）會得到一段**仍然跑在主緒上**的程式碼，而使用者當初用 `global()` 的整個理由就是要離開主緒。
 
-> **關於 `MainActor.run`**：它只用於「從**非 isolated** context 跳回主 actor」。若程式碼已在 `@MainActor` context（例如 MVVMC 的 ViewModel 全是 `@MainActor`），或 `Task` 起自 `@MainActor`（Task 會繼承主 actor），就**不需要**再包 `MainActor.run`——直接寫即可。上表末列的 `MainActor.run` 只在該 `Task` 起自非 isolated 環境時才需要。
+> **關於 `MainActor.run`**：它只用於「從**非 isolated** context 跳回主 actor」。若程式碼已在 `@MainActor` context（例如 MVVMC 的 ViewModel 全是 `@MainActor`），或 `Task` 起自 `@MainActor`（Task 會繼承主 actor），就**不需要**再包 `MainActor.run`——直接寫即可。上表第二列（`DispatchQueue.main.async`）的 `MainActor.run` 只在呼叫端是非 isolated 環境時才需要。
 
 > **`DispatchQueue.global()` → 真的要背景執行**：6.2+ 從 `@MainActor` 起的 `Task { }` **仍在主 actor**，不等於背景。若原本用 global queue 是為了離開主執行緒（重運算、阻塞 I/O），對應寫法是 **`@concurrent` async func**（見 `SKILL.md`），而非只包一層 `Task { }`。
 

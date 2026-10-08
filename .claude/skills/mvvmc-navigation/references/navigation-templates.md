@@ -1,6 +1,6 @@
 # Navigation Templates
 
-MVVMC 導航地基的完整可貼實作。三個檔案住在 `Sources/App/`。
+MVVMC 導航地基的完整可貼實作。三個導航檔案住在 `Sources/App/`。
 
 > ⚠️ **下列程式碼逐字取自 demo 的 `Sources/App/`，不是另一份手抄本。** 唯一的來源是那三個檔；本檔只是把它們攤開來方便貼進新專案。
 >

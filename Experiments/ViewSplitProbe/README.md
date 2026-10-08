@@ -120,6 +120,8 @@ So the qualifier §7 needs is **"…and the child is a pure value, if you build 
 
 The SDK is a variable this probe now has to control for. Keep both Xcodes installed and swap with `DEVELOPER_DIR` rather than `xcode-select` (no sudo, no global side effect):
 
+> ⚠️ **As of 2026-10-08 the control below cannot be re-run on the maintainer's machine**: Xcode 26.4.1 and the iOS 26.x simulator runtime have been removed (installed now: Xcode 27.0 RC / 27.1 RC, iOS 27.0 / 27.1 runtimes). The 2026-09-10 results above stand as a dated record; re-running the control means reinstalling both.
+
 ```bash
 cd Experiments/ViewSplitProbe && xcodegen generate
 SIM=<a booted simulator UDID>   # xcrun simctl list devices booted

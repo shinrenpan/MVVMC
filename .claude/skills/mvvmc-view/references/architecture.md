@@ -629,7 +629,7 @@ ListSection(items: state.items, send: send)
 
 ### 實測數據
 
-上表不是推論，是量到的。實驗設計：一個 `@Observable` model 有 `a` / `b` 兩個屬性，A 區塊只讀 `a`、B 區塊只讀 `b`，用 `UIHostingController` 掛進 window 渲染後**只改 `a`**，數各層 `body` 執行次數（Xcode 26.4.1 / iOS 模擬器 / Swift 6.3.1）：
+上表不是推論，是量到的。實驗設計：一個 `@Observable` model 有 `a` / `b` 兩個屬性，A 區塊只讀 `a`、B 區塊只讀 `b`，用 `UIHostingController` 掛進 window 渲染後**只改 `a`**，數各層 `body` 執行次數（Xcode 26.4.1 / Swift 6.3.1 量測；2026-09-10 於 Xcode 27 / Swift 6.4 重測，結果相同，見 `Experiments/ViewSplitProbe/README.md`）：
 
 | 拆分方式 | 父層 body | A body | B body |
 |---|---|---|---|
@@ -1005,9 +1005,9 @@ Slot 容器本身通常是**純包裝層**——只負責外框的樣式，不�
 struct CardContainer<Content: View>: View {
     @ViewBuilder let content: Content
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .shadow(radius: 4)
-            .overlay(content)
+        content
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 12).fill(.background).shadow(radius: 4))
     }
 }
 ```
@@ -1022,8 +1022,10 @@ struct TappableCard<Content: View>: View {
     let send: @MainActor (Action) -> Void
 
     var body: some View {
-        RoundedRectangle(cornerRadius: 12)
-            .overlay(content)
+        content
+            .padding()
+            .background(RoundedRectangle(cornerRadius: 12).fill(.background))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
             .onTapGesture { send(.cardDidTap) }
     }
 }
