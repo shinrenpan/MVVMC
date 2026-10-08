@@ -78,7 +78,7 @@ if viewModel.state.items.isEmpty {
 - ✅ 按鈕**做了什麼**才是事件，走 `doAction(.view(...))`
 - ❌ 不要因為「alert 底層也是 present」就送去 C 層：那會逼出 `UIAlertController`，讓 C 層寫互動邏輯並起 Task，兩者都是 `mvvmc-hostcontroller` 禁止的
 
-VM 的〈onRoute 邊界〉說「需要 present VC 的東西走 C 層」，指的是**你得自己拿到一個 presenting VC 才做得到**的東西（分享面板、系統相機）。SwiftUI 原生的 alert 不需要。
+`mvvmc-viewmodel`〈什麼算「導航」——`onRoute` 的邊界〉說「需要 present VC 的東西走 C 層」，指的是**你得自己拿到一個 presenting VC 才做得到**的東西（分享面板、系統相機）。SwiftUI 原生的 alert 不需要。
 
 ### Display Helper（Model → UI 型別）
 
@@ -339,7 +339,7 @@ private extension ProductListView {
         enum Action: Sendable { case rowDidTap }
         ...
     }
-    struct ListCartBadge: View { ... }                           // L4，無 Action 也可
+    struct ListCartBadge: View { ... }                           // L3，無 Action 也可
 }
 
 // ❌ 錯誤：分散在不同 extension
@@ -766,10 +766,10 @@ var body: some View {
 
     // 使用者操作才更新，且資料獨立 → 拆成 struct
     // items 沒變時 SwiftUI 直接跳過，不受 priceTicker 更新影響
-    ProductListSection(items: state.items, send: send)
+    ListSection(items: state.items, send: handleListAction)
 
     // 高頻更新，且核心資料獨立 → 拆成 struct
-    // 每秒更新只重跑這個 struct，不影響 ProductListSection
+    // 每秒更新只重跑這個 struct，不影響 ListSection
     PriceTickerSection(prices: state.prices)
 }
 ```
@@ -1162,11 +1162,14 @@ Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是�
     // ⚠️ 寫全名。mocks 掛在 Domain Model 上（見 mvvmc-model），不是 [Item] 的 static member，
     //    寫成 `vm.state.items = .mocks` 會編不過（且錯誤訊息會誤導成 ViewBuilder 的 return 問題）
     vm.state.items = FeatureViewModel.Item.mocks
+    vm.state.isFirstAppear = false
     return FeatureView(viewModel: vm)
 }
 
 #Preview("空狀態") {
-    FeatureView(viewModel: FeatureViewModel())
+    let vm = FeatureViewModel()
+    vm.state.isFirstAppear = false   // 規則 14：否則 .task 會在 Preview 觸發真實請求
+    return FeatureView(viewModel: vm)
 }
 #endif
 ```
@@ -1174,7 +1177,7 @@ Preview 放在 View 檔案底部，**整段以 `#if DEBUG` 包裹**。做法是�
 ### 規則
 
 - ✅ 整段 `#Preview` 用 `#if DEBUG` 包住
-- ✅ 透過 `vm.state.xxx = .mock/.mocks` 注入狀態，**不是**在 Preview 裡呼叫 API 或 `doAction`
+- ✅ 透過 `vm.state.xxx = FeatureViewModel.Item.mock/.mocks`（寫全名，見上方範例註解）注入狀態，**不是**在 Preview 裡呼叫 API 或 `doAction`
 - ⚠️ **注入狀態時，記得一併關掉 run-once 旗標**：`vm.state.isFirstAppear = false`
 
   ```swift

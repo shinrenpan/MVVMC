@@ -107,8 +107,9 @@ Task {
 
 // ✅ 前綴與 UI 無關、直接跳去重運算 → @concurrent 起跑
 Task { @concurrent in
-    let images = data.compactMap { UIImage(data: $0) }   // 重解碼，不佔主 actor
-    await MainActor.run { state.thumbnails = images }     // 回主 actor 更新
+    let posts = (try? JSONDecoder().decode([PostDTO].self, from: data))?
+        .compactMap { $0.toDomain() } ?? []              // 大量解碼，不佔主 actor
+    await MainActor.run { state.posts = posts }          // 回主 actor 更新（State 不放 UIImage 等 UI 型別，見 mvvmc-model）
 }
 
 // ❌ 空的同步前綴、第一件事就 await 跳走 → 不該用預設 Task
@@ -221,7 +222,7 @@ Swift 的取消是**協作式**的：取消只是設旗標，程式要主動檢�
 // ✅ 首選（View 驅動）：.task(id:) 綁 state，id 一變自動取消前一個
 .task(id: viewModel.state.searchQuery) {
     try? await Task.sleep(for: .milliseconds(300))   // 使用者又打字 → 這裡被取消
-    await viewModel.doAction(.apiRequest(.search))
+    await viewModel.doAction(.view(.searchQueryDidSettle))   // View 只送 .view（mvvmc-view 規則 11），由 VM 轉成 .apiRequest(.search)
 }
 
 // ✅ doAction 驅動（無法綁 view modifier 時）：手動存 handle、cancel 前一次

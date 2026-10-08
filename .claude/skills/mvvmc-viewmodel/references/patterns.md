@@ -100,9 +100,9 @@ enum APIRequest: Sendable {
 case .isFirstAppear:
   guard state.isFirstAppear else { return }
   state.isFirstAppear = false
-  async let categories: Void = doAction(.apiRequest(.fetchCategories))
-  async let products: Void = doAction(.apiRequest(.fetchProducts))
-  _ = await (categories, products)
+  async let profile: Void = doAction(.apiRequest(.fetchProfile))
+  async let orders: Void = doAction(.apiRequest(.fetchOrders))
+  _ = await (profile, orders)
 ```
 
 > 這裡沒有違反「`doAction` 單一進入點」——併發的是**兩次對 `doAction` 的呼叫**，不是繞過它。單一進入點管的是「誰能觸發狀態轉移」，不是「一次只能觸發一個」。

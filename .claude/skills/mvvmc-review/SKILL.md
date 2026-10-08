@@ -38,6 +38,7 @@ argument-hint: [feature-path]
 | 版面環境推導值（size class、`isWide`、容器寬度）存進 State；改變版面結構的判斷量的是 view 而不是視窗 | `mvvmc-model`〈除此之外皆可〉下方的 ⚠️ advisory——外部文件與單一專案回報，明文「`mvvmc-review` 不得據此開單」 |
 | `UIViewRepresentable` 沒實作 `sizeThatFits`，但它包的是**專案自己寫的** UIView，且 `intrinsicContentSize` 確定固定或不自報（第三方 SDK 的 view **不在此列**，照開） | `mvvmc-view` §8 規則 15〈不需要的情況〉 |
 | `updateUIView` 以值比對決定要不要套用，但該值是 UIView **應持續呈現的狀態、且使用者無法繞過 ViewModel 改變它**（標記清單、樣式） | `mvvmc-view` §8 規則 16〈不需要的情況〉 |
+| `@Bindable` 沒有在 `body` 內宣告一次（例如在 `@ViewBuilder func` 內自建），但子元件仍只收切片 | `mvvmc-view` 規則 12 的前半是手段（建議），只有「子元件只收切片」強制——`references/architecture.md` §11〈方案 B〉 |
 
 > **維護規則**：新增或修改任何一條上游豁免時，**必須同步更新這張表**。它的存在價值就是讓「有沒有同步」變成一個看得見的問題——14 條散在 6 個檔案裡時（2026-09 的數字；2026-10 已 18 列），沒有人能一眼看出漏了哪條。
 >

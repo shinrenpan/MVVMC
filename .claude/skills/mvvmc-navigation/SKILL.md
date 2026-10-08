@@ -134,7 +134,7 @@ enum Deeplink {
 **規則：**
 - ✅ 三塊各自 `extension`：`enum` 本體 / `init?(url:)` 解析 / `makeDestination()` 工廠
 - ✅ `init?(url:)` 先驗 `scheme`，再 `switch url.host`，失敗回 `nil`（絕不崩潰）
-- ✅ **`makeDestination()` 回傳 `Destination`，不是單一 `UIViewController`**——工廠回傳單一 VC 正是〈冷啟動要建一組 VC〉那個孤兒頁問題的根因。標 `@MainActor`
+- ✅ **`makeDestination()` 回傳 `Destination`，不是單一 `UIViewController`**——工廠回傳單一 VC 正是〈冷啟動的 deeplink 需要建一組 VC〉那個孤兒頁問題的根因。標 `@MainActor`
 - ✅ URL Scheme 與 Push payload **共用同一個 `Deeplink(url:)`**，不寫第二套解析
 - ❌ 禁止在 SceneDelegate 或其他地方自己解析 URL——一律走 `Deeplink(url:)`
 

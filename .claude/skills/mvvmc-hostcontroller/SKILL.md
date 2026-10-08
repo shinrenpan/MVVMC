@@ -92,7 +92,7 @@ final class PostDetailHostController: UIHostingController<PostDetailView> {
 > ```swift
 > init(id: Int, title: String, body: String,
 >      onCallback: @escaping @MainActor (PostDetailViewModel.Callback) async -> Void) {
->     let vm = PostDetailViewModel(id: id, title: title, body: body)
+>     let vm = PostDetailViewModel(post: .init(id: id, title: title, body: body))
 >     vm.onCallback = onCallback
 >     self.viewModel = vm
 >     super.init(rootView: PostDetailView(viewModel: vm))

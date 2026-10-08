@@ -1,6 +1,6 @@
 # VerticalBarProbe
 
-Backs `mvvmc-hostcontroller`〈導覽列歸誰〉: where an MVVMC page must opt out of iPhone Duo's vertical bars.
+Backs `mvvmc-hostcontroller`〈導覽列（title / toolbar）歸誰〉: where an MVVMC page must opt out of iPhone Duo's vertical bars.
 
 ## Question
 

@@ -10,7 +10,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 ## Why the spec reaches further than the demo
 
-As of 2026-10-08 this table carries **21 ❌ against 19 🚫** (the module-default-isolation row was reclassified ❌ → 🚫 the same day — "deliberately not enabled" is the 🚫 meaning; the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
+As of 2026-10-08 this table carries **20 ❌ against 19 🚫** (the "side effect directly in the VM" row turned out to be demonstrated by `ProfileViewModel` all along; the module-default-isolation row was reclassified ❌ → 🚫 the same day — "deliberately not enabled" is the 🚫 meaning; the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
 
 The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
 
@@ -75,7 +75,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Network layer is out of scope (endpoint layout is one option) | `PostList/PostListViewModel+APIs.swift` |
 | Error translated before it reaches State | `PostListViewModel.handleAPIResponse` |
 | Multiple concurrent requests, one status field each | ❌ — every demo VM has exactly one request |
-| Non-navigation side effect run directly in the VM (open URL / share) | ❌ — demo has no such action |
+| Non-navigation side effect run directly in the VM (open URL / share) | `ProfileViewModel` (`UIApplication.shared.open`, scheduling a local notification) |
 | Pagination (first-load vs load-more tracked separately) | ❌ — the fake API returns a fixed 5 rows |
 | Form screen (validation, submitting lock, preserve input on failure) | ❌ — demo has no form |
 | Deep return: relay upward, only the endpoint pops | ❌ — demo's callback chain is one level deep |
@@ -114,7 +114,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 
 | Rule | Demonstrated in |
 |---|---|
-| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — the demo's only callback (`PostFilter`) is same-feature, so it uses the standard shape |
+| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — the demo's only callback (`PostFilter`) is cross-feature, but its VM needs no child Domain Model to build (`PostFilterViewModel()`), so the parent can build it and the standard shape still works |
 | iOS-branch scope note (`#else` branches are out of scope for the iOS skills) | 🚫 — the demo has no Skip target. Lives entirely in [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) (baseline `v1.1.0` `db9013d`, skip 1.9.3, Migration Log M0–M21); this repo kept no Skip rules after 2026-09-17 |
 | `@MainActor final class : UIHostingController<FeatureView>` | all six `*HostController.swift` |
 | Standard init: ViewModel injected from outside | `PostListHostController.swift` |
@@ -141,7 +141,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | `to()` with `.push` / `.modal` / `.fade` | `PostList` → `PostFilter` (modal), `UserDetail` (fade) |
 | `sheet()` | `Settings` |
 | `sheet()` with custom `detents` | `Profile` → `Settings` (`[.medium(), .large()]`) |
-| `back()` auto-detecting sheet → dismiss | `PostFilter`, `Settings` |
+| `back()` auto-detecting sheet → dismiss | `Settings` (sheet from Profile → dismiss); `PostFilter` is shown with `.modal`, a push transition, so its `back()` takes the pop branch |
 | `backTo()` / `backToRoot()` | 🚫 — the demo's deepest stack is two levels, where these are indistinguishable from `back()` |
 | `tab()` | `Profile` |
 | `deeplink()` returning `Deeplink.Destination` — `.navigate(tab:stack:)` selects the tab and pushes onto the existing stack; `.present(_:)` for a true modal. **No injected Close button** | `Sources/App/Deeplink.swift` + `AppRouter.deeplink(_:in:)` |
