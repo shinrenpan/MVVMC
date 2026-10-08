@@ -933,6 +933,35 @@ func sizeThatFits(_ proposal: ProposedViewSize, uiView: BannerView, context: Con
 
 > 退場條件：probe 的 `sticky × fit=0 × start=0` 那一格在新 SDK 量到 0 的那天，這條改為 ⚠️。
 
+### UIViewRepresentable：經由 State 下給 UIView 的一次性指令要帶序號
+
+**規則**：ViewModel 透過 State 要求包進來的 UIView **做一次某件事**（地圖移到某處、捲到某列、播放、聚焦）時，State 除了目標值之外**必須帶一個每次下指令就遞增的序號**（或每次新產生的 `UUID`）；`updateUIView` 以「序號是否已套用過」判斷要不要執行，**不可以用「目標值跟上次相同就略過」去重**。
+
+```swift
+// M（FeatureViewModel+Models.swift）
+struct State {
+    var recenterTo: CoordinateRegion? { didSet { recenterSerial &+= 1 } }
+    private(set) var recenterSerial = 0
+}
+
+// V（UIViewRepresentable）
+final class Coordinator { var appliedSerial = -1 }
+
+func updateUIView(_ map: MKMapView, context: Context) {
+    guard serial != context.coordinator.appliedSerial, let region else { return }
+    context.coordinator.appliedSerial = serial
+    map.setRegion(region.mk, animated: true)
+}
+```
+
+**為什麼值相等不行**：使用者選 A → 自己拖動地圖 → 再選 A。第二次的目標值與上次**完全相同**，以值去重就把它當成「已經套用過」吃掉，畫面不動——但 UIView 的實際狀態早已被使用者改掉，「上次套用的值」不再代表現況。不去重也不行：`updateUIView` 會因為任何無關的 State 變化被呼叫，每次都重做一次指令（地圖不停跳回）。序號是唯一同時區分「新的一次指令」與「無關的重繪」的資訊。
+
+**不需要的情況**：State 描述的是 UIView **應該持續呈現的狀態**、而且 UIView 不會自己改變它（例如標記清單、樣式設定）——那是同步，不是指令，以值比對正確。判準：**使用者能不能在不經過 ViewModel 的情況下改變 UIView 上的這個值？** 能（地圖視野、捲動位置、播放進度）→ 對它下的是指令，要帶序號。
+
+**依據**（entry gate：reported）：HerbMeet（2026-10-08，commit `240f9f5`，1.5.0 TestFlight 使用者回報）。`recenterTo: CoordinateRegion?` 在 `updateUIView` 以「與上次套用的值相同就略過」去重，「選同一個地點 → 拖地圖 → 再選同一個地點」時相機不動。**bug 自 2026-07 存在、兩個多月沒被發現**——它只在「同一個目標」連續出現時觸發，開發時的測試路徑幾乎不會走到。改為 `recenterSerial` 後於 iPhone Duo 與 iPhone 18 Pro 實測修正。demo 沒有包 UIKit view，這條沒有 compiled 依據。
+
+> 退場條件：無——這是值語意與指令語意的差異，不隨 SDK 改變。若改由 ViewModel 以其他通道（例如 `AsyncStream`）下指令、不經 State，這條不適用。
+
 ---
 
 ## 9. 灰色地帶判斷原則

@@ -64,6 +64,8 @@ extension FeatureViewModel {
 - **純 UI 狀態**：請求狀態容器、展開中的 id 集合、捲動位置、選取狀態、分頁游標、wizard 的 `step` 等
 
 > ⚠️ **建議（advisory，`mvvmc-review` 不得據此開單）：版面環境推導值不進 State**——size class、`isWide`、容器寬度。它們每次開合／縮放都會變，存進 State 就得靠 View 每次回送，漏送就過期。版面決策留在 V 層（讀 `@Environment` 或 `.onGeometryChange`）或 C 層（容器在 `viewWillLayoutSubviews` 依 size class／寬高調整 arrangement、HostController 的 `viewWillTransition`）——**不進 ViewModel**。需要跨多個 View 共用時，用 View 持有的獨立 `@Observable` viewport 物件，不是 feature 的 ViewModel。依據：Apple Xcode 27.1 agent skill `app-resizability/references/idiom-task.md`「Do not store it on that type unless absolutely necessary」與 `swiftui-specialist/references/environment.md` 的 `ViewportModel` 範例——外部文件，未實測、無上架專案回報，所以是 ⚠️ 不是 ❌。
+>
+> **改變版面結構的判斷（單欄／兩欄）要量視窗，不要量 view**：`.onGeometryChange` 量到的是 view 自己的尺寸，**鍵盤開著時它會被擠矮**——HerbMeet（2026-10-08，`240f9f5`）在內螢幕直向開鍵盤時高度縮到約 315pt，「寬 > 高」成立而維持兩欄；鍵盤一收一開高度在 835 ↔ 510 間跳，版面反覆切換。背景加 `.ignoresSafeArea(.keyboard)` 再量無效；改由 C 層在 `viewDidLayoutSubviews` 讀 `view.window.bounds.size` 寫進 viewport 物件後解決。view 自身尺寸仍適合**不改結構**的版面（欄寬、字級）。依據：reported（單一專案），所以仍屬這條 ⚠️。
 
 > **某個 enum 該歸 State 還是 Domain Models？** 判準是「**它會不會出現在 API 合約裡**」。`ReturnReason`（會變成 `reason_code` 送出去）是 Domain Model；`Step`（只驅動畫面切換，伺服器不知道它存在）是 UI 狀態。
 

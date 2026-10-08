@@ -101,6 +101,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Every interaction goes through `Task { await doAction(.view(...)) }` | `PostListView`, `PostFilterView` |
 | Preview injects mock state, wrapped in `#if DEBUG` | `PostListView`, `UserDetailView` (both spell out `Post.mocks` in full — the `.mocks` shorthand does not compile) |
 | `UIViewRepresentable` wrapping a self-growing `UIView` implements `sizeThatFits` (rule 15) | 🚫 — the demo wraps no UIKit view; backed by `Experiments/SizeThatFitsProbe` (measured) and FoodEntropy's AdMob banner (reported) |
+| One-shot commands to a wrapped `UIView` carry a serial, not value-equality dedupe (rule 16) | 🚫 — the demo wraps no UIKit view; backed by HerbMeet's `recenterTo` (reported, `240f9f5`) |
 | Four-state block (loading / error / empty / content) | `PostListView` — all four |
 | §1's **ordering** rule: test for content first, status second | `PostListView` — **and the demo violated it until 2026-09-11.** It switched on status at the top level with a guard on `.loading` only, so a failed pull-to-refresh fell into `.error` and replaced a populated list with `ContentUnavailableView`. `handleAPIResponse` had preserved `state.posts` correctly; the View discarded it. This is the exact failure §1 predicts, sitting in the one consumer that is supposed to keep the spec honest |
 | `@Bindable` inside `body` for a `TextField` binding | ❌ — demo has no text input |
