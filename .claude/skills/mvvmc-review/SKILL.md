@@ -35,7 +35,7 @@ argument-hint: [feature-path]
 | **專案有 Skip target 時**（`Package.swift` 掛 `skipstone` plugin，或原始碼出現 `#if !SKIP`），三層內部的語法偏離**與** `#else` 分支——**兩者都算，偏離不限於 `#if` 區塊內** | [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) 的 Idiom #3–#10、`mvvmc-hostcontroller`〈iOS-branch 範圍註記〉「不得依本 skill 開單」。**本 repo 已不保有 Skip 規範**，審查 agent 手上沒有判斷依據，**因此無法自行判斷某個偏離是不是明文要求——一律停手轉 ⚠️ 並指向該 repo，不得開單** |
 | ViewAction 用動詞風格而非事件風格 | `architecture.md`「推薦／避免」是**偏好不是硬規則**——只能列 ⚠️ |
 | Router 的方法名稱與數量跟 demo 的七個方法不吻合（`sheet()` / `backTo()` / `tab()` 等一個都不存在也一樣）——**查的是那張表的覆蓋率，不是 API 表面積** | `mvvmc-navigation`〈你的 Router 必須覆蓋的格子〉：「這一節列的是『要能做到什麼』，不是『必須叫什麼名字』……對齊方式是在專案 CLAUDE.md 寫一張對照表，**不需要改任何程式碼**」 |
-| 版面環境推導值（size class、`isWide`、容器寬度）存進 State | `mvvmc-model`〈除此之外皆可〉下方的 ⚠️ advisory——外部文件依據，明文「`mvvmc-review` 不得據此開單」 |
+| 版面環境推導值（size class、`isWide`、容器寬度）存進 State；改變版面結構的判斷量的是 view 而不是視窗 | `mvvmc-model`〈除此之外皆可〉下方的 ⚠️ advisory——外部文件與單一專案回報，明文「`mvvmc-review` 不得據此開單」 |
 | `UIViewRepresentable` 沒實作 `sizeThatFits`，但它包的是**專案自己寫的** UIView，且 `intrinsicContentSize` 確定固定或不自報（第三方 SDK 的 view **不在此列**，照開） | `mvvmc-view` §8 規則 15〈不需要的情況〉 |
 | `updateUIView` 以值比對決定要不要套用，但該值是 UIView **應持續呈現的狀態、且使用者無法繞過 ViewModel 改變它**（標記清單、樣式） | `mvvmc-view` §8 規則 16〈不需要的情況〉 |
 

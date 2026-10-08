@@ -18,8 +18,6 @@ Pending work tracker. Not part of the spec — see `CLAUDE.md` for the architect
 
 - [ ] **規範變更不會傳播到已上架專案，而 consumer 清單沒有涵蓋它們** — `CLAUDE.md`〈Maintaining the Spec〉列的 consumer（skills、review skill、`TODO.md`、`SPEC-COVERAGE.md`、兩份 README、demo、probes）**全部 grep 得到**；上架專案 grep 不到，所以「什麼在讀這個？」對它們永遠是零命中。2026-09-17 的實例：`mvvmc-view` 規則 5 的 `@MainActor (Action) -> Void` 於 **2026-08-13**（`798906a`）進規範，`FoodEntropy` 的 `SettingsView` 三個 `send` 宣告寫於 **2026-07-23**，至今仍是舊形狀。**那三個是漂移不是違規**——同檔 `BucketListView.ExtendSheet` 於 2026-09-16（規範之後一個月）新寫的那個才是真的漏，兩者要分開看，這正是「開單前先用 git 日期比對」的案例。要決定的是：規範改動要不要有「通知已上架專案」的動作，還是接受漂移、只在各專案自己跑 review 時才發現。**先不要加機制**——軸 0 的教訓是釘版那次。
 
-- [ ] **規範成長速度超過 demo** — `SPEC-COVERAGE.md` 現在有 **22 個 ❌ 對 15 個 🚫**（2026-09 那輪新增 20 列之後重數）。多數 ❌ 是 2026-08 生成測試補進來的**場景規範**（分頁、表單、輪詢、深層回傳、alert、樂觀更新），而 demo 六個 feature 完全沒有這些場景。需要決定走哪條路：(a) 擴充 demo 涵蓋主要場景，(b) 接受「規範涵蓋面大於 demo」並在 SPEC-COVERAGE 開頭講清楚這件事是刻意的。目前是預設 (b) 但沒有明講。
-
 ## Open — three measurements, all in `Experiments/ViewSplitProbe/`
 
 Each decides the wording of a rule that is currently hedged. None is bug-level; all are cheap once the harness is open.
@@ -90,7 +88,6 @@ MVVMC apps that show one feature per screen are adapted: verified on the iPhone 
 - [ ] `backToRoot`／`backTo` with a presented modal — should they dismiss it first? The skill is silent. FoodEntropy hit it only because it uses them for deeplinks. Decide on a non-deeplink report.
 - [ ] **A modal dismissed by someone else never sends `onCallback`.** `mvvmc-viewmodel`／`mvvmc-hostcontroller` describe cross-VC results as "child VM `await onCallback?(.xxx)` → parent C", which assumes the child is always closed *by itself*. Two paths close it from outside, silently: UIKit dismissing a presenter takes everything above it (HerbMeet measured 2026-10-08: its always-on `.sheet` being dismissed on rotation took the fullScreen Settings modal with it — no VM close, no `onCallback`), and this repo's own `AppRouter.dismissPresented(on:then:)` (v3.8.1) does the same on every deeplink. The field cost: HerbMeet's EditRestaurant／Voting send `.didChange` to trigger the map's reload, which is simply lost. HerbMeet's fix was a C-layer signal on the dismissal itself (`viewDidDisappear` + `isBeingDismissed` on the Router's nav, not the VM callback). **Decide**: whether the spec should say "a parent must not depend on `onCallback` for correctness; refresh on the dismissal" — and whether that belongs to `mvvmc-navigation` (the Router owns the dismissal) or `mvvmc-hostcontroller` (the parent owns the refresh). One project, so below the entry gate as a ❌; re-open as a rule when a second project loses a callback, or write it now as ⚠️ advisory. The demo has the shape but not the damage: a deeplink arriving while `PostFilter` is up dismisses it with no callback, which equals `.didCancel` — and `.didCancel` does nothing but close, so nothing is lost. A child whose callback *carries* something (a save, a selection) would lose it.
 
-
 ### 刻意延後的測試（2026-10-07）——不是遺漏，每項都附重開條件
 
 | 未測項目 | 為什麼現在不測 | 什麼時候重開 |
@@ -101,7 +98,6 @@ MVVMC apps that show one feature per screen are adapted: verified on the iPhone 
 | 沒有 scene 的進入點（App Intents、由 NotificationCenter 廣播再於 `sceneDidBecomeActive` 消化的 pending deeplink）在多 scene 時該由哪個 scene 處理（FoodEntropy 反例 4b） | 單 scene 下行為確定；多 scene 時目前是「誰先拿到誰處理」，未定義 | 有專案開啟多 scene 時，與上面第一列一起處理 |
 | deeplink 直接導到並排容器的另一個 pane | 並排寫法還沒寫成規則，介面未定 | 並排容器寫進 skill（或 demo 加並排範例）時一起設計 |
 | demo 加 iPad（`TARGETED_DEVICE_FAMILY` 含 2）當「規則在任意寬度下能否實作」的檢查 | 沒有專案出 iPad 版；iPad 視窗可任意縮放，會帶進 Duo 沒有的情境（不對稱分割、寬度門檻與遲滯），現在加只是多一組沒人要的測試 | 第一個要出 iPad 版的 MVVMC 專案出現時——先在 demo 量，再談規則。已有一筆 HerbMeet 的一次性 iPad 實測（視窗化任意比例、兩欄靠系統最小高度撐住每欄約 330pt、置中標題落在欄縫），見 `Experiments/iPhoneDuo/README.md` |
-
 
 ## Environment notes
 

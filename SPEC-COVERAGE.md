@@ -10,7 +10,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 ## Why the spec reaches further than the demo
 
-As of 2026-09 this table carries **22 ❌ against 15 🚫**. **That gap is deliberate, not drift.**
+As of 2026-10-08 this table carries **22 ❌ against 18 🚫** (the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
 
 The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
 
