@@ -1,4 +1,4 @@
-# iPhone Duo — research record (2026-09-11 → 2026-10-07)
+# iPhone Duo — research record (2026-09-11 → 2026-10-08)
 
 **This is a dated record, not a to-do list and not a spec.** It does not claim to describe the present, so it is not maintained and does not expire: when it disagrees with `.claude/skills/`, the skills win. What became rules is in the skills (each entry names its evidence); what is still actionable is in `TODO.md`. Everything else that the iPhone Duo round learned — official guidance, SDK diffs, FoodEntropy's field measurements, and the reasoning behind decisions — lives here so it can be read without being mistaken for work.
 
@@ -24,6 +24,19 @@ Probes from this round: `../SizeThatFitsProbe/`, `../VerticalBarProbe/`, `../Pan
 - **被推入的頁面在姿態改變後自動退回**（設定頁翻開時已在左欄）→ `viewWillTransition` 轉場完成後經 Router `back`。
 - 測試工具：`simctl openurl` 的系統確認框只在第一次出現。
 
+## HerbMeet field report — always-on sheet ↔ two-column (2026-10-08, single project, below the entry gate)
+
+HerbMeet is MVVMC with a **present-based** variant: the Map page keeps a `.sheet(isPresented: .constant(true))` open at all times, so every feature is presented fullScreen *on top of the sheet* (`AppRouter.present(_:from:)` walks `presentedViewController` to the top). Its Duo goal: inner-display landscape shows the sheet's content as a fixed left column and the map on the right; everything else unchanged. Advised from this repo over cross-session messages, implemented and measured there (Xcode 27.1 RC 27A9275, iOS 27.1, Duo simulator, user screenshots for every row).
+
+- **Where the two columns live: V layer** (one View, one ViewModel — list and map share selection and scroll-to-selected), not a C-layer container. PaneProbe's "each pane a HostController" is for two *features*; this is one feature in two regions.
+- **The hazard, measured before building**: with the sheet's `isPresented` driven by layout, rotating to landscape while a fullScreen modal sits on the sheet **dismissed the modal too** — UIKit dismissing a presenter takes everything above it. No VM close, no `onCallback`. The reverse (landscape → portrait with a modal up) was fine: SwiftUI retried presenting the sheet once the presenter was free. The guess that views under a fullScreen modal stop receiving size changes was **wrong** — MapView kept getting them.
+- **Fix (measured working both directions, including a modal with one push in its nav)**: a C-layer gate — `isTwoPane = wants && !(sheetIsPresented && featureIsOpenAboveSheet)`, read from the UIKit tree on the next runloop; released by the Router's nav posting on `viewDidDisappear` + `isBeingDismissed`, **not** by `onCallback` (the measurement above shows it can be skipped). Sheet binding and left column read the same applied value, so the list never appears twice.
+- **Identity**: the map keeps one structural position across modes (MKMapView not rebuilt; region, markers, selection kept). `.searchable` was kept off the layout switch by hosting it on a 0×0 sibling — works, relies on unguaranteed SwiftUI behaviour, commented to re-verify each iOS. The list is a new instance on every switch; `onAppear` scrolls to the VM's `selectedID`.
+- `reservedRegions(kind: .division, options: .includeInactive)` with HStack: half-open puts the split on either side of the fold, flat splits evenly.
+- **System bug (iOS 27.1 / 24A94232)**: unfolding straight from the outer display into inner **landscape** leaves SwiftUI toolbar buttons in the vertical bar blank and untappable until one rotation; reproduces with a single `topBarTrailing` icon button in a plain `UINavigationController`. Outer → inner portrait and inner → outer are fine. HerbMeet's workaround is `.id(horizontalSizeClass)` on the button (compact → regular on that transition forces a new one), commented with its removal test. Not reproduced here.
+- `MKUserTrackingButton` pinned to `map.trailingAnchor` sat under the vertical bar; pinning to `safeAreaLayoutGuide` fixed it — the field instance of the asymmetric safe area measured in `../VerticalBarProbe` (Split View puts the bar on the **leading** side).
+- **What reaches the spec**: only the `onCallback` gap, tracked in `TODO.md` — this repo's own `dismissPresented(on:then:)` has the same shape. Everything else is one project's layout and stays here.
+
 ### Demo 在 Duo 模擬器上的手動實跑（2026-10-07，iOS 27.1 / 24A94232，Xcode 27.1 RC 27A9275，`deeplink(_:in:)` 版）
 
 使用者手動操作、截圖確認。**全部通過，demo 不需要為 Duo 改任何程式**：
@@ -35,7 +48,7 @@ Probes from this round: `../SizeThatFitsProbe/`, `../VerticalBarProbe/`, `../Pan
 - 非架構觀察：內螢幕上內文單行橫跨全寬並越過折線——V 層 readable width 的問題，不是規則。
 - **外螢幕遵守 `supportedInterfaceOrientations`，內螢幕不理會**（FoodEntropy 實測，兩邊成對照）：FoodEntropy 只宣告 Portrait → 闔上後旋轉介面不轉；demo 沒宣告（iPhone 預設含橫向）→ 闔上後旋轉介面跟著轉、tab bar 移到右側直欄，compact/compact 矮版面——一般 iPhone 橫向也是如此，非 Duo 特有。
 - **原則 11 的另一個落點（開放問題）**：FoodEntropy `BannerAdView.keyRootViewController()` 在 `UIViewRepresentable` 內以 `connectedScenes … isKeyWindow` 取 rootVC 交給 AdMob。`mvvmc-navigation` 新寫的那條只管 `deeplink()`；第三方 SDK 橋接要一個 VC 時怎麼取（例如在 `didMoveToWindow` 讀 `window?.rootViewController`）**沒有規範也沒有實測**。單一 scene 下是潛在而非現行錯誤；demo 沒有這種橋接，要寫規則得先有可編譯的形狀。
-- **沒測到**：demo 自己的第二個 scene（`UIApplicationSupportsMultipleScenes: false`；使用者測的是 Safari 與 demo 並排，兩個 app）；半開（折線 active）姿態；內螢幕旋轉。
+- **沒測到**：demo 自己的第二個 scene（`UIApplicationSupportsMultipleScenes: false`；使用者測的是 Safari 與 demo 並排，兩個 app）；半開（折線 active）姿態；內螢幕旋轉（2026-10-08 已量，見下方 Bars 段「非對稱安全區」）。
 
 ### 第二輪查證（2026-10-07，SDK／DocC／probe）
 
@@ -47,6 +60,7 @@ Probes from this round: `../SizeThatFitsProbe/`, `../VerticalBarProbe/`, `../Pan
 
 - **只有系統容器的 bar 會直排**；自建 `UIToolbar`／`UINavigationBar`／`UITabBar` 永遠橫向（111462）。內螢幕**直向**維持橫向 bar（HIG）。`.bottomBar` 也會併入垂直 bar。
 - **按鈕**：只有文字永遠不直排；`.horizontalOnly` 在沒有橫向 bar 時**不顯示**（`UIBarButtonItem.h:76`）。返回／關閉在最上方（`.cancellationAction`）；重要動作 `.topBarPinnedTrailing`（27.0）；溢出由下往上，`visibilityPriority`（27.0）調整；tab bar 與按鈕互擠時預設保 tab bar。
+- **非對稱安全區（2026-10-08 補量，`Experiments/VerticalBarProbe` watch 模式）**：Tech Talk 111461「safe areas are often asymmetric… vertical buttons can appear on the left side」。實測整頁兩個橫向都是 trailing（右 84／左 0），**180° 旋轉不會鏡像**；**Split View 放在左半時 bar 在 leading**（左 84／右 0）。layout margins 跟著 bar 走（有 bar 那側 84，另一側 20）。變化過程中有暫態值（172、兩側同為 84），不可在第一次 layout 就快取 inset。不寫規則：SwiftUI 預設在安全區內、demo 沒有 inset 運算；HerbMeet 的追蹤鈕接 `trailingAnchor` 被蓋是田野實例。
 - **MVVMC 特有、已實測（`Experiments/VerticalBarProbe`）**：整頁退出只能 C 層覆寫 `preferredVerticalBarBehavior`，SwiftUI `.toolbarVerticalBehavior` 傳不過 `UIHostingController`；按鈕層級 `.axisBehavior` 與 `.toolbarVerticalCompressionBehavior` 傳得過去。已寫入 `mvvmc-hostcontroller`。
 - **demo**：四顆 toolbar 按鈕都改成圖示＋文字（Apple 建議；設計，非規則）。
 - **未查／UNKNOWN**：搜尋列、大標題、`titleView` 在垂直 bar 下的行為；`.confirmationAction`／`.primaryAction`／`.principal` 的位置；垂直 bar 容量。內螢幕 tab sidebar（`sidebar.preferredPlacement`，27.0）為 opt-in，demo 未採用。

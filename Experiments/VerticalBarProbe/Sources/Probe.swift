@@ -5,7 +5,7 @@ import UIKit
 // V 層的 SwiftUI `.toolbarVerticalBehavior(.disabled)` 與 C 層的 `preferredVerticalBarBehavior`。
 // 哪一個真的生效？這決定規則寫在 mvvmc-view 還是 mvvmc-hostcontroller。
 //
-//   -mode none | swiftui | uikit
+//   -mode none | swiftui | uikit | axis | compress | watch
 // 2 秒後印一行 RESULT 並結束。見 ../README.md。
 
 let mode = UserDefaults.standard.string(forKey: "mode") ?? "none"
@@ -57,6 +57,41 @@ final class ProbeHostController: UIHostingController<ProbeView> {
   override var preferredVerticalBarBehavior: UIVerticalBarBehavior {
     mode == "uikit" ? .disabled : .automatic
   }
+
+  /// -mode watch：不結束，每次 layout 有變化就印一行 WATCH。用來在旋轉、Split View 時看
+  /// 垂直 bar 會不會出現在 leading，以及安全區／layout margins 是否左右不對稱。
+  private var lastWatch = ""
+
+  override func viewDidLayoutSubviews() {
+    super.viewDidLayoutSubviews()
+    guard mode == "watch", let window = view.window else { return }
+    func r(_ x: CGFloat) -> String { String(format: "%.0f", x) }
+    var edge = "n/a"
+    if #available(iOS 27.1, *) {
+      edge = switch traitCollection.verticalBarEdge {
+      case .leading: "leading"
+      case .trailing: "trailing"
+      default: "unspecified"
+      }
+    }
+    let orientation = switch window.windowScene?.effectiveGeometry.interfaceOrientation {
+    case .portrait: "portrait"
+    case .portraitUpsideDown: "upsideDown"
+    case .landscapeLeft: "landscapeLeft"
+    case .landscapeRight: "landscapeRight"
+    default: "unknown"
+    }
+    let s = view.safeAreaInsets
+    let m = view.directionalLayoutMargins
+    let line = "WATCH window=\(r(window.bounds.width))x\(r(window.bounds.height))"
+      + " screen=\(r(window.screen.bounds.width))x\(r(window.screen.bounds.height)) orientation=\(orientation)"
+      + " verticalBarEdge=\(edge) safe=[t\(r(s.top)) l\(r(s.left)) b\(r(s.bottom)) r\(r(s.right))]"
+      + " margins=[t\(r(m.top)) lead\(r(m.leading)) b\(r(m.bottom)) trail\(r(m.trailing))]"
+    if line != lastWatch {
+      lastWatch = line
+      print(line)
+    }
+  }
 }
 
 final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
@@ -76,6 +111,7 @@ final class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     window.makeKeyAndVisible()
     self.window = window
 
+    guard mode != "watch" else { return }
     Task { @MainActor in
       try? await Task.sleep(for: .seconds(2))
       func r(_ x: CGFloat) -> String { String(format: "%.0f", x) }
