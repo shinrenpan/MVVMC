@@ -35,8 +35,7 @@ private extension PostListHostController {
       AppRouter.shared.tab(1, from: self)
 
     case .toFilter:
-      let filterVM = PostFilterViewModel()
-      filterVM.onCallback = { [weak self] callback in
+      let filter = PostFilterHostController { [weak self] callback in
         guard let self else { return }
         switch callback {
         case let .didSelectUser(id):
@@ -49,7 +48,7 @@ private extension PostListHostController {
           AppRouter.shared.back(from: self)
         }
       }
-      AppRouter.shared.to(PostFilterHostController(viewModel: filterVM), from: self, style: .modal)
+      AppRouter.shared.to(filter, from: self, style: .modal)
     }
   }
 }

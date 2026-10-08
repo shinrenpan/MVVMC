@@ -101,8 +101,8 @@ private extension PostListHostController {
       AppRouter.shared.to(PostDetailHostController(id: post.id, title: post.title, body: post.body), from: self)
 
     case .toFilter:
-      let filterVM = PostFilterViewModel()
-      filterVM.onCallback = { [weak self] callback in
+      // 跨 feature 且要回傳 → 第三種形狀：只給 callback，子 C 層自己組 VM（見 SKILL〈兩種 init 形狀怎麼選〉）
+      let filter = PostFilterHostController { [weak self] callback in
         guard let self else { return }
         switch callback {
         case let .didSelectUser(id):
@@ -112,7 +112,7 @@ private extension PostListHostController {
           AppRouter.shared.back(from: self)
         }
       }
-      AppRouter.shared.to(PostFilterHostController(viewModel: filterVM), from: self, style: .modal)
+      AppRouter.shared.to(filter, from: self, style: .modal)
     }
   }
 }

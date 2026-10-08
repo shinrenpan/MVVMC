@@ -10,7 +10,7 @@ Legend: ✅ demonstrated · ❌ not demonstrated · 🚫 deliberately not demons
 
 ## Why the spec reaches further than the demo
 
-As of 2026-10-08 this table carries **20 ❌ against 19 🚫** (the "side effect directly in the VM" row turned out to be demonstrated by `ProfileViewModel` all along; the module-default-isolation row was reclassified ❌ → 🚫 the same day — "deliberately not enabled" is the 🚫 meaning; the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
+As of 2026-10-08 this table carries **19 ❌ against 19 🚫** (the third init shape became ✅ when the demo moved `PostFilter` to it; the "side effect directly in the VM" row turned out to be demonstrated by `ProfileViewModel` all along; the module-default-isolation row was reclassified ❌ → 🚫 the same day — "deliberately not enabled" is the 🚫 meaning; the three new 🚫 are the iPhone Duo round's UIKit-bridge and vertical-bar rows — the demo wraps no UIKit view and does not opt out of the bar). **That gap is deliberate, not drift.**
 
 The demo's six features cover every *structural* rule — the shape of each layer, navigation, cross-VC callbacks, tests. What they don't cover are *scenario* rules: pagination, forms, polling, deep returns. Adding those would turn a clear architectural demo into a feature grab-bag, which is the same trade the 🚫 markers already explain — a demo that shows everything stops showing anything clearly.
 
@@ -114,14 +114,14 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 
 | Rule | Demonstrated in |
 |---|---|
-| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — **and the demo deviates from it**: the only callback, `PostList` → `PostFilter`, is cross-feature (`Pages/PostFilter/` is its own feature), yet `PostListHostController` builds `PostFilterViewModel()` itself — the standard shape, which the skill's table reserves for same-feature. It works only because that VM needs no child Domain Model to build. Whether that is an allowed exception or a demo defect is open in `TODO.md` |
+| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | `PostFilterHostController.init(onCallback:)`, called from `PostListHostController` — **since 2026-10-08**; until then the demo built `PostFilterViewModel()` in the parent (the standard shape, which the table reserves for same-feature) |
 | iOS-branch scope note (`#else` branches are out of scope for the iOS skills) | 🚫 — the demo has no Skip target. Lives entirely in [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) (baseline `v1.1.0` `db9013d`, skip 1.9.3, Migration Log M0–M21); this repo kept no Skip rules after 2026-09-17 |
 | `@MainActor final class : UIHostingController<FeatureView>` | all six `*HostController.swift` |
 | Standard init: ViewModel injected from outside | `PostListHostController.swift` |
 | Variant: primitives in, ViewModel assembled inside C | `PostDetailHostController.swift` |
 | `viewDidLoad` wires `viewModel.onRoute` with `[weak self]` | `PostListHostController.swift` |
 | Routing centralised in `handleRouter(_:)` in a `private extension` | same |
-| Child `onCallback` set before navigating, no `Task` wrapper | `PostListHostController.swift` → `PostFilter` |
+| Child `onCallback` set before navigating, no `Task` wrapper | `PostListHostController.swift` → `PostFilter` (the closure is handed to the child C's init, which sets it before the VC is shown) |
 | Callback payload is a primitive, not a Domain Model | `PostFilterViewModel.Callback.didSelectUser(id:)` |
 | `required init?(coder:)` marked `@available(*, unavailable)` | all |
 | Vertical-bar opt-out lives in the HostController (`preferredVerticalBarBehavior`), not SwiftUI `.toolbarVerticalBehavior` | 🚫 — the demo does not opt out; backed by `Experiments/VerticalBarProbe` (measured) |
