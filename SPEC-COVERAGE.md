@@ -39,7 +39,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | Rule | Demonstrated in |
 |---|---|
 | State / Domain Models / DTOs in separate `extension` blocks | `PostList/PostListViewModel+Models.swift` |
-| `State` is `Equatable, Sendable`, every field defaulted | all six `*ViewModel+Models.swift` |
+| `State` is `Equatable, Sendable`, every field defaulted | every `*ViewModel+Models.swift` except `PostDetail` (its `let post` is the Detail exception in the next row) |
 | Detail-view exception: `let post` with no parameterless `init()` | `PostDetail/PostDetailViewModel+Models.swift` |
 | Detail exception's cost spreads to VM and tests (`var state` + `init(post:)`) | `PostDetail/PostDetailViewModel.swift` — **the demo already had the right shape before the rule named it** |
 | `let` only when the data truly never reloads; otherwise `var` | `PostDetail` qualifies (no `doAction`, no refresh path) — the **`var`** default is ❌ undemonstrated |
@@ -52,7 +52,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 | DTO property names mirror API keys 1:1, no `CodingKeys` | `PostList.PostDTO` (`user_id`) |
 | `toDomain()` filters invalid rows (returns `Optional`) | `UserDetail.UserDTO` |
 | DTO does **not** conform to `Equatable` | all DTOs |
-| Mocks hang off Domain Models, whole file `#if DEBUG` | `PostList/PostListMocks.swift`, `PostDetail/PostDetailMocks.swift` |
+| Mocks hang off Domain Models, whole file `#if DEBUG` | `PostList/PostListMocks.swift`, `PostDetail/PostDetailMocks.swift`, `UserDetail/UserDetailMocks.swift` |
 | L2 nested type with parent prefix (`OrderStatus` style) | ❌ |
 | Equatable exceptions (closure member / fire-and-forget / large blob) | 🚫 — edge cases; demonstrating them means inventing a State that shouldn't exist |
 
@@ -114,7 +114,7 @@ So read ❌ as **"not in the demo"**, not as "never checked". The demo is the co
 
 | Rule | Demonstrated in |
 |---|---|
-| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — the demo's only callback (`PostFilter`) is cross-feature, but its VM needs no child Domain Model to build (`PostFilterViewModel()`), so the parent can build it and the standard shape still works |
+| Third init shape: cross-feature **and** needs a callback → child C takes primitives + closure | ❌ — **and the demo deviates from it**: the only callback, `PostList` → `PostFilter`, is cross-feature (`Pages/PostFilter/` is its own feature), yet `PostListHostController` builds `PostFilterViewModel()` itself — the standard shape, which the skill's table reserves for same-feature. It works only because that VM needs no child Domain Model to build. Whether that is an allowed exception or a demo defect is open in `TODO.md` |
 | iOS-branch scope note (`#else` branches are out of scope for the iOS skills) | 🚫 — the demo has no Skip target. Lives entirely in [`MVVMC-Skip`](https://github.com/shinrenpan/MVVMC-Skip) (baseline `v1.1.0` `db9013d`, skip 1.9.3, Migration Log M0–M21); this repo kept no Skip rules after 2026-09-17 |
 | `@MainActor final class : UIHostingController<FeatureView>` | all six `*HostController.swift` |
 | Standard init: ViewModel injected from outside | `PostListHostController.swift` |

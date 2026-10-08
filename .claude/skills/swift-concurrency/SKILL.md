@@ -96,7 +96,7 @@ DispatchQueue 遷移對照請見：`references/migration.md`
 **同步前綴規則**：看 `Task` 第一個 `await` 之前的**同步前綴**——
 
 - 前綴要動主 actor state / UI → 用預設 `Task {}`（保持繼承主 actor）
-- 前綴與 UI 無關、第一件事就是跳走 → 用 `Task { @concurrent in }`（從主 actor 外起跑，回頭再 `await MainActor.run { }` 更新 state）
+- 前綴與 UI 無關、第一件事就是跳走 → 用 `Task { @concurrent in }`（從主 actor 外起跑，結果再 `await` 回主 actor——在 MVVMC 的 VM 裡是 `await doAction(.apiResponse(...))`，其他場合是 `await MainActor.run { }`）
 
 ```swift
 // ✅ 前綴要動主 actor state → 保持繼承
@@ -107,9 +107,8 @@ Task {
 
 // ✅ 前綴與 UI 無關、直接跳去重運算 → @concurrent 起跑
 Task { @concurrent in
-    let posts = (try? JSONDecoder().decode([PostDTO].self, from: data))?
-        .compactMap { $0.toDomain() } ?? []              // 大量解碼，不佔主 actor
-    await MainActor.run { state.posts = posts }          // 回主 actor 更新（State 不放 UIImage 等 UI 型別，見 mvvmc-model）
+    let result = Result { try JSONDecoder().decode([PostDTO].self, from: data) }   // 大量解碼，不佔主 actor
+    await doAction(.apiResponse(.fetchPostsDidFinish(result)))   // 回到 doAction；toDomain() 與寫 state 留在 handleAPIResponse（mvvmc-viewmodel）
 }
 
 // ❌ 空的同步前綴、第一件事就 await 跳走 → 不該用預設 Task
